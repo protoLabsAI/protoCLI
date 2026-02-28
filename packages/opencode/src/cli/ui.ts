@@ -7,8 +7,8 @@ export namespace UI {
   export const CancelledError = NamedError.create("UICancelledError", z.void())
 
   export const Style = {
-    TEXT_HIGHLIGHT: "\x1b[95m",
-    TEXT_HIGHLIGHT_BOLD: "\x1b[95m\x1b[1m",
+    TEXT_HIGHLIGHT: "\x1b[38;2;167;139;250m",
+    TEXT_HIGHLIGHT_BOLD: "\x1b[38;2;167;139;250m\x1b[1m",
     TEXT_DIM: "\x1b[90m",
     TEXT_DIM_BOLD: "\x1b[90m\x1b[1m",
     TEXT_NORMAL: "\x1b[0m",
@@ -19,8 +19,8 @@ export namespace UI {
     TEXT_DANGER_BOLD: "\x1b[91m\x1b[1m",
     TEXT_SUCCESS: "\x1b[92m",
     TEXT_SUCCESS_BOLD: "\x1b[92m\x1b[1m",
-    TEXT_INFO: "\x1b[94m",
-    TEXT_INFO_BOLD: "\x1b[94m\x1b[1m",
+    TEXT_INFO: "\x1b[38;2;96;165;250m",
+    TEXT_INFO_BOLD: "\x1b[38;2;96;165;250m\x1b[1m",
   }
 
   export function println(...message: string[]) {
@@ -44,14 +44,14 @@ export namespace UI {
     const result: string[] = []
     const reset = "\x1b[0m"
     const left = {
-      fg: Bun.color("gray", "ansi") ?? "",
-      shadow: "\x1b[38;5;235m",
-      bg: "\x1b[48;5;235m",
+      fg: "\x1b[38;2;167;139;250m",
+      shadow: "\x1b[38;5;98m",
+      bg: "\x1b[48;5;53m",
     }
     const right = {
       fg: reset,
-      shadow: "\x1b[38;5;238m",
-      bg: "\x1b[48;5;238m",
+      shadow: "\x1b[38;5;60m",
+      bg: "\x1b[48;5;237m",
     }
     const gap = " "
     const draw = (line: string, fg: string, shadow: string, bg: string) => {
