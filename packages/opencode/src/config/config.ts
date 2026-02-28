@@ -76,6 +76,7 @@ export namespace Config {
     const auth = await Auth.all()
 
     // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
+    // 0) Built-in default (ava.jsonc shipped with the package)
     // 1) Remote .well-known/opencode (org defaults)
     // 2) Global config (~/.config/opencode/opencode.json{,c})
     // 3) Custom config (OPENCODE_CONFIG)
@@ -83,7 +84,10 @@ export namespace Config {
     // 5) .opencode directories (.opencode/agents/, .opencode/commands/, .opencode/plugins/, .opencode/opencode.json{,c})
     // 6) Inline config (OPENCODE_CONFIG_CONTENT)
     // Managed config directory is enterprise-only and always overrides everything above.
-    let result: Info = {}
+
+    // Load built-in default config (ava.jsonc) as the base — lowest priority
+    const builtinConfigPath = path.join(import.meta.dirname, "../../ava.jsonc")
+    let result: Info = await loadFile(builtinConfigPath)
     for (const [key, value] of Object.entries(auth)) {
       if (value.type === "wellknown") {
         process.env[value.key] = value.token

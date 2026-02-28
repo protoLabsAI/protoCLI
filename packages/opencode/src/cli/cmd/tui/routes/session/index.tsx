@@ -1539,6 +1539,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "skill"}>
           <Skill {...toolprops} />
         </Match>
+        <Match when={props.part.tool.startsWith("mcp__")}>
+          <McpTool {...toolprops} />
+        </Match>
         <Match when={true}>
           <GenericTool {...toolprops} />
         </Match>
@@ -1555,6 +1558,43 @@ type ToolProps<T extends Tool.Info> = {
   output?: string
   part: ToolPart
 }
+function McpTool(props: ToolProps<any>) {
+  const toolName = createMemo(() => {
+    const parts = props.tool.split("__")
+    return parts.length >= 3 ? parts.slice(2).join("__") : props.tool
+  })
+
+  const outputSummary = createMemo(() => {
+    if (!props.output) return undefined
+    const text = props.output.trim()
+    try {
+      const parsed = JSON.parse(text)
+      if (Array.isArray(parsed)) return `${parsed.length} items`
+      if (typeof parsed === "object" && parsed !== null) {
+        const keys = Object.keys(parsed)
+        if (keys.length === 1) return String(parsed[keys[0]]).slice(0, 50)
+        return `${keys.length} fields`
+      }
+      return String(parsed).slice(0, 60)
+    } catch {
+      const firstLine = text.split("\n")[0]
+      return firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine
+    }
+  })
+
+  return (
+    <InlineTool
+      icon="⊙"
+      complete={props.part.state.status === "completed"}
+      pending={`Calling ${toolName()}...`}
+      part={props.part}
+    >
+      Called: {toolName()}
+      {outputSummary() ? ` -> ${outputSummary()}` : ""}
+    </InlineTool>
+  )
+}
+
 function GenericTool(props: ToolProps<any>) {
   const { theme } = useTheme()
   const ctx = use()

@@ -8,6 +8,9 @@ import type { AssistantMessage, Session } from "@opencode-ai/sdk/v2"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useKeybind } from "../../context/keybind"
 import { useTerminalDimensions } from "@opentui/solid"
+import { RGBA } from "@opentui/core"
+
+const AVA_VIOLET = RGBA.fromHex("#a78bfa")
 
 const Title = (props: { session: Accessor<Session> }) => {
   const { theme } = useTheme()
@@ -123,9 +126,12 @@ export function Header() {
             </box>
           </Match>
           <Match when={true}>
-            <box flexDirection={narrow() ? "column" : "row"} justifyContent="space-between" gap={1}>
-              <Title session={session} />
-              <ContextInfo context={context} cost={cost} />
+            <box flexDirection="column" gap={0}>
+              <text fg={AVA_VIOLET}>ava  ·  protoLabs AI operator</text>
+              <box flexDirection={narrow() ? "column" : "row"} justifyContent="space-between" gap={1}>
+                <Title session={session} />
+                <ContextInfo context={context} cost={cost} />
+              </box>
             </box>
           </Match>
         </Switch>

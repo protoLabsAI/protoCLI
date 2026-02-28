@@ -1,0 +1,13 @@
+{
+  // Built-in default configuration for Ava.
+  // This file is auto-loaded by config.ts as the lowest-priority base config.
+  // It wires the Automaker MCP server so Ava has access to mcp__automaker__* tools
+  // when the Automaker server is running at localhost:3008.
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "automaker": {
+      "type": "remote",
+      "url": "http://localhost:3008/mcp"
+    }
+  }
+}

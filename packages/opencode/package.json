@@ -2,9 +2,15 @@
   "$schema": "https://json.schemastore.org/package.json",
   "version": "1.2.15",
   "name": "protocli",
+  "description": "Ava CLI — the AI-powered developer agent for Automaker workflows",
   "type": "module",
   "license": "MIT",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anomalyco/protocli"
+  },
+  "homepage": "https://github.com/anomalyco/protocli#readme",
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun test --timeout 30000",
