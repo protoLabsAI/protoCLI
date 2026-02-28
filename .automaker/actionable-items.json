@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "2b0cf7a4-feea-495b-9665-93820318b7a0",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Verified",
+      "message": "\"Binary, paths, and config dirs\" has been verified and is complete.",
+      "createdAt": "2026-02-28T11:55:29.862Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1772278884221-i4n7dpvzh",
+        "notificationId": "e51ccb61-5521-4c6d-91ef-580535d66e6c"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "notifications"
+    },
+    {
+      "id": "f2773a3e-2435-48f2-b890-c6c6071f2b4e",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Verified",
+      "message": "\"Ava system prompt and agent definition\" has been verified and is complete.",
+      "createdAt": "2026-02-28T11:58:46.638Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1772278884223-o46zbiv20",
+        "notificationId": "a4860b36-498b-473d-bad8-fefe10c9f4af"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "notifications"
+    },
+    {
+      "id": "c2e686eb-ddfd-410d-82f1-f0c025ae1249",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Verified",
+      "message": "\"Board status panel on home screen\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:04:09.394Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1772278884226-3550bd3ly",
+        "notificationId": "a7b123e5-d556-4008-be0a-7aa838c29dfd"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "notifications"
+    },
+    {
+      "id": "bf00de6f-fc18-4892-b3cf-3b50627ac554",
+      "actionType": "notification",
+      "priority": "low",
+      "title": "Feature Verified",
+      "message": "\"TUI branding — logo and color theme\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:04:12.559Z",
+      "status": "pending",
+      "actionPayload": {
+        "featureId": "feature-1772278884222-7lqdsmi52",
+        "notificationId": "3bbae4b0-0b83-4d99-960c-c69dfe76c9d4"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "notifications"
+    }
+  ]
+}

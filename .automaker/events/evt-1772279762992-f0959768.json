@@ -1,0 +1,12 @@
+{
+  "id": "evt-1772279762992-f0959768",
+  "trigger": "feature_success",
+  "severity": "high",
+  "timestamp": "2026-02-28T11:56:02.992Z",
+  "projectPath": "/home/josh/dev/protocli",
+  "projectName": "protocli",
+  "featureId": "feature-1772278884221-i4n7dpvzh",
+  "featureName": "Binary, paths, and config dirs",
+  "error": "Feature completed in 292s - auto-verified",
+  "passes": true
+}

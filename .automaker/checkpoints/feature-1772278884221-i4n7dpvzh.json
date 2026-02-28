@@ -1,0 +1,17 @@
+{
+  "featureId": "feature-1772278884221-i4n7dpvzh",
+  "projectPath": "/home/josh/dev/protocli",
+  "currentState": "EXECUTE",
+  "stateContext": {
+    "retryCount": 0,
+    "planRequired": false,
+    "remediationAttempts": 0,
+    "mergeRetryCount": 0
+  },
+  "completedStates": [
+    "INTAKE"
+  ],
+  "goalGateResults": [],
+  "timestamp": "2026-02-28T11:51:10.941Z",
+  "version": 1
+}

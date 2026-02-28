@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "notifications": [
+    {
+      "id": "e51ccb61-5521-4c6d-91ef-580535d66e6c",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"Binary, paths, and config dirs\" has been verified and is complete.",
+      "createdAt": "2026-02-28T11:55:29.852Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884221-i4n7dpvzh",
+      "projectPath": "/home/josh/dev/protocli"
+    },
+    {
+      "id": "a4860b36-498b-473d-bad8-fefe10c9f4af",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"Ava system prompt and agent definition\" has been verified and is complete.",
+      "createdAt": "2026-02-28T11:58:46.629Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884223-o46zbiv20",
+      "projectPath": "/home/josh/dev/protocli"
+    },
+    {
+      "id": "a7b123e5-d556-4008-be0a-7aa838c29dfd",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"Board status panel on home screen\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:04:09.349Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884226-3550bd3ly",
+      "projectPath": "/home/josh/dev/protocli"
+    },
+    {
+      "id": "3bbae4b0-0b83-4d99-960c-c69dfe76c9d4",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"TUI branding — logo and color theme\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:04:12.533Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884222-7lqdsmi52",
+      "projectPath": "/home/josh/dev/protocli"
+    }
+  ]
+}

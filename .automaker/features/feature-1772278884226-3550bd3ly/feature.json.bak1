@@ -1,0 +1,39 @@
+{
+  "category": "Ava Home Screen",
+  "description": "**Milestone:** Ava Home Screen\n\nModify src/cli/cmd/tui/routes/home.tsx to replace the session history list with a board status panel. Fetch board summary from Automaker API (localhost:3008/api/board/summary): total, backlog, in-progress, review, blocked counts. Display as a clean summary table. Show recent features (last 5 updated) below. Graceful fallback when Automaker is offline. Chat prompt remains at bottom and is focused by default.\n\n**Files to Modify:**\n- packages/opencode/src/cli/cmd/tui/routes/home.tsx\n\n**Acceptance Criteria:**\n- [ ] Home screen shows board summary when Automaker is running\n- [ ] Board counts are accurate\n- [ ] Graceful fallback when Automaker is offline\n- [ ] Chat prompt is accessible and focused by default\n- [ ] Refreshes on focus\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Board status panel on home screen",
+  "status": "in_progress",
+  "isEpic": false,
+  "epicId": "feature-1772278884225-vzgkqixwg",
+  "branchName": "feature/ava-home-screen-board-status-panel",
+  "isFoundation": false,
+  "id": "feature-1772278884226-3550bd3ly",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Ava Home Screen\n\nModify src/cli/cmd/tui/routes/home.tsx to replace the session history list with a board status panel. Fetch board summary from Automaker API (localhost:3008/api/board/summary): total, backlog, in-progress, review, blocked counts. Display as a clean summary table. Show recent features (last 5 updated) below. Graceful fallback when Automaker is offline. Chat prompt remains at bottom and is focused by default.\n\n**Files to Modify:**\n- packages/opencode/src/cli/cmd/tui/routes/home.tsx\n\n**Acceptance Criteria:**\n- [ ] Home screen shows board summary when Automaker is running\n- [ ] Board counts are accurate\n- [ ] Graceful fallback when Automaker is offline\n- [ ] Chat prompt is accessible and focused by default\n- [ ] Refreshes on focus\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-02-28T11:41:24.226Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.226Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.226Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T11:58:48.064Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "updatedAt": "2026-02-28T11:58:50.071Z",
+  "model": "claude-sonnet-4-6",
+  "costUsd": 1.4849429999999997,
+  "lastSessionId": "973b9968-009c-4f5d-acbc-8ade71e17fbc",
+  "lastTraceId": "937ef850-c539-4fa7-9f55-2df842d90d31"
+}

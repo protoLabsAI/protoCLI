@@ -1,0 +1,181 @@
+{
+  "slug": "protocli-ava-cli",
+  "title": "protoCli — Ava CLI",
+  "goal": "Fork opencode into protoCli: a conversational terminal interface to Ava, the protoLabs AI operator. Users chat with Ava from the CLI and she orchestrates the org — managing the Automaker board, reviewing PRs, spawning agents, and handling operations — all through a Raycast-style TUI.",
+  "status": "active",
+  "prd": {
+    "situation": "The codebase at /home/josh/dev/protocli is a fork of anomalyco/opencode — a provider-agnostic, open-source AI coding CLI with a SolidJS TUI, Hono HTTP server, Vercel AI SDK provider abstraction, and built-in MCP client integration. It uses a two-process Bun architecture: a worker process runs the server and agent loop, the UI thread renders the terminal via @opentui/solid. Sessions, messages, and tool output are persisted in SQLite. The MCP integration is the critical leverage point: any MCP server's tools are automatically injected into the agent's tool set with zero code changes — just config.",
+    "problem": "Ava is only accessible via the Automaker web UI and Claude Code CLI. There is no first-class terminal interface designed around Ava's operational domain: board management, PR review, agent orchestration, and org operations. The existing opencode TUI is optimized for coding sessions — not for conversational operations management. Users who live in the terminal have no ergonomic way to interact with Ava.",
+    "approach": "Fork opencode into protoCli by: (1) renaming the binary and global paths, (2) replacing the generic coding agent persona with Ava's system prompt and operational context, (3) shipping a default config that auto-wires the Automaker MCP server so all board/PR/agent tools are available with no setup, (4) pruning unused coding-specific commands and tools, (5) replacing the home screen with a live board status panel, and (6) rebranding the TUI with protoLabs identity. The Vercel AI SDK and MCP client are kept entirely as-is — Ava's power comes from MCP, not from native tool changes.",
+    "results": "A protocli binary (aliased as ava) that any protoLabs team member can install via curl or brew. On first launch: Ava greets them, the home screen shows live board state, and they can start chatting to manage the org from anywhere in the terminal. All Automaker MCP tools are available. Sessions persist locally. The experience feels like Ava Anywhere but in the terminal.",
+    "constraints": [
+      "Use opencode's existing architecture unchanged — do not rewrite the agent loop, server, session persistence, MCP client, or provider system",
+      "All Ava tool access goes through the Automaker MCP server — no new native tool implementations",
+      "Must run on macOS and Linux",
+      "Keep the fork delta small — PRs should be easy to rebase if opencode upstream advances",
+      "No emojis in code or docs",
+      "New TUI components must use @opentui/solid patterns (SolidJS, not React)",
+      "Config defaults go in a shipped ava.jsonc — users should need zero config to get started"
+    ]
+  },
+  "researchSummary": "opencode architecture: two-process Bun app — worker (Hono HTTP server + agent loop + SQLite via Drizzle) + UI thread (SolidJS TUI via @opentui/solid). MCP tools auto-injected into every LLM call via src/mcp/index.ts. Agent system is config-driven: src/agent/agent.ts defines agents as Info objects, custom agents loaded from .opencode/agents/*.md. System prompt in src/session/system.ts (PROMPT_ANTHROPIC + per-model variants). Global paths in src/global.ts (XDG-based, currently 'opencode'). Binary at packages/opencode/bin/opencode. TUI home route: src/cli/cmd/tui/routes/home.tsx. Config schema: src/config/config.ts (Zod-validated). Key change surface: global.ts (paths), system.ts (prompt), agent/agent.ts (agent defs), logo.ts (branding), home.tsx (home screen), config defaults. MCP wiring requires only a default ava.jsonc shipped with the binary.",
+  "milestones": [
+    {
+      "slug": "foundation-fork-identity",
+      "title": "Foundation — Fork Identity",
+      "description": "Rename all opencode identity to ava/protocli. Update binary name, global config/data paths, database filename, CLI scriptName, and all user-facing strings. Creates a clean fork baseline with zero functional changes.",
+      "phases": [
+        {
+          "slug": "binary-paths-and-config-dirs",
+          "title": "Binary, paths, and config dirs",
+          "description": "Rename the binary from 'opencode' to 'ava' (packages/opencode/bin/opencode -> bin/ava). Update src/global.ts to use 'ava' for XDG config dir (~/.config/ava/), data dir (~/.local/share/ava/), and database name (ava.db). Update CLI entry in src/index.ts: scriptName('ava'), all yargs command descriptions. Update package.json name to 'protocli' and bin field.",
+          "filesToModify": [
+            "packages/opencode/bin/opencode",
+            "packages/opencode/src/global.ts",
+            "packages/opencode/src/index.ts",
+            "packages/opencode/package.json"
+          ],
+          "acceptanceCriteria": [
+            "Running ./bin/ava starts the TUI",
+            "Config is read from ~/.config/ava/",
+            "Data is stored in ~/.local/share/ava/ava.db",
+            "CLI help shows 'ava' not 'opencode'"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772278884222-7lqdsmi52"
+        },
+        {
+          "slug": "tui-branding-logo-and-color-theme",
+          "title": "TUI branding — logo and color theme",
+          "description": "Replace the opencode logo in src/cli/logo.ts with protoLabs/Ava branding. Update UI color scheme in src/cli/ui.ts. Replace all user-facing strings referencing 'opencode' with 'ava' or 'protoCli'. Update the welcome message and first-run dialog.",
+          "filesToModify": [
+            "packages/opencode/src/cli/logo.ts",
+            "packages/opencode/src/cli/ui.ts",
+            "packages/opencode/src/cli/cmd/tui/routes/home.tsx"
+          ],
+          "acceptanceCriteria": [
+            "TUI displays ava/protoLabs logo on startup",
+            "No 'opencode' text visible in the TUI",
+            "Color scheme reflects protoLabs brand"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772278884222-7lqdsmi52"
+        }
+      ],
+      "epicId": "feature-1772278884219-x0osws5fk"
+    },
+    {
+      "slug": "ava-agent-and-mcp-wiring",
+      "title": "Ava Agent and MCP Wiring",
+      "description": "Replace the generic coding agent persona with Ava's operational identity. Configure the Automaker MCP server as the default tool source. Remove coding-specific tools and unused CLI commands.",
+      "phases": [
+        {
+          "slug": "ava-system-prompt-and-agent-definition",
+          "title": "Ava system prompt and agent definition",
+          "description": "Replace PROMPT_ANTHROPIC in src/session/system.ts with Ava's system prompt — she is the protoLabs AI operator for org operations (board management, PR review, agent orchestration, feature planning). Update src/agent/agent.ts: rename 'build' agent to 'ava' (primary, conversational ops), keep 'general' subagent, remove 'plan' agent. The ava agent permission ruleset denies edit/write/apply_patch tools. Set default_agent to 'ava'.",
+          "filesToModify": [
+            "packages/opencode/src/session/system.ts",
+            "packages/opencode/src/agent/agent.ts"
+          ],
+          "acceptanceCriteria": [
+            "Ava introduces herself correctly on first message",
+            "Agent is named 'ava' in the TUI header",
+            "Edit/write tools are not offered to Ava",
+            "general subagent still works for research tasks"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772278884224-cq3xgjlcz"
+        },
+        {
+          "slug": "default-automaker-mcp-config-and-prune-unused-commands",
+          "title": "Default Automaker MCP config and prune unused commands",
+          "description": "Create a shipped default config file (packages/opencode/ava.jsonc) that auto-configures the Automaker MCP server. Wire this as a built-in default in src/config/config.ts so it merges automatically without user setup. Remove unused CLI commands: github, pr, stats, export, import. Add an 'ava board' shortcut command.",
+          "filesToModify": [
+            "packages/opencode/src/config/config.ts",
+            "packages/opencode/src/index.ts",
+            "packages/opencode/ava.jsonc"
+          ],
+          "acceptanceCriteria": [
+            "Starting ava with a running Automaker server gives Ava access to all mcp__automaker__* tools",
+            "ava board command works",
+            "Removed commands are gone from help output",
+            "MCP connection status visible in TUI"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772278884224-cq3xgjlcz"
+        }
+      ],
+      "epicId": "feature-1772278884223-u068sqafl"
+    },
+    {
+      "slug": "ava-home-screen",
+      "title": "Ava Home Screen",
+      "description": "Replace the opencode home screen (session history list) with an Ava-native home screen showing live board status from the Automaker API, recent activity, and a prominent chat prompt.",
+      "phases": [
+        {
+          "slug": "board-status-panel-on-home-screen",
+          "title": "Board status panel on home screen",
+          "description": "Modify src/cli/cmd/tui/routes/home.tsx to replace the session history list with a board status panel. Fetch board summary from Automaker API (localhost:3008/api/board/summary): total, backlog, in-progress, review, blocked counts. Display as a clean summary table. Show recent features (last 5 updated) below. Graceful fallback when Automaker is offline. Chat prompt remains at bottom and is focused by default.",
+          "filesToModify": [
+            "packages/opencode/src/cli/cmd/tui/routes/home.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Home screen shows board summary when Automaker is running",
+            "Board counts are accurate",
+            "Graceful fallback when Automaker is offline",
+            "Chat prompt is accessible and focused by default",
+            "Refreshes on focus"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1772278884227-wdnzi3gt2"
+        },
+        {
+          "slug": "session-view-polish-for-conversational-style",
+          "title": "Session view polish for conversational style",
+          "description": "Update session/index.tsx to optimize for Ava's conversational, operational style. Add compact MCP tool call display: instead of full JSON input/output, show 'Called: list_features -> 12 features' summaries for Automaker MCP tools. Update session header to show Ava branding. Remove model selector from footer.",
+          "filesToModify": [
+            "packages/opencode/src/cli/cmd/tui/routes/session/index.tsx",
+            "packages/opencode/src/cli/cmd/tui/routes/session/header.tsx",
+            "packages/opencode/src/cli/cmd/tui/routes/session/footer.tsx"
+          ],
+          "acceptanceCriteria": [
+            "MCP tool calls show compact summary lines not raw JSON",
+            "Session header shows Ava branding",
+            "Footer is clean without model selector",
+            "Text responses render cleanly"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772278884227-wdnzi3gt2"
+        }
+      ],
+      "epicId": "feature-1772278884225-vzgkqixwg"
+    },
+    {
+      "slug": "distribution",
+      "title": "Distribution",
+      "description": "Package protoCli for easy installation. Update build pipeline, write install script, update package metadata.",
+      "phases": [
+        {
+          "slug": "install-script-and-package-metadata",
+          "title": "Install script and package metadata",
+          "description": "Update packages/opencode/package.json: name to 'protocli', description, repository, homepage. Write install/ava script based on existing install/opencode: downloads the right binary for the platform, installs to ~/.ava/bin/ava. Update turbo.json and root package references. Add README.md explaining protoCli/Ava CLI, installation, and first-run setup.",
+          "filesToModify": [
+            "packages/opencode/package.json",
+            "install/ava",
+            "packages/opencode/README.md"
+          ],
+          "acceptanceCriteria": [
+            "Install script downloads correct binary",
+            "README explains what protoCli is and how to configure Automaker connection",
+            "bun run build produces ava binary"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772278884228-feninkh88"
+        }
+      ],
+      "epicId": "feature-1772278884227-19y6cylz3"
+    }
+  ],
+  "createdAt": "2026-02-28T11:39:07.507Z",
+  "updatedAt": "2026-02-28T11:41:24.235Z"
+}

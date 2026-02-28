@@ -1,0 +1,12 @@
+{
+  "id": "evt-1772280277564-f9cd2831",
+  "trigger": "feature_success",
+  "severity": "high",
+  "timestamp": "2026-02-28T12:04:37.564Z",
+  "projectPath": "/home/josh/dev/protocli",
+  "projectName": "protocli",
+  "featureId": "feature-1772278884222-7lqdsmi52",
+  "featureName": "TUI branding — logo and color theme",
+  "error": "Feature completed in 774s - auto-verified",
+  "passes": true
+}

@@ -1,0 +1,26 @@
+{
+  "category": "Epic",
+  "description": "# Ava Agent and MCP Wiring\n\nReplace the generic coding agent persona with Ava's operational identity. Configure the Automaker MCP server as the default tool source. Remove coding-specific tools and unused CLI commands.\n\n## Phases\n1. Ava system prompt and agent definition\n2. Default Automaker MCP config and prune unused commands",
+  "title": "[Epic] Ava Agent and MCP Wiring",
+  "status": "backlog",
+  "isEpic": true,
+  "epicColor": "#7C3AED",
+  "branchName": "epic/ava-agent-and-mcp-wiring",
+  "id": "feature-1772278884223-u068sqafl",
+  "descriptionHistory": [
+    {
+      "description": "# Ava Agent and MCP Wiring\n\nReplace the generic coding agent persona with Ava's operational identity. Configure the Automaker MCP server as the default tool source. Remove coding-specific tools and unused CLI commands.\n\n## Phases\n1. Ava system prompt and agent definition\n2. Default Automaker MCP config and prune unused commands",
+      "timestamp": "2026-02-28T11:41:24.223Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.223Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.223Z",
+      "reason": "Feature created"
+    }
+  ]
+}

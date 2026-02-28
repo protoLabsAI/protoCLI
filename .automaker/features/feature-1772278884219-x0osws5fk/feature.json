@@ -1,0 +1,33 @@
+{
+  "category": "Epic",
+  "description": "# Foundation — Fork Identity\n\nRename all opencode identity to ava/protocli. Update binary name, global config/data paths, database filename, CLI scriptName, and all user-facing strings. Creates a clean fork baseline with zero functional changes.\n\n## Phases\n1. Binary, paths, and config dirs\n2. TUI branding — logo and color theme",
+  "title": "[Epic] Foundation — Fork Identity",
+  "status": "done",
+  "isEpic": true,
+  "epicColor": "#4F46E5",
+  "branchName": "epic/foundation-fork-identity",
+  "id": "feature-1772278884219-x0osws5fk",
+  "descriptionHistory": [
+    {
+      "description": "# Foundation — Fork Identity\n\nRename all opencode identity to ava/protocli. Update binary name, global config/data paths, database filename, CLI scriptName, and all user-facing strings. Creates a clean fork baseline with zero functional changes.\n\n## Phases\n1. Binary, paths, and config dirs\n2. TUI branding — logo and color theme",
+      "timestamp": "2026-02-28T11:41:24.220Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.220Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.220Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-02-28T12:04:37.565Z"
+    }
+  ],
+  "featureType": "code",
+  "completedAt": "2026-02-28T12:04:37.565Z"
+}

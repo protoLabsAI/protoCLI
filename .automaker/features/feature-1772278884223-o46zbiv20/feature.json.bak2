@@ -1,0 +1,34 @@
+{
+  "category": "Ava Agent and MCP Wiring",
+  "description": "**Milestone:** Ava Agent and MCP Wiring\n\nReplace PROMPT_ANTHROPIC in src/session/system.ts with Ava's system prompt — she is the protoLabs AI operator for org operations (board management, PR review, agent orchestration, feature planning). Update src/agent/agent.ts: rename 'build' agent to 'ava' (primary, conversational ops), keep 'general' subagent, remove 'plan' agent. The ava agent permission ruleset denies edit/write/apply_patch tools. Set default_agent to 'ava'.\n\n**Files to Modify:**\n- packages/opencode/src/session/system.ts\n- packages/opencode/src/agent/agent.ts\n\n**Acceptance Criteria:**\n- [ ] Ava introduces herself correctly on first message\n- [ ] Agent is named 'ava' in the TUI header\n- [ ] Edit/write tools are not offered to Ava\n- [ ] general subagent still works for research tasks\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Ava system prompt and agent definition",
+  "status": "in_progress",
+  "isEpic": false,
+  "epicId": "feature-1772278884223-u068sqafl",
+  "branchName": "feature/ava-agent-and-mcp-ava-system-prompt",
+  "isFoundation": false,
+  "id": "feature-1772278884223-o46zbiv20",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Ava Agent and MCP Wiring\n\nReplace PROMPT_ANTHROPIC in src/session/system.ts with Ava's system prompt — she is the protoLabs AI operator for org operations (board management, PR review, agent orchestration, feature planning). Update src/agent/agent.ts: rename 'build' agent to 'ava' (primary, conversational ops), keep 'general' subagent, remove 'plan' agent. The ava agent permission ruleset denies edit/write/apply_patch tools. Set default_agent to 'ava'.\n\n**Files to Modify:**\n- packages/opencode/src/session/system.ts\n- packages/opencode/src/agent/agent.ts\n\n**Acceptance Criteria:**\n- [ ] Ava introduces herself correctly on first message\n- [ ] Agent is named 'ava' in the TUI header\n- [ ] Edit/write tools are not offered to Ava\n- [ ] general subagent still works for research tasks\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-02-28T11:41:24.224Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.224Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.224Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T11:55:30.411Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium"
+}

@@ -1,0 +1,26 @@
+{
+  "category": "Epic",
+  "description": "# Distribution\n\nPackage protoCli for easy installation. Update build pipeline, write install script, update package metadata.\n\n## Phases\n1. Install script and package metadata",
+  "title": "[Epic] Distribution",
+  "status": "backlog",
+  "isEpic": true,
+  "epicColor": "#EF4444",
+  "branchName": "epic/distribution",
+  "id": "feature-1772278884227-19y6cylz3",
+  "descriptionHistory": [
+    {
+      "description": "# Distribution\n\nPackage protoCli for easy installation. Update build pipeline, write install script, update package metadata.\n\n## Phases\n1. Install script and package metadata",
+      "timestamp": "2026-02-28T11:41:24.227Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.228Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.228Z",
+      "reason": "Feature created"
+    }
+  ]
+}

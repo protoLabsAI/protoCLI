@@ -1,0 +1,30 @@
+{
+  "category": "Epic",
+  "description": "# Ava Home Screen\n\nReplace the opencode home screen (session history list) with an Ava-native home screen showing live board status from the Automaker API, recent activity, and a prominent chat prompt.\n\n## Phases\n1. Board status panel on home screen\n2. Session view polish for conversational style",
+  "title": "[Epic] Ava Home Screen",
+  "status": "backlog",
+  "isEpic": true,
+  "epicColor": "#EC4899",
+  "branchName": "epic/ava-home-screen",
+  "id": "feature-1772278884225-vzgkqixwg",
+  "descriptionHistory": [
+    {
+      "description": "# Ava Home Screen\n\nReplace the opencode home screen (session history list) with an Ava-native home screen showing live board status from the Automaker API, recent activity, and a prominent chat prompt.\n\n## Phases\n1. Board status panel on home screen\n2. Session view polish for conversational style",
+      "timestamp": "2026-02-28T11:41:24.225Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.225Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.225Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772278884223-u068sqafl"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "category": "Foundation — Fork Identity",
+  "description": "**Milestone:** Foundation — Fork Identity\n\nRename the binary from 'opencode' to 'ava' (packages/opencode/bin/opencode -> bin/ava). Update src/global.ts to use 'ava' for XDG config dir (~/.config/ava/), data dir (~/.local/share/ava/), and database name (ava.db). Update CLI entry in src/index.ts: scriptName('ava'), all yargs command descriptions. Update package.json name to 'protocli' and bin field.\n\n**Files to Modify:**\n- packages/opencode/bin/opencode\n- packages/opencode/src/global.ts\n- packages/opencode/src/index.ts\n- packages/opencode/package.json\n\n**Acceptance Criteria:**\n- [ ] Running ./bin/ava starts the TUI\n- [ ] Config is read from ~/.config/ava/\n- [ ] Data is stored in ~/.local/share/ava/ava.db\n- [ ] CLI help shows 'ava' not 'opencode'\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Binary, paths, and config dirs",
+  "status": "in_progress",
+  "isEpic": false,
+  "epicId": "feature-1772278884219-x0osws5fk",
+  "branchName": "feature/foundation-fork-binary-paths-and",
+  "isFoundation": false,
+  "id": "feature-1772278884221-i4n7dpvzh",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Foundation — Fork Identity\n\nRename the binary from 'opencode' to 'ava' (packages/opencode/bin/opencode -> bin/ava). Update src/global.ts to use 'ava' for XDG config dir (~/.config/ava/), data dir (~/.local/share/ava/), and database name (ava.db). Update CLI entry in src/index.ts: scriptName('ava'), all yargs command descriptions. Update package.json name to 'protocli' and bin field.\n\n**Files to Modify:**\n- packages/opencode/bin/opencode\n- packages/opencode/src/global.ts\n- packages/opencode/src/index.ts\n- packages/opencode/package.json\n\n**Acceptance Criteria:**\n- [ ] Running ./bin/ava starts the TUI\n- [ ] Config is read from ~/.config/ava/\n- [ ] Data is stored in ~/.local/share/ava/ava.db\n- [ ] CLI help shows 'ava' not 'opencode'\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-02-28T11:41:24.221Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.221Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.221Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T11:51:10.940Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "updatedAt": "2026-02-28T11:51:11.015Z",
+  "model": "claude-sonnet-4-6",
+  "costUsd": 1.6214475000000004,
+  "lastSessionId": "880fa1a9-5938-4562-a42f-96e6c28c49e0"
+}

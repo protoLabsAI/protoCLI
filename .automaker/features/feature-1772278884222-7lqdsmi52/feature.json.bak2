@@ -1,0 +1,34 @@
+{
+  "category": "Foundation — Fork Identity",
+  "description": "**Milestone:** Foundation — Fork Identity\n\nReplace the opencode logo in src/cli/logo.ts with protoLabs/Ava branding. Update UI color scheme in src/cli/ui.ts. Replace all user-facing strings referencing 'opencode' with 'ava' or 'protoCli'. Update the welcome message and first-run dialog.\n\n**Files to Modify:**\n- packages/opencode/src/cli/logo.ts\n- packages/opencode/src/cli/ui.ts\n- packages/opencode/src/cli/cmd/tui/routes/home.tsx\n\n**Acceptance Criteria:**\n- [ ] TUI displays ava/protoLabs logo on startup\n- [ ] No 'opencode' text visible in the TUI\n- [ ] Color scheme reflects protoLabs brand\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "TUI branding — logo and color theme",
+  "status": "in_progress",
+  "isEpic": false,
+  "epicId": "feature-1772278884219-x0osws5fk",
+  "branchName": "feature/foundation-fork-tui-branding-logo",
+  "isFoundation": false,
+  "id": "feature-1772278884222-7lqdsmi52",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Foundation — Fork Identity\n\nReplace the opencode logo in src/cli/logo.ts with protoLabs/Ava branding. Update UI color scheme in src/cli/ui.ts. Replace all user-facing strings referencing 'opencode' with 'ava' or 'protoCli'. Update the welcome message and first-run dialog.\n\n**Files to Modify:**\n- packages/opencode/src/cli/logo.ts\n- packages/opencode/src/cli/ui.ts\n- packages/opencode/src/cli/cmd/tui/routes/home.tsx\n\n**Acceptance Criteria:**\n- [ ] TUI displays ava/protoLabs logo on startup\n- [ ] No 'opencode' text visible in the TUI\n- [ ] Color scheme reflects protoLabs brand\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-02-28T11:41:24.222Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-28T11:41:24.222Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T11:41:24.222Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T11:51:43.161Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium"
+}

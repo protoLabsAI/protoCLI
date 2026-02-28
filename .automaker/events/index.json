@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "id": "evt-1772280277564-f9cd2831",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T12:04:37.564Z",
+      "featureName": "TUI branding — logo and color theme",
+      "featureId": "feature-1772278884222-7lqdsmi52"
+    },
+    {
+      "id": "evt-1772280276509-37206abf",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T12:04:36.509Z",
+      "featureName": "Board status panel on home screen",
+      "featureId": "feature-1772278884226-3550bd3ly"
+    },
+    {
+      "id": "evt-1772279957174-7a20ed5b",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T11:59:17.174Z",
+      "featureName": "Ava system prompt and agent definition",
+      "featureId": "feature-1772278884223-o46zbiv20"
+    },
+    {
+      "id": "evt-1772279762992-f0959768",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T11:56:02.992Z",
+      "featureName": "Binary, paths, and config dirs",
+      "featureId": "feature-1772278884221-i4n7dpvzh"
+    },
+    {
+      "id": "evt-1772278884237-d0e5986e",
+      "trigger": "project_scaffolded",
+      "severity": "low",
+      "timestamp": "2026-02-28T11:41:24.237Z"
+    }
+  ]
+}

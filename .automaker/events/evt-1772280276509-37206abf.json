@@ -1,0 +1,12 @@
+{
+  "id": "evt-1772280276509-37206abf",
+  "trigger": "feature_success",
+  "severity": "high",
+  "timestamp": "2026-02-28T12:04:36.509Z",
+  "projectPath": "/home/josh/dev/protocli",
+  "projectName": "protocli",
+  "featureId": "feature-1772278884226-3550bd3ly",
+  "featureName": "Board status panel on home screen",
+  "error": "Feature completed in 346s - auto-verified",
+  "passes": true
+}

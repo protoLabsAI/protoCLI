@@ -1,0 +1,12 @@
+{
+  "id": "evt-1772279957174-7a20ed5b",
+  "trigger": "feature_success",
+  "severity": "high",
+  "timestamp": "2026-02-28T11:59:17.174Z",
+  "projectPath": "/home/josh/dev/protocli",
+  "projectName": "protocli",
+  "featureId": "feature-1772278884223-o46zbiv20",
+  "featureName": "Ava system prompt and agent definition",
+  "error": "Feature completed in 227s - auto-verified",
+  "passes": true
+}

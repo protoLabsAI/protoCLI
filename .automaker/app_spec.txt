@@ -1,0 +1,103 @@
+<project_specification>
+  <project_name>protocli</project_name>
+
+  <overview>
+    This project was cloned from https://github.com/proto-labs-ai/protoCli.
+    The AI agent will analyze the project structure.
+  </overview>
+
+  <technology_stack>
+    <!-- The AI agent will fill this in after analyzing your project -->
+  </technology_stack>
+
+  <core_capabilities>
+    <!-- List core features and capabilities -->
+  </core_capabilities>
+
+  <implemented_features>
+    <feature>
+      <name>Binary, paths, and config dirs</name>
+      <description>**Milestone:** Foundation — Fork Identity
+
+Rename the binary from &apos;opencode&apos; to &apos;ava&apos; (packages/opencode/bin/opencode -&gt; bin/ava). Update src/global.ts to use &apos;ava&apos; for XDG config dir (~/.config/ava/), data dir (~/.local/share/ava/), and database name (ava.db). Update CLI entry in src/index.ts: scriptName(&apos;ava&apos;), all yargs command descriptions. Update package.json name to &apos;protocli&apos; and bin field.
+
+**Files to Modify:**
+- packages/opencode/bin/opencode
+- packages/opencode/src/global.ts
+- packages/opencode/src/index.ts
+- packages/opencode/package.json
+
+**Acceptance Criteria:**
+- [ ] Running ./bin/ava starts the TUI
+- [ ] Config is read from ~/.config/ava/
+- [ ] Data is stored in ~/.local/share/ava/ava.db
+- [ ] CLI help shows &apos;ava&apos; not &apos;opencode&apos;
+
+**Complexity:** small
+
+**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.</description>
+    </feature>
+    <feature>
+      <name>Ava system prompt and agent definition</name>
+      <description>**Milestone:** Ava Agent and MCP Wiring
+
+Replace PROMPT_ANTHROPIC in src/session/system.ts with Ava&apos;s system prompt — she is the protoLabs AI operator for org operations (board management, PR review, agent orchestration, feature planning). Update src/agent/agent.ts: rename &apos;build&apos; agent to &apos;ava&apos; (primary, conversational ops), keep &apos;general&apos; subagent, remove &apos;plan&apos; agent. The ava agent permission ruleset denies edit/write/apply_patch tools. Set default_agent to &apos;ava&apos;.
+
+**Files to Modify:**
+- packages/opencode/src/session/system.ts
+- packages/opencode/src/agent/agent.ts
+
+**Acceptance Criteria:**
+- [ ] Ava introduces herself correctly on first message
+- [ ] Agent is named &apos;ava&apos; in the TUI header
+- [ ] Edit/write tools are not offered to Ava
+- [ ] general subagent still works for research tasks
+
+**Complexity:** medium
+
+**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.</description>
+    </feature>
+    <feature>
+      <name>Board status panel on home screen</name>
+      <description>**Milestone:** Ava Home Screen
+
+Modify src/cli/cmd/tui/routes/home.tsx to replace the session history list with a board status panel. Fetch board summary from Automaker API (localhost:3008/api/board/summary): total, backlog, in-progress, review, blocked counts. Display as a clean summary table. Show recent features (last 5 updated) below. Graceful fallback when Automaker is offline. Chat prompt remains at bottom and is focused by default.
+
+**Files to Modify:**
+- packages/opencode/src/cli/cmd/tui/routes/home.tsx
+
+**Acceptance Criteria:**
+- [ ] Home screen shows board summary when Automaker is running
+- [ ] Board counts are accurate
+- [ ] Graceful fallback when Automaker is offline
+- [ ] Chat prompt is accessible and focused by default
+- [ ] Refreshes on focus
+
+**Complexity:** large
+
+**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.</description>
+    </feature>
+    <feature>
+      <name>TUI branding — logo and color theme</name>
+      <description>Replace the opencode logo in packages/opencode/src/cli/logo.ts with protoLabs/Ava branding. Update UI color scheme in packages/opencode/src/cli/ui.ts. Replace all user-facing strings referencing &apos;opencode&apos; with &apos;ava&apos; or &apos;protoCli&apos;. Update the welcome message and first-run dialog.
+
+IMPORTANT: Full design spec is in .automaker/context/ava-brand.md — read that file first before making any changes. It contains:
+- Exact replacement logo arrays for &quot;ava | cli&quot; using the existing _^~ glyph system
+- Exact ANSI color codes (violet-400 #a78bfa as primary, replacing cyan)
+- Complete Style object with updated TEXT_HIGHLIGHT/TEXT_INFO colors
+- Brand voice copy for welcome message and first-run dialog
+- String replacement table (opencode→ava, OpenCode→protoCli, etc.)
+- Scope discipline: only touch logo.ts, ui.ts, and user-facing strings
+
+Files to modify:
+- packages/opencode/src/cli/logo.ts
+- packages/opencode/src/cli/ui.ts
+- packages/opencode/src/cli/cmd/tui/routes/home.tsx
+
+Acceptance criteria:
+- TUI displays ava/protoLabs logo on startup (run bun run packages/opencode/src/index.ts to verify visually)
+- No &apos;opencode&apos; text visible in the TUI
+- Color scheme reflects protoLabs brand (violet not cyan)</description>
+    </feature>
+  </implemented_features>
+</project_specification>
