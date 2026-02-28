@@ -2,7 +2,7 @@
   "category": "Ava Agent and MCP Wiring",
   "description": "**Milestone:** Ava Agent and MCP Wiring\n\nCreate a shipped default config file (packages/opencode/ava.jsonc) that auto-configures the Automaker MCP server. Wire this as a built-in default in src/config/config.ts so it merges automatically without user setup. Remove unused CLI commands: github, pr, stats, export, import. Add an 'ava board' shortcut command.\n\n**Files to Modify:**\n- packages/opencode/src/config/config.ts\n- packages/opencode/src/index.ts\n- packages/opencode/ava.jsonc\n\n**Acceptance Criteria:**\n- [ ] Starting ava with a running Automaker server gives Ava access to all mcp__automaker__* tools\n- [ ] ava board command works\n- [ ] Removed commands are gone from help output\n- [ ] MCP connection status visible in TUI\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Default Automaker MCP config and prune unused commands",
-  "status": "verified",
+  "status": "in_progress",
   "isEpic": false,
   "epicId": "feature-1772278884223-u068sqafl",
   "branchName": "feature/ava-agent-and-mcp-default-automaker",
@@ -27,39 +27,11 @@
       "from": "backlog",
       "to": "in_progress",
       "timestamp": "2026-02-28T12:04:14.242Z"
-    },
-    {
-      "from": "in_progress",
-      "to": "backlog",
-      "timestamp": "2026-02-28T12:07:43.765Z"
-    },
-    {
-      "from": "backlog",
-      "to": "blocked",
-      "timestamp": "2026-02-28T12:11:05.840Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772278884222-7lqdsmi52"
   ],
-  "complexity": "medium",
-  "updatedAt": "2026-02-28T12:15:34.684Z",
-  "model": "claude-sonnet-4-6",
-  "lastTraceId": "86778539-7abb-4812-81dd-bcf4930f6b26",
-  "executionHistory": [
-    {
-      "id": "42ae4537-55b7-49c2-ac62-582fdd947fbb",
-      "startedAt": "2026-02-28T12:04:14.403Z",
-      "completedAt": "2026-02-28T12:11:04.326Z",
-      "durationMs": 409923,
-      "costUsd": 0,
-      "model": "claude-sonnet-4-6",
-      "success": false,
-      "error": "Operation was cancelled",
-      "trigger": "manual"
-    }
-  ],
-  "costUsd": 1.56018025,
-  "lastSessionId": "6c63ea1f-4849-485e-b45a-95a7573edd22"
+  "complexity": "medium"
 }

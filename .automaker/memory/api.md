@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 5
+  referenced: 3
+  successfulFeatures: 3
 ---
 # api
 
@@ -20,3 +20,8 @@ usageStats:
 - **Situation:** Type definitions expect camelCase fields; if Automaker API uses snake_case, properties silently become undefined
 - **Root cause:** Rapid prototyping assumed field names match TypeScript types; no schema validation or parsing
 - **How to avoid:** Fewer lines of code initially but fragile to API changes; type safety is false (TS types don't validate runtime shape)
+
+#### [Pattern] MCP tool naming convention is mcp__[server]__[tool_name] (e.g., mcp__automaker__list_features). Extraction requires regex-based parsing of server and tool name. (2026-02-28)
+- **Problem solved:** Need to display human-readable tool names ('list_features') from the fully-qualified MCP identifier.
+- **Why this works:** MCP server name is part of the identifier to distinguish tools from different servers. Parsing extracts the meaningful tool name for display.
+- **Trade-offs:** Simpler state vs slightly more parsing logic. Pattern is established in ava.jsonc (Automaker MCP server config).

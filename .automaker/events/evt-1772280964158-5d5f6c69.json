@@ -1,0 +1,12 @@
+{
+  "id": "evt-1772280964158-5d5f6c69",
+  "trigger": "feature_success",
+  "severity": "high",
+  "timestamp": "2026-02-28T12:16:04.158Z",
+  "projectPath": "/home/josh/dev/protocli",
+  "projectName": "protocli",
+  "featureId": "feature-1772278884224-cq3xgjlcz",
+  "featureName": "Default Automaker MCP config and prune unused commands",
+  "error": "Feature completed in 299s - auto-verified",
+  "passes": true
+}

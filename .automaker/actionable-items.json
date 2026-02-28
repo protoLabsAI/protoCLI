@@ -18,52 +18,103 @@
       "category": "notifications"
     },
     {
-      "id": "f2773a3e-2435-48f2-b890-c6c6071f2b4e",
+      "id": "8392ea8a-403e-4338-8583-1c0b71c9d075",
       "actionType": "notification",
       "priority": "low",
       "title": "Feature Verified",
-      "message": "\"Ava system prompt and agent definition\" has been verified and is complete.",
-      "createdAt": "2026-02-28T11:58:46.638Z",
+      "message": "\"Default Automaker MCP config and prune unused commands\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:15:35.677Z",
       "status": "pending",
       "actionPayload": {
-        "featureId": "feature-1772278884223-o46zbiv20",
-        "notificationId": "a4860b36-498b-473d-bad8-fefe10c9f4af"
+        "featureId": "feature-1772278884224-cq3xgjlcz",
+        "notificationId": "bfb65ce0-ab26-432b-89c4-b30f28764323"
       },
       "projectPath": "/home/josh/dev/protocli",
       "read": false,
       "category": "notifications"
     },
     {
-      "id": "c2e686eb-ddfd-410d-82f1-f0c025ae1249",
+      "id": "c5b59055-3887-43bc-8544-c391798779f6",
       "actionType": "notification",
       "priority": "low",
       "title": "Feature Verified",
-      "message": "\"Board status panel on home screen\" has been verified and is complete.",
-      "createdAt": "2026-02-28T12:04:09.394Z",
+      "message": "\"Session view polish for conversational style\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:17:31.616Z",
       "status": "pending",
       "actionPayload": {
-        "featureId": "feature-1772278884226-3550bd3ly",
-        "notificationId": "a7b123e5-d556-4008-be0a-7aa838c29dfd"
+        "featureId": "feature-1772278884227-wdnzi3gt2",
+        "notificationId": "aa2cffa9-9ded-4355-a48c-54be7bec4af2"
       },
       "projectPath": "/home/josh/dev/protocli",
       "read": false,
       "category": "notifications"
     },
     {
-      "id": "bf00de6f-fc18-4892-b3cf-3b50627ac554",
+      "id": "0c603670-1d62-4959-987b-8c54ad07dcf2",
       "actionType": "notification",
       "priority": "low",
       "title": "Feature Verified",
-      "message": "\"TUI branding — logo and color theme\" has been verified and is complete.",
-      "createdAt": "2026-02-28T12:04:12.559Z",
+      "message": "\"Install script and package metadata\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:22:57.410Z",
       "status": "pending",
       "actionPayload": {
-        "featureId": "feature-1772278884222-7lqdsmi52",
-        "notificationId": "3bbae4b0-0b83-4d99-960c-c69dfe76c9d4"
+        "featureId": "feature-1772278884228-feninkh88",
+        "notificationId": "cf4b44b5-c282-4a11-be3f-b2c565dc61d7"
       },
       "projectPath": "/home/josh/dev/protocli",
       "read": false,
       "category": "notifications"
+    },
+    {
+      "id": "c395618c-bb45-4bca-a17c-62727a6c7a3c",
+      "actionType": "hitl_form",
+      "priority": "high",
+      "title": "Agent blocked: Default Automaker MCP config and prune unused commands",
+      "message": "2 step form from lead_engineer",
+      "createdAt": "2026-02-28T12:32:01.651Z",
+      "expiresAt": "2026-02-28T13:11:06.396Z",
+      "status": "pending",
+      "actionPayload": {
+        "formId": "hitl-09d7c618",
+        "featureId": "feature-1772278884224-cq3xgjlcz"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "forms"
+    },
+    {
+      "id": "2224d776-fb91-4242-8111-0a11baf65e94",
+      "actionType": "hitl_form",
+      "priority": "high",
+      "title": "Agent blocked: Default Automaker MCP config and prune unused commands",
+      "message": "2 step form from lead_engineer",
+      "createdAt": "2026-02-28T12:41:06.397Z",
+      "expiresAt": "2026-02-28T13:11:06.396Z",
+      "status": "pending",
+      "actionPayload": {
+        "formId": "hitl-09d7c618",
+        "featureId": "feature-1772278884224-cq3xgjlcz"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "forms"
+    },
+    {
+      "id": "331e6363-f9a7-49fd-b365-a32b4639a12a",
+      "actionType": "hitl_form",
+      "priority": "high",
+      "title": "Agent blocked: Default Automaker MCP config and prune unused commands",
+      "message": "2 step form from lead_engineer",
+      "createdAt": "2026-02-28T12:48:57.162Z",
+      "expiresAt": "2026-02-28T13:11:06.396Z",
+      "status": "pending",
+      "actionPayload": {
+        "formId": "hitl-09d7c618",
+        "featureId": "feature-1772278884224-cq3xgjlcz"
+      },
+      "projectPath": "/home/josh/dev/protocli",
+      "read": false,
+      "category": "forms"
     }
   ]
 }

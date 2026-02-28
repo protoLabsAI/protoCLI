@@ -2,7 +2,7 @@
   "category": "Ava Home Screen",
   "description": "**Milestone:** Ava Home Screen\n\nUpdate session/index.tsx to optimize for Ava's conversational, operational style. Add compact MCP tool call display: instead of full JSON input/output, show 'Called: list_features -> 12 features' summaries for Automaker MCP tools. Update session header to show Ava branding. Remove model selector from footer.\n\n**Files to Modify:**\n- packages/opencode/src/cli/cmd/tui/routes/session/index.tsx\n- packages/opencode/src/cli/cmd/tui/routes/session/header.tsx\n- packages/opencode/src/cli/cmd/tui/routes/session/footer.tsx\n\n**Acceptance Criteria:**\n- [ ] MCP tool calls show compact summary lines not raw JSON\n- [ ] Session header shows Ava branding\n- [ ] Footer is clean without model selector\n- [ ] Text responses render cleanly\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Session view polish for conversational style",
-  "status": "backlog",
+  "status": "verified",
   "isEpic": false,
   "epicId": "feature-1772278884225-vzgkqixwg",
   "branchName": "feature/ava-home-screen-session-view-polish",
@@ -22,10 +22,34 @@
       "to": "backlog",
       "timestamp": "2026-02-28T11:41:24.227Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T12:04:46.464Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772278884222-7lqdsmi52"
-  ]
+  ],
+  "complexity": "medium",
+  "updatedAt": "2026-02-28T12:17:31.379Z",
+  "model": "claude-sonnet-4-6",
+  "lastTraceId": "1fd42cb4-cf39-408c-8bea-b6f323fb069c",
+  "executionHistory": [
+    {
+      "id": "58a52b21-a62e-4899-bb22-4e69b1effdb4",
+      "startedAt": "2026-02-28T12:04:46.788Z",
+      "completedAt": "2026-02-28T12:11:04.326Z",
+      "durationMs": 377538,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 2.150049250000001,
+  "lastSessionId": "28331d05-5f4a-49cb-893c-db21f318a207"
 }

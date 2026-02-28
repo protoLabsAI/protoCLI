@@ -2,6 +2,36 @@
   "version": 1,
   "events": [
     {
+      "id": "evt-1772281409601-ae138e46",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T12:23:29.601Z",
+      "featureName": "Install script and package metadata",
+      "featureId": "feature-1772278884228-feninkh88"
+    },
+    {
+      "id": "evt-1772281387757-ec4e376a",
+      "trigger": "auto_mode_complete",
+      "severity": "high",
+      "timestamp": "2026-02-28T12:23:07.757Z"
+    },
+    {
+      "id": "evt-1772281076334-a94c87a4",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T12:17:56.334Z",
+      "featureName": "Session view polish for conversational style",
+      "featureId": "feature-1772278884227-wdnzi3gt2"
+    },
+    {
+      "id": "evt-1772280964158-5d5f6c69",
+      "trigger": "feature_success",
+      "severity": "high",
+      "timestamp": "2026-02-28T12:16:04.158Z",
+      "featureName": "Default Automaker MCP config and prune unused commands",
+      "featureId": "feature-1772278884224-cq3xgjlcz"
+    },
+    {
       "id": "evt-1772280277564-f9cd2831",
       "trigger": "feature_success",
       "severity": "high",

@@ -1,7 +1,8 @@
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
+- The default branch in this repo is `master`. This is NOT the protoMaker/ava project — do NOT use `dev`.
+- Local `main` ref does not exist; use `master` or `origin/master` for diffs and PRs.
+- All feature branches should target `master` (e.g. `git checkout -b feature/my-feature master`).
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
 
 ## Style Guide

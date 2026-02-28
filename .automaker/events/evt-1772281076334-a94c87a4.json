@@ -1,0 +1,12 @@
+{
+  "id": "evt-1772281076334-a94c87a4",
+  "trigger": "feature_success",
+  "severity": "high",
+  "timestamp": "2026-02-28T12:17:56.334Z",
+  "projectPath": "/home/josh/dev/protocli",
+  "projectName": "protocli",
+  "featureId": "feature-1772278884227-wdnzi3gt2",
+  "featureName": "Session view polish for conversational style",
+  "error": "Feature completed in 411s - auto-verified",
+  "passes": true
+}

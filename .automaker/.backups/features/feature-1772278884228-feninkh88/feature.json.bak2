@@ -2,7 +2,7 @@
   "category": "Distribution",
   "description": "**Milestone:** Distribution\n\nUpdate packages/opencode/package.json: name to 'protocli', description, repository, homepage. Write install/ava script based on existing install/opencode: downloads the right binary for the platform, installs to ~/.ava/bin/ava. Update turbo.json and root package references. Add README.md explaining protoCli/Ava CLI, installation, and first-run setup.\n\n**Files to Modify:**\n- packages/opencode/package.json\n- install/ava\n- packages/opencode/README.md\n\n**Acceptance Criteria:**\n- [ ] Install script downloads correct binary\n- [ ] README explains what protoCli is and how to configure Automaker connection\n- [ ] bun run build produces ava binary\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Install script and package metadata",
-  "status": "done",
+  "status": "verified",
   "isEpic": false,
   "epicId": "feature-1772278884227-19y6cylz3",
   "branchName": "feature/distribution-install-script-and",
@@ -47,16 +47,6 @@
       "model": "claude-sonnet-4-6",
       "success": false,
       "error": "Agent loop detected (Read:be8d967e). Aborting for retry with recovery guidance.",
-      "trigger": "manual"
-    },
-    {
-      "id": "edeb31bc-4817-4baf-b8c7-ddcda86bf39c",
-      "startedAt": "2026-02-28T12:16:10.574Z",
-      "completedAt": "2026-02-28T12:22:57.438Z",
-      "durationMs": 406864,
-      "costUsd": 1.917840750000001,
-      "model": "claude-sonnet-4-6",
-      "success": true,
       "trigger": "manual"
     }
   ],

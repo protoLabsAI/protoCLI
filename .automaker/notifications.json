@@ -44,6 +44,39 @@
       "dismissed": false,
       "featureId": "feature-1772278884222-7lqdsmi52",
       "projectPath": "/home/josh/dev/protocli"
+    },
+    {
+      "id": "bfb65ce0-ab26-432b-89c4-b30f28764323",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"Default Automaker MCP config and prune unused commands\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:15:35.650Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884224-cq3xgjlcz",
+      "projectPath": "/home/josh/dev/protocli"
+    },
+    {
+      "id": "aa2cffa9-9ded-4355-a48c-54be7bec4af2",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"Session view polish for conversational style\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:17:31.591Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884227-wdnzi3gt2",
+      "projectPath": "/home/josh/dev/protocli"
+    },
+    {
+      "id": "cf4b44b5-c282-4a11-be3f-b2c565dc61d7",
+      "type": "feature_verified",
+      "title": "Feature Verified",
+      "message": "\"Install script and package metadata\" has been verified and is complete.",
+      "createdAt": "2026-02-28T12:22:57.398Z",
+      "read": false,
+      "dismissed": false,
+      "featureId": "feature-1772278884228-feninkh88",
+      "projectPath": "/home/josh/dev/protocli"
     }
   ]
 }

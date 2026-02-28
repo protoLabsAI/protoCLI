@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "autoLoopWasRunning": true,
+  "maxConcurrency": 2,
+  "projectPath": "/home/josh/dev/protocli",
+  "branchName": null,
+  "runningFeatureIds": [
+    "feature-1772278884224-cq3xgjlcz",
+    "feature-1772278884227-wdnzi3gt2"
+  ],
+  "savedAt": "2026-02-28T12:10:03.951Z"
+}

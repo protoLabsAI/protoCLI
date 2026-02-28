@@ -80,3 +80,42 @@ usageStats:
 - **Situation:** Multiple agents working on same codebase with no coordination mechanism for file access
 - **Root cause:** Defensive re-reading prevents losing changes from other agents and maintains code integrity during concurrent development
 - **How to avoid:** Gained data safety and consistency, cost is additional file I/O and longer implementation time
+
+#### [Pattern] Graceful optional builtin config file loaded via loadFile() that returns {} on ENOENT, allowing compiled binaries to function without source files present (2026-02-28)
+- **Problem solved:** ava.jsonc path won't exist in compiled Bun binary since import.meta.dirname points to executable directory, not source tree
+- **Why this works:** Enables distributed binaries to work without requiring builtin config file presence while providing dev-time defaults; config.ts already has graceful ENOENT handling
+- **Trade-offs:** Silent failure if path is wrong becomes harder to debug; cleaner deployment without extra files
+
+### MCP server configured as 'type': 'remote' at http://localhost:3008/mcp instead of subprocess-managed approach (2026-02-28)
+- **Context:** Automaker MCP integrated as external service; must already be running for CLI to use it
+- **Why:** Separates concern of MCP lifecycle management from CLI; Automaker is development environment tool with independent deployment
+- **Rejected:** Spawn subprocess (requires process management, version pinning, environment setup complexity) or embedded MCP (tight coupling)
+- **Trade-offs:** Simpler CLI code vs hard runtime dependency on external service being available; clearer error behavior when service is down
+- **Breaking if changed:** If MCP moves to different URL or hostname, constant in board.ts and ava.jsonc both need updates; no automatic service discovery
+
+#### [Pattern] Config layering with ava.jsonc loaded as 'lowest-priority base config' allowing user configs to override defaults (2026-02-28)
+- **Problem solved:** Default MCP server config needs to be available but users should be able to customize or replace it
+- **Why this works:** Standard config precedence pattern (builtin < user) enables both sensible defaults and customization; prevents lock-in to hardcoded values
+- **Trade-offs:** Requires documented config loading order; adds mental model complexity vs single config source
+
+#### [Gotcha] ToolPart Switch statement Match conditions are evaluated in order. MCP tool check must come BEFORE GenericTool fallback, not after. (2026-02-28)
+- **Situation:** Adding McpTool component to handle mcp__[server]__[tool_name] format requires specific placement in conditional logic.
+- **Root cause:** First matching condition wins in Switch statements. If GenericTool matches all strings (implicit catch-all), MCP tools never reach McpTool handler.
+- **How to avoid:** None if placed correctly. Mistakes silently fail — tools appear generic instead of compact.
+
+### Separate binary name ('ava') from package name ('protocli') by using binary name in user-facing paths and infrastructure (2026-02-28)
+- **Context:** Package.json name is 'protocli' but CLI binary is 'ava', applied throughout: build output, install paths (~/.ava/bin), user-agent headers
+- **Why:** Allows CLI tool name to evolve independently from workspace package name. Package name is infrastructure/release artifact identifier, binary name is user-facing tool identity. Decouples naming for flexibility in multi-tool distribution
+- **Rejected:** Single unified name throughout (would make CLI rename require package rename). Install to ~/.protocli (would confuse package vs tool naming)
+- **Trade-offs:** Requires careful coordination across build.ts, install scripts, and metadata. More flexible but adds naming conceptual overhead. Build archive uses package name (protocli-*.tar.gz) but extracts binary name (ava) - users see protocli releases but run 'ava' command
+- **Breaking if changed:** Changing binary back to 'opencode' breaks: build.ts outfile, install script binary extraction path, user-agent identification, PATH setup. Users who ran 'ava' command would lose it
+
+#### [Pattern] Use install/<binary-name> directory structure instead of flat install files to support multiple installers from one repo (2026-02-28)
+- **Problem solved:** Restructured install file to install/ava directory, preserving old install logic as install/opencode
+- **Why this works:** Enables multiple distribution channels for different tools (ava, opencode) in the same monorepo. Each tool can have its own installer with custom logic, flags, and installation paths. Scales to adding more tools without cluttering root
+- **Trade-offs:** Requires convention documentation (install/<name> pattern not self-obvious). Git tracks both install/ava and install/opencode as separate files, both must be maintained. Clearer discoverability vs more files to manage
+
+#### [Gotcha] Install script hardcodes GitHub release repo (anomalyco/protocli) - release channel becomes part of binary installation logic (2026-02-28)
+- **Situation:** install/ava script has hardcoded APP=protocli repo reference for downloading releases
+- **Root cause:** Simplest approach - binary knows where to get updates. But creates tight coupling between installation and release infrastructure
+- **How to avoid:** Simple installation vs release location locked into binary. Can't easily redirect releases or use different channels without rebuilding

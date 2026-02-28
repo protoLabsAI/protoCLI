@@ -2,7 +2,7 @@
   "category": "Distribution",
   "description": "**Milestone:** Distribution\n\nUpdate packages/opencode/package.json: name to 'protocli', description, repository, homepage. Write install/ava script based on existing install/opencode: downloads the right binary for the platform, installs to ~/.ava/bin/ava. Update turbo.json and root package references. Add README.md explaining protoCli/Ava CLI, installation, and first-run setup.\n\n**Files to Modify:**\n- packages/opencode/package.json\n- install/ava\n- packages/opencode/README.md\n\n**Acceptance Criteria:**\n- [ ] Install script downloads correct binary\n- [ ] README explains what protoCli is and how to configure Automaker connection\n- [ ] bun run build produces ava binary\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Install script and package metadata",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772278884227-19y6cylz3",
   "branchName": "feature/distribution-install-script-and",
@@ -22,10 +22,45 @@
       "to": "backlog",
       "timestamp": "2026-02-28T11:41:24.228Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T12:15:37.181Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772278884222-7lqdsmi52"
-  ]
+  ],
+  "complexity": "medium",
+  "updatedAt": "2026-02-28T12:22:56.103Z",
+  "model": "claude-sonnet-4-6",
+  "lastTraceId": "84cc7fe1-e723-4392-a894-acada41a51da",
+  "executionHistory": [
+    {
+      "id": "c6c13913-3310-4e7b-9e64-ee83bac93e06",
+      "startedAt": "2026-02-28T12:15:37.238Z",
+      "completedAt": "2026-02-28T12:16:04.273Z",
+      "durationMs": 27035,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Agent loop detected (Read:be8d967e). Aborting for retry with recovery guidance.",
+      "trigger": "manual"
+    },
+    {
+      "id": "edeb31bc-4817-4baf-b8c7-ddcda86bf39c",
+      "startedAt": "2026-02-28T12:16:10.574Z",
+      "completedAt": "2026-02-28T12:22:57.438Z",
+      "durationMs": 406864,
+      "costUsd": 1.917840750000001,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 1.917840750000001,
+  "lastSessionId": "e968bf89-dec7-433d-9c19-3e1e0df74598",
+  "summary": "## Summary: Milestone: Distribution\n\n### Changes Implemented\n- **`packages/opencode/package.json`**: Added `description`, `repository`, and `homepage` fields. Name was already `protocli`, bin was already `{\"ava\": \"./bin/ava\"}`.\n- **`install/ava`**: Created new install script based on existing `install` (now moved to `install/opencode`). The ava installer:\n  - Downloads platform-specific `protocli-<target>.tar.gz/.zip` from GitHub releases at `anomalyco/protocli`\n  - Installs the `ava` binary to `~/.ava/bin/ava`\n  - Adds `~/.ava/bin` to shell `$PATH`\n  - Supports `--version`, `--binary`, and `--no-modify-path` flags\n- **`install/opencode`**: The existing `install` file was moved here (restructured from flat file to directory) to match the expected `install/<name>` layout described in the feature.\n- **`packages/opencode/README.md`**: Rewrote to explain protoCli/Ava CLI, installation, Automaker connection configuration, and building from source.\n- **`turbo.json`**: Updated `opencode#test` task key to `protocli#test`.\n- **`package.json`** (root): Updated `name` from `opencode` to `protocli`, updated `repository.url` to point to `anomalyco/protocli`.\n- **`packages/opencode/script/build.ts`**: Updated `outfile` from `bin/opencode` to `bin/ava` and user-agent from `opencode/...` to `ava/...` so `bun run build` produces the `ava` binary.\n\n### Files Modified\n- `packages/opencode/package.json` — added description, repository, homepage\n- `install/ava` — created (new file)\n- `install/opencode` — renamed from `install` (existing installer preserved)\n- `packages/opencode/README.md` — full rewrite\n- `turbo.json` — task key updated\n- `package.json` (root) — name and repository updated\n- `packages/opencode/script/build.ts` — outfile/user-agent updated to `ava`\n\n### Risks/Blockers Encountered\n- **`install` was a file, not a directory**: The feature referenced `install/ava` and `install/opencode` as a directory structure, but the repo only had a single `install` file. Resolved by moving `install` → `install/opencode` and creating `install/ava`.\n- **`bun` not available**: The environment does not have `bun` installed, so the full build (`bun run build -- --single`) could not be run for verification. Bash syntax was verified with `bash -n` and JSON files were validated with `node -e JSON.parse(...)`.\n\n### Learnings\n- Build output file path is controlled in `packages/opencode/script/build.ts` via the `outfile` property — changing `opencode` → `ava` there satisfies the \"bun run build produces ava binary\" acceptance criterion.\n- The `pkg.name` from `packages/opencode/package.json` is used in the build script to name the archive (`protocli-linux-x64.tar.gz` etc.), so the install script uses `protocli-$target$archive_ext` as the filename but extracts `ava` from within it.\n\n### Notes for Developer\n- The `install/ava` script expects the GitHub release archive to contain a binary named `ava` at the root. This is consistent with the build.ts change (outfile `bin/ava`) and the archive creation step (`tar/zip` from `dist/${name}/bin`).\n- When setting up real releases, ensure `GH_REPO` is set to `anomalyco/protocli` in CI and that `Script.release` is configured appropriately.\n\n### Verification Status\n- Playwright verification was not applicable for this feature — it is a distribution/packaging feature with no browser UI or server endpoint to test. Verification was done via:\n  - `bash -n install/ava` — bash syntax check passed\n  - `node -e JSON.parse(...)` — all JSON files valid\n  - Manual review of key field values (INSTALL_DIR, APP, filename, outfile)"
 }

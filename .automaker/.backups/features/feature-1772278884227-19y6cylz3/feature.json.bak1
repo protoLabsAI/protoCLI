@@ -22,5 +22,9 @@
       "timestamp": "2026-02-28T11:41:24.228Z",
       "reason": "Feature created"
     }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772278884225-vzgkqixwg"
   ]
 }

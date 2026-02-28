@@ -33,5 +33,23 @@
   "dependencies": [
     "feature-1772278884222-7lqdsmi52"
   ],
-  "complexity": "medium"
+  "complexity": "medium",
+  "updatedAt": "2026-02-28T12:11:05.398Z",
+  "model": "claude-sonnet-4-6",
+  "lastTraceId": "1fd42cb4-cf39-408c-8bea-b6f323fb069c",
+  "executionHistory": [
+    {
+      "id": "58a52b21-a62e-4899-bb22-4e69b1effdb4",
+      "startedAt": "2026-02-28T12:04:46.788Z",
+      "completedAt": "2026-02-28T12:11:04.326Z",
+      "durationMs": 377538,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 2.150049250000001,
+  "lastSessionId": "28331d05-5f4a-49cb-893c-db21f318a207"
 }
