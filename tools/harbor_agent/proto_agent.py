@@ -122,26 +122,9 @@ class ProtoAgent(BaseInstalledAgent):
                 "chmod +x /usr/local/bin/br && br --version || echo 'beads_rust install failed (non-fatal)'"
             ),
         )
-        # Install LSP servers for languages common in terminal-bench tasks.
-        # pyright covers Python; clangd covers C/C++; typescript-language-server covers JS/TS.
-        # Rust-analyzer and others are skipped — they require the full toolchain which tasks
-        # install themselves if needed. All installs are best-effort (non-fatal on failure).
-        await self.exec_as_root(
-            environment,
-            command=(
-                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq clangd 2>/dev/null || true"
-            ),
-            env={"DEBIAN_FRONTEND": "noninteractive"},
-        )
-        await self.exec_as_agent(
-            environment,
-            command=(
-                ". ~/.nvm/nvm.sh; "
-                # pyright (Python LSP) + typescript-language-server (JS/TS LSP)
-                "npm install -g pyright typescript-language-server typescript 2>/dev/null || "
-                "echo 'LSP server install failed (non-fatal)'"
-            ),
-        )
+        # LSP servers (clangd, pyright, typescript-language-server) are installed as a
+        # background process at the start of run() rather than here, to avoid exceeding
+        # the harbor setup timeout (360s). NVM+Node+proto alone takes ~3 min.
 
     def _find_session_jsonl(self) -> Path | None:
         sessions_dir = self.logs_dir / "proto-sessions"
@@ -412,6 +395,13 @@ class ProtoAgent(BaseInstalledAgent):
             # subagents inherit a stripped environment.
             safe_key = openai_key.replace("'", "'\\''")
             setup_cmd = (
+                # Install LSP servers in the background so they don't block proto startup.
+                # clangd (C/C++), pyright (Python), typescript-language-server (JS/TS).
+                # Proto connects to LSP lazily on first file open, so background install
+                # means LSP is available by the time proto needs it for a real code file.
+                "(DEBIAN_FRONTEND=noninteractive apt-get install -y -qq clangd 2>/dev/null; "
+                ". ~/.nvm/nvm.sh; npm install -g pyright typescript-language-server typescript 2>/dev/null"
+                ") > /tmp/lsp-install.log 2>&1 & "
                 f"mkdir -p ~/.proto && printf '%s' '{safe_settings}' > ~/.proto/settings.json && "
                 f"printf 'OPENAI_API_KEY=%s\\n' '{safe_key}' > ~/.proto/.env && "
                 f"mkdir -p /app/.proto/teams/protolabs && printf '%s' '{safe_team}' > /app/.proto/teams/protolabs/config.json && "
