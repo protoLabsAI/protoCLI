@@ -4,15 +4,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { spawn , execSync } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 
 function hasCommand(cmd: string): boolean {
   try {
-    execSync(`which ${cmd}`, { stdio: 'ignore' });
+    execSync(`${cmd} --version`, { stdio: 'ignore' });
     return true;
   } catch {
-    return false;
+    try {
+      execSync(`${cmd} -h`, { stdio: 'ignore' });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

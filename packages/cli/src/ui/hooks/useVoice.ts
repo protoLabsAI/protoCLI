@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -24,8 +24,7 @@ export function useVoice(sttEndpoint: string) {
   const procRef = useRef<ChildProcess | null>(null);
   const audioPathRef = useRef<string | null>(null);
   // Detect backend once at hook initialisation time.
-  const backendRef = useRef(detectBackend());
-  const backend = backendRef.current;
+  const backend = useMemo(() => detectBackend(), []);
 
   const start = useCallback(async () => {
     if (voiceState !== 'idle') return;
