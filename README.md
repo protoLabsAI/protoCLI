@@ -165,7 +165,7 @@ proto supports [Langfuse](https://langfuse.com) tracing out of the box. Set thre
 
 ### Setup
 
-Add to `~/.proto/.env`:
+Add to `~/.proto/.env` or export in your shell:
 
 ```
 LANGFUSE_PUBLIC_KEY=pk-lf-...
