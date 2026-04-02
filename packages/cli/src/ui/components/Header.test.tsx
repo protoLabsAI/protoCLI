@@ -26,7 +26,7 @@ describe('<Header />', () => {
 
   it('renders the ASCII logo on wide terminal', () => {
     const { lastFrame } = render(<Header {...defaultProps} />);
-    expect(lastFrame()).toContain('██╔═══██╗');
+    expect(lastFrame()).toContain('/\\ \\__');
   });
 
   it('hides the ASCII logo on narrow terminal', () => {

@@ -85,6 +85,7 @@ vi.mock('@qwen-code/qwen-code-core', async (importOriginal) => {
     ApiCancelEvent: MockedApiCancelEvent,
     parseAndFormatApiError: mockParseAndFormatApiError,
     logApiCancel: mockLogApiCancel,
+    hasFileEdits: vi.fn(() => false),
   };
 });
 
@@ -184,7 +185,11 @@ describe('useGeminiStream', () => {
       vertexai: false,
       contextFileName: undefined,
       getToolRegistry: vi.fn(
-        () => ({ getToolSchemaList: vi.fn(() => []) }) as any,
+        () =>
+          ({
+            getToolSchemaList: vi.fn(() => []),
+            getTool: vi.fn(() => null),
+          }) as any,
       ),
       getProjectRoot: vi.fn(() => '/test/dir'),
       getCheckpointingEnabled: vi.fn(() => false),
@@ -298,6 +303,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         );
       },
       {
@@ -463,6 +469,7 @@ describe('useGeminiStream', () => {
         () => {},
         80,
         24,
+        () => [],
       ),
     );
 
@@ -547,6 +554,7 @@ describe('useGeminiStream', () => {
         () => {},
         80,
         24,
+        () => [],
       ),
     );
 
@@ -659,6 +667,7 @@ describe('useGeminiStream', () => {
         () => {},
         80,
         24,
+        () => [],
       ),
     );
 
@@ -772,6 +781,7 @@ describe('useGeminiStream', () => {
         () => {},
         80,
         24,
+        () => [],
       ),
     );
 
@@ -888,6 +898,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -931,6 +942,7 @@ describe('useGeminiStream', () => {
           setShellInputFocusedSpy, // Pass the spy here
           80,
           24,
+          () => [],
         ),
       );
 
@@ -1258,6 +1270,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -1315,6 +1328,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -1808,6 +1822,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -1863,6 +1878,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -1919,6 +1935,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -2015,6 +2032,7 @@ describe('useGeminiStream', () => {
             vi.fn(),
             80,
             24,
+            () => [],
           ),
         );
 
@@ -2142,6 +2160,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -2233,6 +2252,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -2297,6 +2317,7 @@ describe('useGeminiStream', () => {
             () => {},
             80,
             24,
+            () => [],
           ),
         );
 
@@ -2413,6 +2434,7 @@ describe('useGeminiStream', () => {
             () => {},
             80,
             24,
+            () => [],
           ),
         );
 
@@ -2486,6 +2508,7 @@ describe('useGeminiStream', () => {
           vi.fn(), // setShellInputFocused
           80,
           24,
+          () => [],
         ),
       );
 
@@ -2556,6 +2579,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -2614,6 +2638,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 
@@ -2669,6 +2694,7 @@ describe('useGeminiStream', () => {
           () => {},
           80,
           24,
+          () => [],
         ),
       );
 

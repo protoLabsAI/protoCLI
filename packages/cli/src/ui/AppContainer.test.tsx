@@ -680,7 +680,7 @@ describe('AppContainer State Management', () => {
       );
       expect(titleWrites).toHaveLength(1);
       expect(titleWrites[0][0]).toBe(
-        `\x1b]2;${thoughtSubject.padEnd(80, ' ')}\x07`,
+        `\x1b[?2026h\x1b]2;${thoughtSubject.padEnd(80, ' ')}\x07\x1b[?2026l`,
       );
       unmount();
     });
@@ -726,7 +726,7 @@ describe('AppContainer State Management', () => {
       );
       expect(titleWrites).toHaveLength(1);
       expect(titleWrites[0][0]).toBe(
-        `\x1b]2;${'Gemini - workspace'.padEnd(80, ' ')}\x07`,
+        `\x1b[?2026h\x1b]2;${'Gemini - workspace'.padEnd(80, ' ')}\x07\x1b[?2026l`,
       );
       unmount();
     });
@@ -773,7 +773,7 @@ describe('AppContainer State Management', () => {
       );
       expect(titleWrites).toHaveLength(1);
       expect(titleWrites[0][0]).toBe(
-        `\x1b]2;${thoughtSubject.padEnd(80, ' ')}\x07`,
+        `\x1b[?2026h\x1b]2;${thoughtSubject.padEnd(80, ' ')}\x07\x1b[?2026l`,
       );
       unmount();
     });
@@ -825,7 +825,9 @@ describe('AppContainer State Management', () => {
       expect(calledWith).toContain(shortTitle);
       expect(calledWith).toContain('\x1b]2;');
       expect(calledWith).toContain('\x07');
-      expect(calledWith).toBe('\x1b]2;' + expectedTitle + '\x07');
+      expect(calledWith).toBe(
+        '\x1b[?2026h\x1b]2;' + expectedTitle + '\x07\x1b[?2026l',
+      );
       unmount();
     });
 
@@ -870,7 +872,7 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
-      const expectedEscapeSequence = `\x1b]2;${title.padEnd(80, ' ')}\x07`;
+      const expectedEscapeSequence = `\x1b[?2026h\x1b]2;${title.padEnd(80, ' ')}\x07\x1b[?2026l`;
       expect(titleWrites[0][0]).toBe(expectedEscapeSequence);
       unmount();
     });
@@ -919,7 +921,7 @@ describe('AppContainer State Management', () => {
       );
       expect(titleWrites).toHaveLength(1);
       expect(titleWrites[0][0]).toBe(
-        `\x1b]2;${'Custom Gemini Title'.padEnd(80, ' ')}\x07`,
+        `\x1b[?2026h\x1b]2;${'Custom Gemini Title'.padEnd(80, ' ')}\x07\x1b[?2026l`,
       );
       unmount();
     });
