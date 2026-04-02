@@ -122,6 +122,26 @@ class ProtoAgent(BaseInstalledAgent):
                 "chmod +x /usr/local/bin/br && br --version || echo 'beads_rust install failed (non-fatal)'"
             ),
         )
+        # Install LSP servers for languages common in terminal-bench tasks.
+        # pyright covers Python; clangd covers C/C++; typescript-language-server covers JS/TS.
+        # Rust-analyzer and others are skipped — they require the full toolchain which tasks
+        # install themselves if needed. All installs are best-effort (non-fatal on failure).
+        await self.exec_as_root(
+            environment,
+            command=(
+                "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq clangd 2>/dev/null || true"
+            ),
+            env={"DEBIAN_FRONTEND": "noninteractive"},
+        )
+        await self.exec_as_agent(
+            environment,
+            command=(
+                ". ~/.nvm/nvm.sh; "
+                # pyright (Python LSP) + typescript-language-server (JS/TS LSP)
+                "npm install -g pyright typescript-language-server typescript 2>/dev/null || "
+                "echo 'LSP server install failed (non-fatal)'"
+            ),
+        )
 
     def _find_session_jsonl(self) -> Path | None:
         sessions_dir = self.logs_dir / "proto-sessions"
@@ -335,8 +355,10 @@ class ProtoAgent(BaseInstalledAgent):
         # Anthropic's API to 404 on gateway model names like "cli/claude-opus-4-6").
         auth_flag = ""
         setup_cmd = ""
-        openai_base = env.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "")
-        openai_key = env.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+        # --ae values go into self._extra_env (container env), NOT _resolved_env_vars.
+        # Must check all three sources to detect gateway mode correctly.
+        openai_base = env.get("OPENAI_BASE_URL") or self._extra_env.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "")
+        openai_key = env.get("OPENAI_API_KEY") or self._extra_env.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
         if openai_base:
             # OpenAI-compat / gateway mode. Write ~/.proto/settings.json so proto registers
             # the model against the correct base URL — more reliable than env vars alone.
@@ -364,11 +386,36 @@ class ProtoAgent(BaseInstalledAgent):
                     {"name": "verifier", "agentId": f"verifier-{now_ms}", "agentType": "general-purpose", "status": "idle"},
                 ],
             })
+            # .lsp.json in the task working dir — proto auto-enables LSP when this file exists.
+            # Covers the languages most common in terminal-bench tasks.
+            lsp_config = _json.dumps({
+                "python": {
+                    "command": "pyright-langserver",
+                    "args": ["--stdio"],
+                    "extensionToLanguage": {".py": "python", ".pyi": "python"},
+                },
+                "c": {
+                    "command": "clangd",
+                    "args": ["--background-index"],
+                    "extensionToLanguage": {".c": "c", ".h": "c", ".cpp": "cpp", ".cc": "cpp", ".cxx": "cpp", ".hpp": "cpp"},
+                },
+                "typescript": {
+                    "command": "typescript-language-server",
+                    "args": ["--stdio"],
+                    "extensionToLanguage": {".ts": "typescript", ".tsx": "typescriptreact", ".js": "javascript", ".jsx": "javascriptreact"},
+                },
+            })
             safe_settings = settings.replace("'", "'\\''")
             safe_team = team.replace("'", "'\\''")
+            safe_lsp = lsp_config.replace("'", "'\\''")
+            # Also write the key to ~/.proto/.env so proto can find it even if
+            # subagents inherit a stripped environment.
+            safe_key = openai_key.replace("'", "'\\''")
             setup_cmd = (
                 f"mkdir -p ~/.proto && printf '%s' '{safe_settings}' > ~/.proto/settings.json && "
+                f"printf 'OPENAI_API_KEY=%s\\n' '{safe_key}' > ~/.proto/.env && "
                 f"mkdir -p /app/.proto/teams/protolabs && printf '%s' '{safe_team}' > /app/.proto/teams/protolabs/config.json && "
+                f"printf '%s' '{safe_lsp}' > /app/.lsp.json && "
             )
             auth_flag = "--auth-type openai"
         else:
@@ -391,8 +438,12 @@ class ProtoAgent(BaseInstalledAgent):
                 command=(
                     ". ~/.nvm/nvm.sh; "
                     f"{setup_cmd}"
-                    f"proto --yolo {auth_flag} {model_flag} --prompt={escaped_instruction} "
-                    f"2>&1 | tee /logs/agent/proto.txt"
+                    # Use positional prompt (non-deprecated one-shot form) and redirect
+                    # stdin from /dev/null so proto doesn't block on the open exec pipe.
+                    # stdbuf -oL forces line-buffered output on tee so log bytes appear
+                    # incrementally rather than only at process exit.
+                    f"proto --yolo {auth_flag} {model_flag} {escaped_instruction} "
+                    f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/proto.txt"
                 ),
                 env=env,
             )
