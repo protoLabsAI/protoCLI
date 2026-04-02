@@ -165,13 +165,15 @@ proto supports [Langfuse](https://langfuse.com) tracing out of the box. Set thre
 
 ### Setup
 
-Add to `~/.proto/.env` or export in your shell:
+Add to `~/.proto/.env`:
 
 ```
 LANGFUSE_PUBLIC_KEY=pk-lf-...
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_BASE_URL=https://cloud.langfuse.com  # optional, this is the default
 ```
+
+> **Use `~/.proto/.env`, not `~/.env` or a project-level `.env`.** proto walks up from your CWD loading `.env` files — if your project already has `LANGFUSE_PUBLIC_KEY` in its own `.env` for its own tracing, proto would pick those up and mix its traces into your project's Langfuse dataset. `~/.proto/.env` is proto-namespaced and won't be touched by any project's runtime.
 
 ### What gets traced
 
