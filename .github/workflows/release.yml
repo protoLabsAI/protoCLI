@@ -43,15 +43,15 @@ jobs:
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Version: v${VERSION}"
 
           if git tag -l "v${VERSION}" | grep -q "v${VERSION}"; then
-            echo "already_tagged=true" >> $GITHUB_OUTPUT
+            echo "already_tagged=true" >> "$GITHUB_OUTPUT"
             echo "WARNING: v${VERSION} is already tagged — skipping."
           else
-            echo "already_tagged=false" >> $GITHUB_OUTPUT
+            echo "already_tagged=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build bundle
