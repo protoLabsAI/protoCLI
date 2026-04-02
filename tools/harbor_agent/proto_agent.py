@@ -442,8 +442,10 @@ class ProtoAgent(BaseInstalledAgent):
                     # stdin from /dev/null so proto doesn't block on the open exec pipe.
                     # stdbuf -oL forces line-buffered output on tee so log bytes appear
                     # incrementally rather than only at process exit.
+                    # '|| true' prevents harbor's set -o pipefail from treating proto's
+                    # non-zero exit (incomplete task) as a NonZeroAgentExitCodeError.
                     f"proto --yolo {auth_flag} {model_flag} {escaped_instruction} "
-                    f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/proto.txt"
+                    f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/proto.txt || true"
                 ),
                 env=env,
             )
