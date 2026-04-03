@@ -422,6 +422,25 @@ class ProtoAgent(BaseInstalledAgent):
         # Build model flag — pass explicitly to avoid env var confusion between auth types
         model_flag = f"--model {model}" if model else ""
 
+        # Inject benchmark-optimised system prompt additions via --append-system-prompt.
+        # These mirror ForgeCode's proven runtime interventions (doom loop breaking,
+        # tool error reflection, file-staleness awareness) without patching proto source.
+        append_prompt = (
+            "Before starting: run `ls /app` to understand the workspace.\n\n"
+            "LOOP DETECTION: If you find yourself running the same command or making "
+            "the same tool call 3 times without meaningful progress — STOP. "
+            "Explain what you tried and why it failed, then adopt a fundamentally "
+            "different approach. Never retry identical failing commands.\n\n"
+            "FAILURE REFLECTION: When a tool call or command fails, before retrying: "
+            "(1) identify exactly what went wrong, (2) explain why, "
+            "(3) describe your corrected approach. Never blindly retry.\n\n"
+            "FILE STALENESS: After any shell command that modifies a file you previously "
+            "read, re-read that file before making decisions based on its content.\n\n"
+            "PLANNING: For multi-step tasks, write a numbered plan first. "
+            "Use the todo tool to track progress. Mark steps complete as you finish them."
+        )
+        safe_append = shlex.quote(append_prompt)
+
         try:
             await self.exec_as_agent(
                 environment,
@@ -434,7 +453,9 @@ class ProtoAgent(BaseInstalledAgent):
                     # incrementally rather than only at process exit.
                     # '|| true' prevents harbor's set -o pipefail from treating proto's
                     # non-zero exit (incomplete task) as a NonZeroAgentExitCodeError.
-                    f"proto --yolo {auth_flag} {model_flag} {escaped_instruction} "
+                    f"proto --yolo {auth_flag} {model_flag} "
+                    f"--append-system-prompt {safe_append} "
+                    f"{escaped_instruction} "
                     f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/proto.txt || true"
                 ),
                 env=env,
