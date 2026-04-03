@@ -52,6 +52,20 @@ import type { RenderLineOptions } from './BaseTextInput.js';
 import { useSettings } from '../contexts/SettingsContext.js';
 import { useVoice } from '../hooks/useVoice.js';
 
+const IMAGE_PATH_REGEX = /\.(png|jpe?g|gif|webp|bmp)$/i;
+
+/**
+ * Returns true when `text` looks like an absolute path to an image file.
+ * Handles shell-escaped spaces and single/double-quoted paths.
+ */
+function isImageFilePath(text: string): boolean {
+  const stripped = text.replace(/\\(.)/g, '$1').replace(/^['"]|['"]$/g, '');
+  return (
+    IMAGE_PATH_REGEX.test(stripped) &&
+    (stripped.startsWith('/') || /^[A-Za-z]:\\/.test(stripped))
+  );
+}
+
 /**
  * Represents an attachment (e.g., pasted image) displayed above the input prompt
  */
@@ -407,6 +421,29 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
     }
   }, []);
 
+  // Handle a dragged/dropped image file path — strip shell escapes and add as attachment
+  const handleDroppedImagePath = useCallback(async (rawPath: string) => {
+    try {
+      const imagePath = rawPath
+        .replace(/\\(.)/g, '$1')
+        .replace(/^['"]|['"]$/g, '');
+      const { existsSync } = await import('node:fs');
+      if (!existsSync(imagePath)) {
+        debugLogger.warn('Dropped image path not found:', imagePath);
+        return;
+      }
+      const filename = path.basename(imagePath);
+      const newAttachment: Attachment = {
+        id: String(Date.now()),
+        path: imagePath,
+        filename,
+      };
+      setAttachments((prev) => [...prev, newAttachment]);
+    } catch (error) {
+      debugLogger.error('Error handling dropped image path:', error);
+    }
+  }, []);
+
   // Handle deletion of an attachment from the list
   const handleAttachmentDelete = useCallback((index: number) => {
     setAttachments((prev) => {
@@ -471,6 +508,9 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         // Ensure we never accidentally interpret paste as regular input.
         if (key.pasteImage) {
           handleClipboardImage(true);
+        } else if (isImageFilePath(pasted.trim())) {
+          // Dragged/dropped image file path — add as attachment
+          void handleDroppedImagePath(pasted.trim());
         } else if (
           charCount > LARGE_PASTE_CHAR_THRESHOLD ||
           lineCount > LARGE_PASTE_LINE_THRESHOLD
@@ -949,6 +989,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       shellHistory,
       reverseSearchCompletion,
       handleClipboardImage,
+      handleDroppedImagePath,
       resetCompletionState,
       escPressCount,
       showEscapePrompt,
