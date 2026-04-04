@@ -145,6 +145,7 @@ describe('useSlashCommandProcessor', () => {
         mockAddItem,
         mockClearItems,
         mockLoadHistory,
+        [], // history
         vi.fn(), // refreshStatic
         vi.fn(), // toggleVimEnabled
         false, // isProcessing
@@ -160,12 +161,16 @@ describe('useSlashCommandProcessor', () => {
           openPermissionsDialog: vi.fn(),
           openApprovalModeDialog: vi.fn(),
           openResumeDialog: vi.fn(),
+          openRewindDialog: vi.fn(),
           quit: mockSetQuittingMessages,
           setDebugMessage: vi.fn(),
           dispatchExtensionStateUpdate: vi.fn(),
           addConfirmUpdateExtensionRequest: vi.fn(),
           openSubagentCreateDialog: vi.fn(),
           openAgentsManagerDialog: vi.fn(),
+          openExtensionsManagerDialog: vi.fn(),
+          openMcpDialog: vi.fn(),
+          openHooksDialog: vi.fn(),
         },
         new Map(), // extensionsUpdateState
         true, // isConfigInitialized
