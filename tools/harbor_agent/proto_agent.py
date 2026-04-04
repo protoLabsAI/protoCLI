@@ -445,18 +445,18 @@ class ProtoAgent(BaseInstalledAgent):
             await self.exec_as_agent(
                 environment,
                 command=(
-                    ". ~/.nvm/nvm.sh; "
+                    "set -o pipefail; . ~/.nvm/nvm.sh; "
                     f"{setup_cmd}"
                     # Use positional prompt (non-deprecated one-shot form) and redirect
                     # stdin from /dev/null so proto doesn't block on the open exec pipe.
                     # stdbuf -oL forces line-buffered output on tee so log bytes appear
                     # incrementally rather than only at process exit.
-                    # '|| true' prevents harbor's set -o pipefail from treating proto's
-                    # non-zero exit (incomplete task) as a NonZeroAgentExitCodeError.
+                    # pipefail ensures proto's non-zero exit propagates through the tee
+                    # pipe so Harbor can detect crashes and auth failures for retry logic.
                     f"proto --yolo {auth_flag} {model_flag} "
                     f"--append-system-prompt {safe_append} "
                     f"{escaped_instruction} "
-                    f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/proto.txt || true"
+                    f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/proto.txt"
                 ),
                 env=env,
             )
