@@ -33,15 +33,34 @@ type Phase = 'pick' | 'action';
 
 // ─── Action menu items ────────────────────────────────────────────────────────
 
-const ACTION_ITEMS = [
-  { label: 'Restore files + conversation', key: 'files_and_conversation' },
-  { label: 'Restore conversation only', key: 'conversation_only' },
-  { label: 'Restore files only', key: 'files_only' },
-  { label: 'Summarize from here', key: 'summarize_from_here' },
-  { label: 'Cancel', key: 'cancel' },
-] as const;
+type ActionKey =
+  | 'files_and_conversation'
+  | 'conversation_only'
+  | 'files_only'
+  | 'summarize_from_here'
+  | 'cancel';
 
-type ActionKey = (typeof ACTION_ITEMS)[number]['key'];
+interface ActionItem {
+  label: string;
+  key: ActionKey;
+}
+
+function buildActionItems(hasFileSnapshots: boolean): ActionItem[] {
+  const items: ActionItem[] = [];
+  if (hasFileSnapshots) {
+    items.push({
+      label: 'Restore files + conversation',
+      key: 'files_and_conversation',
+    });
+  }
+  items.push({ label: 'Restore conversation only', key: 'conversation_only' });
+  if (hasFileSnapshots) {
+    items.push({ label: 'Restore files only', key: 'files_only' });
+  }
+  items.push({ label: 'Summarize from here', key: 'summarize_from_here' });
+  items.push({ label: 'Cancel', key: 'cancel' });
+  return items;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -84,6 +103,13 @@ export function RewindPicker({
   const [phase, setPhase] = useState<Phase>('pick');
   const [selectedCheckpointIdx, setSelectedCheckpointIdx] = useState(0);
   const [selectedActionIdx, setSelectedActionIdx] = useState(0);
+
+  // Derive action items based on whether the selected checkpoint has file snapshots.
+  const actionItems = useMemo(() => {
+    const cp = checkpoints[selectedCheckpointIdx];
+    const hasFileSnapshots = (cp?.fileSnapshots.size ?? 0) > 0;
+    return buildActionItems(hasFileSnapshots);
+  }, [checkpoints, selectedCheckpointIdx]);
 
   const boxWidth = width - 4;
 
@@ -149,7 +175,7 @@ export function RewindPicker({
           onCancel();
           return;
         }
-        const action = ACTION_ITEMS[selectedActionIdx];
+        const action = actionItems[selectedActionIdx];
         if (!action) {
           onCancel();
           return;
@@ -182,7 +208,7 @@ export function RewindPicker({
       }
       if (key.name === 'down') {
         setSelectedActionIdx((prev) =>
-          Math.min(ACTION_ITEMS.length - 1, prev + 1),
+          Math.min(actionItems.length - 1, prev + 1),
         );
         return;
       }
@@ -196,6 +222,7 @@ export function RewindPicker({
       checkpoints,
       selectedCheckpointIdx,
       selectedActionIdx,
+      actionItems,
     ],
   );
 
@@ -327,7 +354,7 @@ export function RewindPicker({
 
         {/* Action list */}
         <Box flexDirection="column" paddingX={1} overflow="hidden">
-          {ACTION_ITEMS.map((item, idx) => {
+          {actionItems.map((item, idx) => {
             const isSelected = idx === selectedActionIdx;
             const prefix = isSelected ? '› ' : '  ';
             return (
