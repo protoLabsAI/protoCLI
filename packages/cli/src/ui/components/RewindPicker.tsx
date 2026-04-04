@@ -72,9 +72,7 @@ export function RewindPicker({
   const { columns: width, rows: height } = useTerminalSize();
 
   // All checkpoints in reverse chronological order (most-recent first).
-  const checkpoints: Checkpoint[] = useMemo(() => {
-    return checkpointStore.list().slice().reverse();
-  }, []);
+  const checkpoints: Checkpoint[] = useMemo(() => checkpointStore.list().slice().reverse(), []);
 
   const [phase, setPhase] = useState<Phase>('pick');
   const [selectedCheckpointIdx, setSelectedCheckpointIdx] = useState(0);
@@ -162,6 +160,8 @@ export function RewindPicker({
             break;
           case 'cancel':
             onCancel();
+            break;
+          default:
             break;
         }
         return;
