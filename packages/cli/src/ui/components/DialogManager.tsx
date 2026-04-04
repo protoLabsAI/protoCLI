@@ -40,6 +40,7 @@ import { ExtensionsManagerDialog } from './extensions/ExtensionsManagerDialog.js
 import { MCPManagementDialog } from './mcp/MCPManagementDialog.js';
 import { HooksManagementDialog } from './hooks/HooksManagementDialog.js';
 import { SessionPicker } from './SessionPicker.js';
+import { RewindDialog } from './RewindDialog.js';
 
 interface DialogManagerProps {
   addItem: UseHistoryManagerReturn['addItem'];
@@ -346,6 +347,62 @@ export const DialogManager = ({
         currentBranch={uiState.branchName}
         onSelect={uiActions.handleResume}
         onCancel={uiActions.closeResumeDialog}
+      />
+    );
+  }
+
+  if (uiState.isRewindDialogOpen) {
+    return (
+      <RewindDialog
+        history={uiState.history}
+        onConfirm={(historyIndex) => {
+          // Slice UI history to the selected index (exclusive)
+          const slicedUiHistory = uiState.history.slice(0, historyIndex);
+          uiState.historyManager.loadHistory(slicedUiHistory);
+
+          // Count how many user turns are in the sliced UI history,
+          // then cut the LLM history at the same relative position.
+          const geminiClient = config?.getGeminiClient?.();
+          if (geminiClient) {
+            const userTurnCount = slicedUiHistory.filter(
+              (item) => item.type === 'user',
+            ).length;
+            const llmHistory = geminiClient.getHistory();
+            let usersSeen = 0;
+            let llmCutIdx = 0;
+            for (let i = 0; i < llmHistory.length; i++) {
+              if (llmHistory[i].role === 'user') {
+                usersSeen++;
+                if (usersSeen > userTurnCount) {
+                  llmCutIdx = i;
+                  break;
+                }
+                llmCutIdx = i + 1;
+              }
+            }
+            const newLlmHistory =
+              userTurnCount === 0 ? [] : llmHistory.slice(0, llmCutIdx);
+            geminiClient.setHistory(newLlmHistory);
+          }
+
+          uiActions.closeRewindDialog();
+
+          // Count user turns in sliced history for the info message
+          const turnNumber = uiState.history
+            .slice(0, historyIndex)
+            .filter((item) => item.type === 'user').length;
+          addItem(
+            {
+              type: 'info',
+              text:
+                turnNumber === 0
+                  ? 'Rewound to the beginning of the conversation.'
+                  : `Rewound to turn ${turnNumber}.`,
+            },
+            Date.now(),
+          );
+        }}
+        onCancel={uiActions.closeRewindDialog}
       />
     );
   }
