@@ -94,22 +94,8 @@ export const DEFAULT_MODELS = {
   'qwen-oauth': DEFAULT_QWEN_MODEL,
 } as Partial<Record<AuthType, string>>;
 
-/**
- * Hard-coded Qwen OAuth models that are always available.
- * These cannot be overridden by user configuration.
- */
-export const QWEN_OAUTH_MODELS: ModelConfig[] = [
-  {
-    id: 'coder-model',
-    name: 'coder-model',
-    capabilities: { vision: true },
-  },
-];
+export const QWEN_OAUTH_MODELS: ModelConfig[] = [];
 
-/**
- * Derive allowed models from QWEN_OAUTH_MODELS for authorization.
- * This ensures single source of truth (SSOT).
- */
 export const QWEN_OAUTH_ALLOWED_MODELS = QWEN_OAUTH_MODELS.map(
   (model) => model.id,
 ) as readonly string[];
