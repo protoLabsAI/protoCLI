@@ -132,7 +132,10 @@ export class CheckpointStore {
    *
    * Returns `undefined` when the turn or file is not tracked.
    */
-  fileExistedBeforeTurn(promptId: string, filePath: string): boolean | undefined {
+  fileExistedBeforeTurn(
+    promptId: string,
+    filePath: string,
+  ): boolean | undefined {
     const checkpoint = this.getInternal(promptId);
     if (!checkpoint) return undefined;
     const snap = checkpoint.fileSnapshots.get(filePath);
@@ -187,6 +190,54 @@ export class CheckpointStore {
   /** Number of checkpoints currently stored. */
   get size(): number {
     return this.checkpoints.length;
+  }
+
+  // ─── Rewind API ────────────────────────────────────────────
+
+  /**
+   * Restores all files snapshotted in the given checkpoint to their pre-turn state.
+   *
+   * For each file recorded in the checkpoint's `fileSnapshots`:
+   * - If the file did not exist before the turn (i.e. it was newly created),
+   *   it is **deleted** from disk.  If the file is already absent (because a
+   *   previous rewind already removed it), the deletion is silently skipped.
+   * - Otherwise the original file content is written back to disk, overwriting
+   *   whatever is there now.
+   *
+   * This method is **idempotent**: calling it multiple times with the same
+   * `promptId` always produces the same on-disk result.
+   *
+   * @param promptId - The turn identifier whose checkpoint should be rewound.
+   * @returns An array of absolute file paths that were restored or deleted.
+   * @throws {Error} if no checkpoint for `promptId` exists.
+   */
+  rewindToCheckpoint(promptId: string): string[] {
+    const checkpoint = this.getInternal(promptId);
+    if (!checkpoint) {
+      throw new Error(
+        `rewindToCheckpoint: no checkpoint found for promptId "${promptId}"`,
+      );
+    }
+
+    const restoredPaths: string[] = [];
+
+    for (const [filePath, content] of checkpoint.fileSnapshots) {
+      if (content === CHECK_NOT_EXISTED) {
+        // The file was created during this turn — remove it on rewind.
+        try {
+          fs.unlinkSync(filePath);
+        } catch {
+          // File may already be absent (previous rewind or manual deletion).
+          // Treat as success to preserve idempotency.
+        }
+      } else {
+        // Restore the original pre-turn content.
+        fs.writeFileSync(filePath, content, 'utf8');
+      }
+      restoredPaths.push(filePath);
+    }
+
+    return restoredPaths;
   }
 
   // ─── Private helpers ────────────────────────────────────────

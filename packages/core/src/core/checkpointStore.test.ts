@@ -12,8 +12,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('node:fs', () => ({
   default: {
     readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    unlinkSync: vi.fn(),
   },
   readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  unlinkSync: vi.fn(),
 }));
 
 // Now import the mocked fs and the module under test.
@@ -30,8 +34,10 @@ const PROMPT_TEXT_1 = 'Now add unit tests for it';
 const FILE_A = '/project/src/hello.ts';
 const FILE_B = '/project/src/goodbye.ts';
 
-// Typed alias to the mock so TypeScript knows about .mockReturnValue etc.
+// Typed aliases to the mocks so TypeScript knows about .mockReturnValue etc.
 const readFileSyncMock = vi.mocked(fs.readFileSync);
+const writeFileSyncMock = vi.mocked(fs.writeFileSync);
+const unlinkSyncMock = vi.mocked(fs.unlinkSync);
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -195,9 +201,9 @@ describe('CheckpointStore', () => {
       const snapped = store.snapshotFile(PROMPT_ID_0, '/new/file.ts');
       expect(snapped).toBe(true);
       // fileExistedBeforeTurn should return false for the non-existent file
-      expect(
-        store.fileExistedBeforeTurn(PROMPT_ID_0, '/new/file.ts'),
-      ).toBe(false);
+      expect(store.fileExistedBeforeTurn(PROMPT_ID_0, '/new/file.ts')).toBe(
+        false,
+      );
     });
 
     it('can snapshot multiple files for the same turn', () => {
@@ -205,8 +211,7 @@ describe('CheckpointStore', () => {
       readFileSyncMock.mockReturnValueOnce('file-b-content');
       store.snapshotFile(PROMPT_ID_0, FILE_A);
       store.snapshotFile(PROMPT_ID_0, FILE_B);
-      const snapshots =
-        store.getByPromptId(PROMPT_ID_0)!.fileSnapshots;
+      const snapshots = store.getByPromptId(PROMPT_ID_0)!.fileSnapshots;
       expect(snapshots.get(FILE_A)).toBe('file-a-content');
       expect(snapshots.get(FILE_B)).toBe('file-b-content');
     });
@@ -216,9 +221,9 @@ describe('CheckpointStore', () => {
       readFileSyncMock.mockReturnValueOnce('turn0-content');
       store.snapshotFile(PROMPT_ID_0, FILE_A);
       // FILE_A was not touched in turn 1
-      expect(
-        store.getByPromptId(PROMPT_ID_1)!.fileSnapshots.has(FILE_A),
-      ).toBe(false);
+      expect(store.getByPromptId(PROMPT_ID_1)!.fileSnapshots.has(FILE_A)).toBe(
+        false,
+      );
     });
   });
 
@@ -250,9 +255,7 @@ describe('CheckpointStore', () => {
     });
 
     it('returns undefined for an unknown promptId', () => {
-      expect(
-        store.fileExistedBeforeTurn('unknown', FILE_A),
-      ).toBeUndefined();
+      expect(store.fileExistedBeforeTurn('unknown', FILE_A)).toBeUndefined();
     });
   });
 
@@ -268,6 +271,132 @@ describe('CheckpointStore', () => {
       expect(store.size).toBe(1);
       store.add(PROMPT_ID_1, PROMPT_TEXT_1);
       expect(store.size).toBe(2);
+    });
+  });
+
+  // ── rewindToCheckpoint() ──────────────────────────────────────────────────
+
+  describe('rewindToCheckpoint()', () => {
+    beforeEach(() => {
+      store.add(PROMPT_ID_0, PROMPT_TEXT_0);
+    });
+
+    it('throws when the promptId is unknown', () => {
+      expect(() => store.rewindToCheckpoint('unknown-id')).toThrow(
+        /no checkpoint found/,
+      );
+    });
+
+    it('returns an empty array when no files were snapshotted', () => {
+      const restored = store.rewindToCheckpoint(PROMPT_ID_0);
+      expect(restored).toEqual([]);
+      expect(writeFileSyncMock).not.toHaveBeenCalled();
+      expect(unlinkSyncMock).not.toHaveBeenCalled();
+    });
+
+    it('restores an existing file to its original content', () => {
+      readFileSyncMock.mockReturnValueOnce('original content');
+      store.snapshotFile(PROMPT_ID_0, FILE_A);
+
+      const restored = store.rewindToCheckpoint(PROMPT_ID_0);
+
+      expect(restored).toEqual([FILE_A]);
+      expect(writeFileSyncMock).toHaveBeenCalledOnce();
+      expect(writeFileSyncMock).toHaveBeenCalledWith(
+        FILE_A,
+        'original content',
+        'utf8',
+      );
+    });
+
+    it('deletes a newly-created file (one that did not exist before the turn)', () => {
+      // Simulate the file not existing before the turn
+      readFileSyncMock.mockImplementationOnce(() => {
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+      store.snapshotFile(PROMPT_ID_0, FILE_A);
+
+      const restored = store.rewindToCheckpoint(PROMPT_ID_0);
+
+      expect(restored).toEqual([FILE_A]);
+      expect(unlinkSyncMock).toHaveBeenCalledOnce();
+      expect(unlinkSyncMock).toHaveBeenCalledWith(FILE_A);
+      expect(writeFileSyncMock).not.toHaveBeenCalled();
+    });
+
+    it('handles multiple files in a single checkpoint', () => {
+      readFileSyncMock.mockReturnValueOnce('content-a');
+      readFileSyncMock.mockReturnValueOnce('content-b');
+      store.snapshotFile(PROMPT_ID_0, FILE_A);
+      store.snapshotFile(PROMPT_ID_0, FILE_B);
+
+      const restored = store.rewindToCheckpoint(PROMPT_ID_0);
+
+      expect(restored).toHaveLength(2);
+      expect(restored).toContain(FILE_A);
+      expect(restored).toContain(FILE_B);
+      expect(writeFileSyncMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('is idempotent — rewinding the same checkpoint twice produces the same result', () => {
+      readFileSyncMock.mockReturnValueOnce('original content');
+      store.snapshotFile(PROMPT_ID_0, FILE_A);
+
+      const first = store.rewindToCheckpoint(PROMPT_ID_0);
+      const second = store.rewindToCheckpoint(PROMPT_ID_0);
+
+      expect(first).toEqual([FILE_A]);
+      expect(second).toEqual([FILE_A]);
+      expect(writeFileSyncMock).toHaveBeenCalledTimes(2);
+      // Both calls should write the same original content
+      expect(writeFileSyncMock).toHaveBeenNthCalledWith(
+        1,
+        FILE_A,
+        'original content',
+        'utf8',
+      );
+      expect(writeFileSyncMock).toHaveBeenNthCalledWith(
+        2,
+        FILE_A,
+        'original content',
+        'utf8',
+      );
+    });
+
+    it('is idempotent when deleting a new file — second rewind does not throw', () => {
+      readFileSyncMock.mockImplementationOnce(() => {
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+      store.snapshotFile(PROMPT_ID_0, FILE_A);
+
+      // First rewind deletes the file
+      store.rewindToCheckpoint(PROMPT_ID_0);
+
+      // Second rewind: unlinkSync will throw because file is already gone;
+      // rewindToCheckpoint must swallow the error.
+      unlinkSyncMock.mockImplementationOnce(() => {
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+      expect(() => store.rewindToCheckpoint(PROMPT_ID_0)).not.toThrow();
+    });
+
+    it('does not affect other checkpoints', () => {
+      store.add(PROMPT_ID_1, PROMPT_TEXT_1);
+      readFileSyncMock.mockReturnValueOnce('turn0-content');
+      readFileSyncMock.mockReturnValueOnce('turn1-content');
+      store.snapshotFile(PROMPT_ID_0, FILE_A);
+      store.snapshotFile(PROMPT_ID_1, FILE_B);
+
+      // Only rewind turn 0
+      store.rewindToCheckpoint(PROMPT_ID_0);
+
+      // Only FILE_A should have been written back
+      expect(writeFileSyncMock).toHaveBeenCalledOnce();
+      expect(writeFileSyncMock).toHaveBeenCalledWith(
+        FILE_A,
+        'turn0-content',
+        'utf8',
+      );
     });
   });
 });
