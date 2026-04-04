@@ -18,6 +18,7 @@ export function createNonInteractiveUI(): CommandContext['ui'] {
     clear: () => {},
     setDebugMessage: (_message) => {},
     loadHistory: (_newHistory) => {},
+    history: [],
     pendingItem: null,
     setPendingItem: (_item) => {},
     btwItem: null,

@@ -669,6 +669,7 @@ export const AppContainer = (props: AppContainerProps) => {
     historyManager.addItem,
     historyManager.clearItems,
     historyManager.loadHistory,
+    historyManager.history,
     refreshStatic,
     toggleVimEnabled,
     isProcessing,

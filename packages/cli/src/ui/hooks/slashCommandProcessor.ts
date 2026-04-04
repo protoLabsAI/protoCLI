@@ -99,6 +99,7 @@ export const useSlashCommandProcessor = (
   addItem: UseHistoryManagerReturn['addItem'],
   clearItems: UseHistoryManagerReturn['clearItems'],
   loadHistory: UseHistoryManagerReturn['loadHistory'],
+  history: UseHistoryManagerReturn['history'],
   refreshStatic: () => void,
   toggleVimEnabled: () => Promise<boolean>,
   isProcessing: boolean,
@@ -262,6 +263,7 @@ export const useSlashCommandProcessor = (
           refreshStatic();
         },
         loadHistory,
+        history,
         setDebugMessage: actions.setDebugMessage,
         pendingItem,
         setPendingItem,
@@ -289,6 +291,7 @@ export const useSlashCommandProcessor = (
       gitService,
       logger,
       loadHistory,
+      history,
       addItem,
       clearItems,
       refreshStatic,
