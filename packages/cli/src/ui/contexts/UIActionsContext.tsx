@@ -99,6 +99,9 @@ export interface UIActions {
   openResumeDialog: () => void;
   closeResumeDialog: () => void;
   handleResume: (sessionId: string) => void;
+  // Rewind dialog
+  openRewindDialog: () => void;
+  closeRewindDialog: () => void;
   // Feedback dialog
   openFeedbackDialog: () => void;
   closeFeedbackDialog: () => void;

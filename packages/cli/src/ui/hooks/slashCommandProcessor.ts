@@ -79,6 +79,7 @@ interface SlashCommandProcessorActions {
   openPermissionsDialog: () => void;
   openApprovalModeDialog: () => void;
   openResumeDialog: () => void;
+  openRewindDialog: () => void;
   quit: (messages: HistoryItem[]) => void;
   setDebugMessage: (message: string) => void;
   dispatchExtensionStateUpdate: (action: ExtensionUpdateAction) => void;
@@ -538,6 +539,9 @@ export const useSlashCommandProcessor = (
                       return { type: 'handled' };
                     case 'resume':
                       actions.openResumeDialog();
+                      return { type: 'handled' };
+                    case 'rewind':
+                      actions.openRewindDialog();
                       return { type: 'handled' };
                     case 'extensions_manage':
                       actions.openExtensionsManagerDialog();

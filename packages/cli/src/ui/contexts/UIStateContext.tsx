@@ -57,6 +57,7 @@ export interface UIState {
   isPermissionsDialogOpen: boolean;
   isApprovalModeDialogOpen: boolean;
   isResumeDialogOpen: boolean;
+  isRewindDialogOpen: boolean;
   slashCommands: readonly SlashCommand[];
   pendingSlashCommandHistoryItems: HistoryItemWithoutId[];
   commandContext: CommandContext;

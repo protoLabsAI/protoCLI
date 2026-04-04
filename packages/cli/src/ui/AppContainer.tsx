@@ -603,6 +603,10 @@ export const AppContainer = (props: AppContainerProps) => {
   const { isHooksDialogOpen, openHooksDialog, closeHooksDialog } =
     useHooksDialog();
 
+  const [isRewindDialogOpen, setIsRewindDialogOpen] = useState(false);
+  const openRewindDialog = useCallback(() => setIsRewindDialogOpen(true), []);
+  const closeRewindDialog = useCallback(() => setIsRewindDialogOpen(false), []);
+
   const slashCommandActions = useMemo(
     () => ({
       openAuthDialog,
@@ -630,6 +634,7 @@ export const AppContainer = (props: AppContainerProps) => {
       openMcpDialog,
       openHooksDialog,
       openResumeDialog,
+      openRewindDialog,
     }),
     [
       openAuthDialog,
@@ -650,6 +655,7 @@ export const AppContainer = (props: AppContainerProps) => {
       openMcpDialog,
       openHooksDialog,
       openResumeDialog,
+      openRewindDialog,
     ],
   );
 
@@ -1628,6 +1634,27 @@ export const AppContainer = (props: AppContainerProps) => {
           return;
         }
 
+        // Double-ESC with empty input and not streaming: open rewind dialog
+        if (escapePressedOnce) {
+          if (escapeTimerRef.current) {
+            clearTimeout(escapeTimerRef.current);
+            escapeTimerRef.current = null;
+          }
+          setEscapePressedOnce(false);
+          openRewindDialog();
+          return;
+        }
+
+        // First ESC with empty input and not streaming: set flag for double-press
+        if (!escapePressedOnce) {
+          setEscapePressedOnce(true);
+          escapeTimerRef.current = setTimeout(() => {
+            setEscapePressedOnce(false);
+            escapeTimerRef.current = null;
+          }, CTRL_EXIT_PROMPT_DURATION_MS);
+          return;
+        }
+
         // No action available, reset the flag
         if (escapeTimerRef.current) {
           clearTimeout(escapeTimerRef.current);
@@ -1710,6 +1737,7 @@ export const AppContainer = (props: AppContainerProps) => {
       cancelBtw,
       settings.merged.general?.debugKeystrokeLogging,
       isAuthenticating,
+      openRewindDialog,
     ],
   );
 
@@ -1781,6 +1809,7 @@ export const AppContainer = (props: AppContainerProps) => {
     isHooksDialogOpen ||
     isApprovalModeDialogOpen ||
     isResumeDialogOpen ||
+    isRewindDialogOpen ||
     isExtensionsManagerDialogOpen;
   dialogsVisibleRef.current = dialogsVisible;
 
@@ -1826,6 +1855,7 @@ export const AppContainer = (props: AppContainerProps) => {
       isPermissionsDialogOpen,
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
+      isRewindDialogOpen,
       slashCommands,
       pendingSlashCommandHistoryItems,
       commandContext,
@@ -1934,6 +1964,7 @@ export const AppContainer = (props: AppContainerProps) => {
       isPermissionsDialogOpen,
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
+      isRewindDialogOpen,
       slashCommands,
       pendingSlashCommandHistoryItems,
       commandContext,
@@ -2087,6 +2118,9 @@ export const AppContainer = (props: AppContainerProps) => {
       openResumeDialog,
       closeResumeDialog,
       handleResume,
+      // Rewind dialog
+      openRewindDialog,
+      closeRewindDialog,
       // Feedback dialog
       openFeedbackDialog,
       closeFeedbackDialog,
@@ -2146,6 +2180,9 @@ export const AppContainer = (props: AppContainerProps) => {
       openResumeDialog,
       closeResumeDialog,
       handleResume,
+      // Rewind dialog
+      openRewindDialog,
+      closeRewindDialog,
       // Feedback dialog
       openFeedbackDialog,
       closeFeedbackDialog,
