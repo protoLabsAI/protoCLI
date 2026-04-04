@@ -161,6 +161,7 @@ packages/*/src/**/__snapshots__/*.js.snap
 
 # protoLabs Studio workspace (local agent state, not source)
 .automaker/
+.automaker-lock
 
 # beads_rust task management (local state, not source)
 .beads/
