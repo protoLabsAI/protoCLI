@@ -57,35 +57,7 @@ describe('showAuthStatus', () => {
       expect.stringContaining('No authentication method configured'),
     );
     expect(writeStdoutLine).toHaveBeenCalledWith(
-      expect.stringContaining('qwen auth qwen-oauth'),
-    );
-    expect(writeStdoutLine).toHaveBeenCalledWith(
       expect.stringContaining('proto auth coding-plan'),
-    );
-    expect(process.exit).toHaveBeenCalledWith(0);
-  });
-
-  it('should show Qwen OAuth status when configured', async () => {
-    vi.mocked(loadSettings).mockReturnValue(
-      createMockSettings({
-        security: {
-          auth: {
-            selectedType: AuthType.QWEN_OAUTH,
-          },
-        },
-      }),
-    );
-
-    await showAuthStatus();
-
-    expect(writeStdoutLine).toHaveBeenCalledWith(
-      expect.stringContaining('Qwen OAuth'),
-    );
-    expect(writeStdoutLine).toHaveBeenCalledWith(
-      expect.stringContaining('Free tier'),
-    );
-    expect(writeStdoutLine).toHaveBeenCalledWith(
-      expect.stringContaining('1,000 requests/day'),
     );
     expect(process.exit).toHaveBeenCalledWith(0);
   });

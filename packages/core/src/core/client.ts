@@ -1050,9 +1050,7 @@ export class GeminiClient {
           promptId,
         );
       };
-      const result = await retryWithBackoff(apiCall, {
-        authType: this.config.getContentGeneratorConfig()?.authType,
-      });
+      const result = await retryWithBackoff(apiCall);
       return result;
     } catch (error: unknown) {
       if (abortSignal.aborted) {

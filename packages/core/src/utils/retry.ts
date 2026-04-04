@@ -5,8 +5,6 @@
  */
 
 import type { GenerateContentResponse } from '@google/genai';
-import { AuthType } from '../core/contentGenerator.js';
-import { isQwenQuotaExceededError } from './quotaErrorDetection.js';
 import { createDebugLogger } from './debugLogger.js';
 import { getErrorStatus } from './errors.js';
 
@@ -22,11 +20,19 @@ export interface RetryOptions {
   maxDelayMs: number;
   shouldRetryOnError: (error: Error) => boolean;
   shouldRetryOnContent?: (content: GenerateContentResponse) => boolean;
-  authType?: string;
 }
 
+export const DEFAULT_MAX_ATTEMPTS = (() => {
+  const env = process.env['PROTO_MAX_RETRIES'];
+  if (env) {
+    const parsed = parseInt(env, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return 7;
+})();
+
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
-  maxAttempts: 7,
+  maxAttempts: DEFAULT_MAX_ATTEMPTS,
   initialDelayMs: 1500,
   maxDelayMs: 30000, // 30 seconds
   shouldRetryOnError: defaultShouldRetry,
@@ -77,7 +83,6 @@ export async function retryWithBackoff<T>(
     maxAttempts,
     initialDelayMs,
     maxDelayMs,
-    authType,
     shouldRetryOnError,
     shouldRetryOnContent,
   } = {
@@ -107,17 +112,6 @@ export async function retryWithBackoff<T>(
       return result;
     } catch (error) {
       const errorStatus = getErrorStatus(error);
-
-      // Check for Qwen OAuth quota exceeded error - throw immediately without retry
-      if (authType === AuthType.QWEN_OAUTH && isQwenQuotaExceededError(error)) {
-        throw new Error(
-          `Qwen OAuth quota exceeded: Your free daily quota has been reached.\n\n` +
-            `To continue using Qwen Code without waiting, upgrade to the Alibaba Cloud Coding Plan:\n` +
-            `  China:       https://help.aliyun.com/zh/model-studio/coding-plan\n` +
-            `  Global/Intl: https://www.alibabacloud.com/help/en/model-studio/coding-plan\n\n` +
-            `After subscribing, run /auth to configure your Coding Plan API key.`,
-        );
-      }
 
       // Check if we've exhausted retries or shouldn't retry
       if (attempt >= maxAttempts || !shouldRetryOnError(error as Error)) {

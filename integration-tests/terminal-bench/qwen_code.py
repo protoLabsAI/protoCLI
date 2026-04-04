@@ -7,10 +7,10 @@ from terminal_bench.agents.installed_agents.abstract_installed_agent import (
 from terminal_bench.terminal.models import TerminalCommand
 
 
-class QwenCodeAgent(AbstractInstalledAgent):
+class ProtoAgent(AbstractInstalledAgent):
     @staticmethod
     def name() -> str:
-        return "Qwen Code"
+        return "proto"
 
     def __init__(self, model_name: str | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -61,10 +61,22 @@ class QwenCodeAgent(AbstractInstalledAgent):
     def _run_agent_commands(self, task_description: str) -> list[TerminalCommand]:
         escaped_description = shlex.quote(task_description)
         return [
+            # Pre-flight: verify auth reaches the endpoint before burning task time.
+            # Fails fast (30s) if API key is invalid or endpoint is unreachable.
             TerminalCommand(
-                command=f"qwen -y --prompt {escaped_description}",
+                command="proto -y -- 'respond with the single word OK'",
+                max_timeout_sec=30.0,
+                block=True,
+                append_enter=True,
+            ),
+            # Main task. Use -- to terminate yargs flag parsing so a description
+            # starting with - is never misinterpreted as a CLI flag.
+            # max_retries via PROTO_MAX_RETRIES lets the CLI retry transient
+            # network/rate-limit errors without the harness seeing a failure.
+            TerminalCommand(
+                command=f"PROTO_MAX_RETRIES=5 proto -y -- {escaped_description}",
                 max_timeout_sec=float("inf"),
                 block=True,
-                append_enter=True
-            )
+                append_enter=True,
+            ),
         ]

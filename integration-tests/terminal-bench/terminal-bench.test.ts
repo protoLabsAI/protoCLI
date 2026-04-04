@@ -225,15 +225,15 @@ describe('terminal-bench integration', () => {
           );
         }
 
-        // Run qwen-code agent using spawn to avoid blocking event loop
+        // Run proto agent using spawn to avoid blocking event loop
         const args = [
           'run',
           '--agent-import-path',
-          'integration-tests.terminal-bench.qwen_code:QwenCodeAgent',
+          'integration-tests.terminal-bench.qwen_code:ProtoAgent',
           '--agent-kwarg',
           `api_key=${apiKey}`,
           '--agent-kwarg',
-          `version=${process.env['QWEN_CODE_VERSION'] || 'latest'}`,
+          `version=${process.env['PROTO_VERSION'] || 'latest'}`,
           '--dataset-path',
           ciTasksPath,
           '--task-id',
