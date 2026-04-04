@@ -43,7 +43,7 @@ function parseDefaultAuthType(
 }
 
 // Main menu option type
-type MainOption = typeof AuthType.QWEN_OAUTH | 'CODING_PLAN' | 'API_KEY';
+type MainOption = 'CODING_PLAN' | 'API_KEY';
 type ApiKeyOption = 'ALIBABA_STANDARD_API_KEY' | 'CUSTOM_API_KEY';
 
 // View level for navigation
@@ -100,17 +100,8 @@ export function AuthDialog(): React.JSX.Element {
   const [alibabaStandardModelIdError, setAlibabaStandardModelIdError] =
     useState<string | null>(null);
 
-  // Main authentication entries (flat three-option layout)
+  // Main authentication entries (flat two-option layout)
   const mainItems = [
-    {
-      key: AuthType.QWEN_OAUTH,
-      title: t('Qwen OAuth'),
-      label: t('Qwen OAuth'),
-      description: t(
-        'Free \u00B7 Up to 1,000 requests/day \u00B7 Qwen latest models',
-      ),
-      value: AuthType.QWEN_OAUTH as MainOption,
-    },
     {
       key: 'CODING_PLAN',
       title: t('Alibaba Cloud Coding Plan'),
@@ -232,7 +223,7 @@ export function AuthDialog(): React.JSX.Element {
   ];
 
   // Map an AuthType to the corresponding main menu option.
-  // QWEN_OAUTH maps directly; USE_OPENAI maps to:
+  // USE_OPENAI maps to:
   // - CODING_PLAN when current config matches coding plan
   // - API_KEY for other OpenAI / Anthropic / Gemini-compatible configs
   const contentGenConfig = config.getContentGeneratorConfig();
@@ -242,7 +233,6 @@ export function AuthDialog(): React.JSX.Element {
       contentGenConfig?.apiKeyEnvKey,
     ) !== false;
   const authTypeToMainOption = (authType: AuthType): MainOption => {
-    if (authType === AuthType.QWEN_OAUTH) return AuthType.QWEN_OAUTH;
     if (authType === AuthType.USE_OPENAI && isCurrentlyCodingPlan) {
       return 'CODING_PLAN';
     }
@@ -271,8 +261,8 @@ export function AuthDialog(): React.JSX.Element {
         return item.value === authTypeToMainOption(defaultAuthType);
       }
 
-      // Priority 4: default to QWEN_OAUTH
-      return item.value === AuthType.QWEN_OAUTH;
+      // Priority 4: default to CODING_PLAN
+      return item.value === 'CODING_PLAN';
     }),
   );
 
@@ -290,9 +280,6 @@ export function AuthDialog(): React.JSX.Element {
       setViewLevel('api-key-type-select');
       return;
     }
-
-    // For Qwen OAuth, proceed directly
-    await onAuthSelect(value);
   };
 
   const handleApiKeyTypeSelect = async (value: ApiKeyOption) => {

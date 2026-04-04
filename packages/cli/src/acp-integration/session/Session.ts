@@ -19,7 +19,6 @@ import type {
   AgentEventEmitter,
 } from '@qwen-code/qwen-code-core';
 import {
-  AuthType,
   ApprovalMode,
   convertToFunctionResponse,
   createDebugLogger,
@@ -672,14 +671,7 @@ export class Session implements SessionContext {
       );
     }
 
-    await this.config.switchModel(
-      selectedAuthType,
-      parsed.modelId,
-      selectedAuthType !== previousAuthType &&
-        selectedAuthType === AuthType.QWEN_OAUTH
-        ? { requireCachedCredentials: true }
-        : undefined,
-    );
+    await this.config.switchModel(selectedAuthType, parsed.modelId);
   }
 
   /**

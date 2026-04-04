@@ -8,16 +8,12 @@ import {
   APPROVAL_MODE_INFO,
   APPROVAL_MODES,
   AuthType,
-  clearCachedCredentialFile,
   createDebugLogger,
-  QwenOAuth2Event,
-  qwenOAuth2Events,
   MCPServerConfig,
   SessionService,
   tokenLimit,
   type Config,
   type ConversationRecord,
-  type DeviceAuthorizationData,
 } from '@qwen-code/qwen-code-core';
 import {
   AgentSideConnection,
@@ -166,31 +162,12 @@ class QwenAgent implements Agent {
   async authenticate({ methodId }: AuthenticateRequest): Promise<void> {
     const method = z.nativeEnum(AuthType).parse(methodId);
 
-    let authUri: string | undefined;
-    const authUriHandler = (deviceAuth: DeviceAuthorizationData) => {
-      authUri = deviceAuth.verification_uri_complete;
-      void this.connection.extNotification('authenticate/update', {
-        _meta: { authUri },
-      });
-    };
-
-    if (method === AuthType.QWEN_OAUTH) {
-      qwenOAuth2Events.once(QwenOAuth2Event.AuthUri, authUriHandler);
-    }
-
-    await clearCachedCredentialFile();
-    try {
-      await this.config.refreshAuth(method);
-      this.settings.setValue(
-        SettingScope.User,
-        'security.auth.selectedType',
-        method,
-      );
-    } finally {
-      if (method === AuthType.QWEN_OAUTH) {
-        qwenOAuth2Events.off(QwenOAuth2Event.AuthUri, authUriHandler);
-      }
-    }
+    await this.config.refreshAuth(method);
+    this.settings.setValue(
+      SettingScope.User,
+      'security.auth.selectedType',
+      method,
+    );
   }
 
   async newSession({
@@ -425,19 +402,9 @@ class QwenAgent implements Agent {
 
   private pickAuthMethodsForAuthRequired(
     selectedType?: AuthType | string,
-    error?: unknown,
+    _error?: unknown,
   ): AuthMethod[] {
     const authMethods = buildAuthMethods();
-    const errorMessage = this.extractErrorMessage(error);
-    if (
-      errorMessage?.includes('qwen-oauth') ||
-      errorMessage?.includes('Qwen OAuth')
-    ) {
-      const qwenOAuthMethods = authMethods.filter(
-        (m) => m.id === AuthType.QWEN_OAUTH,
-      );
-      return qwenOAuthMethods.length ? qwenOAuthMethods : authMethods;
-    }
 
     if (selectedType) {
       const matched = authMethods.filter((m) => m.id === selectedType);
@@ -445,20 +412,6 @@ class QwenAgent implements Agent {
     }
 
     return authMethods;
-  }
-
-  private extractErrorMessage(error?: unknown): string | undefined {
-    if (error instanceof Error) return error.message;
-    if (
-      typeof error === 'object' &&
-      error != null &&
-      'message' in error &&
-      typeof error.message === 'string'
-    ) {
-      return error.message;
-    }
-    if (typeof error === 'string') return error;
-    return undefined;
   }
 
   private setupFileSystem(config: Config): void {

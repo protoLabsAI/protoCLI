@@ -481,7 +481,6 @@ export class GeminiChat {
 
         return false;
       },
-      authType: this.config.getContentGeneratorConfig()?.authType,
     });
 
     return this.processStreamResponse(model, streamResponse);

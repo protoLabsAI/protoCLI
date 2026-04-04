@@ -4,9 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { DEFAULT_QWEN_MODEL, MAINLINE_CODER_MODEL } from '../config/models.js';
-
-import type { ModelConfig } from './types.js';
+import { MAINLINE_CODER_MODEL } from '../config/models.js';
 
 type AuthType = import('../core/contentGenerator.js').AuthType;
 type ContentGeneratorConfig =
@@ -82,20 +80,8 @@ export const AUTH_ENV_MAPPINGS = {
     baseUrl: [],
     model: ['GOOGLE_MODEL'],
   },
-  'qwen-oauth': {
-    apiKey: [],
-    baseUrl: [],
-    model: [],
-  },
 } as const satisfies Record<AuthType, AuthEnvMapping>;
 
 export const DEFAULT_MODELS = {
   openai: MAINLINE_CODER_MODEL,
-  'qwen-oauth': DEFAULT_QWEN_MODEL,
 } as Partial<Record<AuthType, string>>;
-
-export const QWEN_OAUTH_MODELS: ModelConfig[] = [];
-
-export const QWEN_OAUTH_ALLOWED_MODELS = QWEN_OAUTH_MODELS.map(
-  (model) => model.id,
-) as readonly string[];

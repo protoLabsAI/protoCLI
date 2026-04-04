@@ -14,7 +14,7 @@ const useTerminalSizeMock = vi.mocked(useTerminalSize.useTerminalSize);
 
 const defaultProps = {
   version: '1.0.0',
-  authDisplayType: AuthDisplayType.QWEN_OAUTH,
+  authDisplayType: AuthDisplayType.API_KEY,
   model: 'qwen-coder-plus',
   workingDirectory: '/home/user/projects/test',
 };

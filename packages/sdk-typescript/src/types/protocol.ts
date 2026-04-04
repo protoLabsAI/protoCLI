@@ -292,12 +292,7 @@ export type PermissionMode = 'default' | 'plan' | 'auto-edit' | 'yolo';
  * Authentication types supported by the CLI.
  * Aligns with CLI's --auth-type parameter.
  */
-export type AuthType =
-  | 'openai'
-  | 'anthropic'
-  | 'qwen-oauth'
-  | 'gemini'
-  | 'vertex-ai';
+export type AuthType = 'openai' | 'anthropic' | 'gemini' | 'vertex-ai';
 
 /**
  * TODO: Align with `ToolCallConfirmationDetails`
