@@ -105,7 +105,7 @@ describe('OpenRouterOpenAICompatibleProvider', () => {
       expect(headers).toEqual({
         'User-Agent': `QwenCode/1.0.0 (${process.platform}; ${process.arch})`,
         'HTTP-Referer': 'https://github.com/QwenLM/qwen-code.git',
-        'X-OpenRouter-Title': 'Qwen Code',
+        'X-OpenRouter-Title': 'proto',
       });
     });
 
@@ -125,7 +125,7 @@ describe('OpenRouterOpenAICompatibleProvider', () => {
       expect(headers).toEqual({
         'User-Agent': 'ParentAgent/1.0.0',
         'HTTP-Referer': 'https://github.com/QwenLM/qwen-code.git', // OpenRouter-specific value should override
-        'X-OpenRouter-Title': 'Qwen Code',
+        'X-OpenRouter-Title': 'proto',
       });
 
       parentBuildHeaders.mockRestore();
