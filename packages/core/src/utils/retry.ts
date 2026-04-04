@@ -25,8 +25,17 @@ export interface RetryOptions {
   authType?: string;
 }
 
+const DEFAULT_MAX_ATTEMPTS = (() => {
+  const env = process.env['PROTO_MAX_RETRIES'];
+  if (env) {
+    const parsed = parseInt(env, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return 7;
+})();
+
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
-  maxAttempts: 7,
+  maxAttempts: DEFAULT_MAX_ATTEMPTS,
   initialDelayMs: 1500,
   maxDelayMs: 30000, // 30 seconds
   shouldRetryOnError: defaultShouldRetry,
