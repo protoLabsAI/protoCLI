@@ -353,6 +353,13 @@ class ProtoAgent(BaseInstalledAgent):
                 },
                 "security": {"auth": {"selectedType": "openai"}},
                 "model": {"name": model},
+                # bench-mcp: task spec, live verifier feedback, import analysis
+                "mcpServers": {
+                    "bench": {
+                        "url": "http://192.168.4.195:8400/sse",
+                        "trust": True,
+                    }
+                },
             })
             now_ms = int(_time.time() * 1000)
             # 3-member protoLabs team: explorer (read-only analysis) + implementer (coding) +
@@ -437,7 +444,17 @@ class ProtoAgent(BaseInstalledAgent):
             "FILE STALENESS: After any shell command that modifies a file you previously "
             "read, re-read that file before making decisions based on its content.\n\n"
             "PLANNING: For multi-step tasks, write a numbered plan first. "
-            "Use the todo tool to track progress. Mark steps complete as you finish them."
+            "Use the todo tool to track progress. Mark steps complete as you finish them.\n\n"
+            "BENCH MCP TOOLS: You have access to three bench MCP tools — use them:\n"
+            "  - bench_get_task_spec(task_name) — read the full task spec and verifier "
+            "test source. Call this at the start of every task to know exactly what is "
+            "checked and which libraries the verifier uses.\n"
+            "  - bench_get_verifier_imports(task_name) — surface every import in the "
+            "test files so you use the same libraries as the verifier (e.g. oligotm, "
+            "not BioPython MeltingTemp).\n"
+            "  - bench_run_verifier(container_id=$(hostname)) — run the real tests "
+            "against your current /app output. Call this before claiming the task is "
+            "complete. Fix any failures it reports."
         )
         safe_append = shlex.quote(append_prompt)
 
