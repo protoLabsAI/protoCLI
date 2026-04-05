@@ -25,6 +25,7 @@ These commands help you save, restore, and summarize work progress.
 | `/compress` | Replace chat history with summary to save Tokens          | `/compress`                          |
 | `/resume`   | Resume a previous conversation session                    | `/resume`                            |
 | `/restore`  | Restore files to state before tool execution              | `/restore` (list) or `/restore <ID>` |
+| `/export`   | Export current session to a file (html, md, json, jsonl)  | `/export html`, `/export md`         |
 
 ### 1.2 Interface and Workspace Control
 

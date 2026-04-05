@@ -1,5 +1,6 @@
 export default {
   commands: 'Commands',
+  export: 'Session Export',
   'followup-suggestions': 'Followup Suggestions',
   'sub-agents': 'SubAgents',
   arena: 'Agent Arena',
