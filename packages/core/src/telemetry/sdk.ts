@@ -38,8 +38,11 @@ import {
 } from './file-exporters.js';
 import { createDebugLogger } from '../utils/debugLogger.js';
 
-// For troubleshooting, set the log level to DiagLogLevel.DEBUG
-diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
+// OTEL diagnostics are silenced by default to prevent connection errors from
+// leaking into the terminal. Set PROTO_OTEL_DEBUG=1 to enable verbose logging.
+if (process.env?.['PROTO_OTEL_DEBUG']) {
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
+}
 
 let sdk: NodeSDK | undefined;
 let telemetryInitialized = false;

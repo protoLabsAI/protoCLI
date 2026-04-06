@@ -16,8 +16,8 @@ import { ProxyAgent, setGlobalDispatcher } from 'undici';
 import type {
   ContentGenerator,
   ContentGeneratorConfig,
-
-  AuthType} from '../core/contentGenerator.js';
+  AuthType,
+} from '../core/contentGenerator.js';
 import type { ContentGeneratorConfigSources } from '../core/contentGenerator.js';
 import type { MCPOAuthConfig } from '../mcp/oauth-provider.js';
 import type { ShellExecutionConfig } from '../services/shellExecutionService.js';
@@ -85,7 +85,6 @@ import { AutoApproveClassifier } from '../permissions/auto-approve-classifier.js
 import { SubagentManager } from '../subagents/subagent-manager.js';
 import type { SubagentConfig } from '../subagents/types.js';
 import {
-  DEFAULT_OTLP_ENDPOINT,
   DEFAULT_TELEMETRY_TARGET,
   initializeTelemetry,
   logStartSession,
@@ -696,7 +695,10 @@ export class Config {
     this.telemetrySettings = {
       enabled: params.telemetry?.enabled ?? false,
       target: params.telemetry?.target ?? DEFAULT_TELEMETRY_TARGET,
-      otlpEndpoint: params.telemetry?.otlpEndpoint ?? DEFAULT_OTLP_ENDPOINT,
+      // No default endpoint — if none is configured, OTLP exporters are not used
+      // and we fall back to console/file exporters. This prevents spurious
+      // "connection refused" errors when no local OTEL collector is running.
+      otlpEndpoint: params.telemetry?.otlpEndpoint,
       otlpProtocol: params.telemetry?.otlpProtocol,
       logPrompts: params.telemetry?.logPrompts ?? true,
       outfile: params.telemetry?.outfile,
@@ -796,7 +798,11 @@ export class Config {
       onModelChange: this.handleModelChange.bind(this),
     });
 
-    if (this.telemetrySettings.enabled) {
+    if (
+      this.telemetrySettings.enabled ||
+      (process.env?.['LANGFUSE_PUBLIC_KEY'] &&
+        process.env?.['LANGFUSE_SECRET_KEY'])
+    ) {
       initializeTelemetry(this);
     }
 
@@ -1717,8 +1723,8 @@ export class Config {
     return this.telemetrySettings.logPrompts ?? true;
   }
 
-  getTelemetryOtlpEndpoint(): string {
-    return this.telemetrySettings.otlpEndpoint ?? DEFAULT_OTLP_ENDPOINT;
+  getTelemetryOtlpEndpoint(): string | undefined {
+    return this.telemetrySettings.otlpEndpoint;
   }
 
   getTelemetryOtlpProtocol(): 'grpc' | 'http' {

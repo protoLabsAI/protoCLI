@@ -10,11 +10,7 @@ import type { ConfigParameters, SandboxConfig } from './config.js';
 import { Config, ApprovalMode } from './config.js';
 import * as path from 'node:path';
 import { setGeminiMdFilename as mockSetGeminiMdFilename } from '../tools/memoryTool.js';
-import {
-  DEFAULT_TELEMETRY_TARGET,
-  DEFAULT_OTLP_ENDPOINT,
-  QwenLogger,
-} from '../telemetry/index.js';
+import { DEFAULT_TELEMETRY_TARGET, QwenLogger } from '../telemetry/index.js';
 import type {
   ContentGenerator,
   ContentGeneratorConfig,
@@ -667,13 +663,13 @@ describe('Server Config (config.ts)', () => {
       expect(config.getTelemetryOtlpEndpoint()).toBe(endpoint);
     });
 
-    it('should return default OTLP endpoint if not provided', () => {
+    it('should return undefined OTLP endpoint if not provided', () => {
       const params: ConfigParameters = {
         ...baseParams,
         telemetry: { enabled: true },
       };
       const config = new Config(params);
-      expect(config.getTelemetryOtlpEndpoint()).toBe(DEFAULT_OTLP_ENDPOINT);
+      expect(config.getTelemetryOtlpEndpoint()).toBeUndefined();
     });
 
     it('should return provided logPrompts setting', () => {
@@ -708,11 +704,11 @@ describe('Server Config (config.ts)', () => {
       expect(config.getTelemetryTarget()).toBe(DEFAULT_TELEMETRY_TARGET);
     });
 
-    it('should return default OTLP endpoint if telemetry object is not provided', () => {
+    it('should return undefined OTLP endpoint if telemetry object is not provided', () => {
       const paramsWithoutTelemetry: ConfigParameters = { ...baseParams };
       delete paramsWithoutTelemetry.telemetry;
       const config = new Config(paramsWithoutTelemetry);
-      expect(config.getTelemetryOtlpEndpoint()).toBe(DEFAULT_OTLP_ENDPOINT);
+      expect(config.getTelemetryOtlpEndpoint()).toBeUndefined();
     });
 
     it('should return provided OTLP protocol', () => {
