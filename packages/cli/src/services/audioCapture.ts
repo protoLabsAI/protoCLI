@@ -34,6 +34,8 @@ export async function startRecording(
   backend: CaptureBackend,
 ): Promise<ChildProcess> {
   if (backend === 'sox') {
+    // No silence detection — push-to-talk controls start/stop explicitly.
+    // Silence detection caused empty recordings on macOS (mic below threshold).
     return spawn('rec', [
       '-r',
       '16000',
@@ -44,13 +46,6 @@ export async function startRecording(
       '-b',
       '16',
       outputPath,
-      'silence',
-      '1',
-      '0.1',
-      '1%',
-      '1',
-      '1.5',
-      '1%',
     ]);
   } else if (backend === 'arecord') {
     return spawn('arecord', [
