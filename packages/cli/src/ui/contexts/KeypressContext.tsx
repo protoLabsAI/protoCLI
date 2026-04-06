@@ -481,6 +481,22 @@ export function KeypressProvider({
           };
         }
 
+        // Ctrl+Space (keyCode 32)
+        if (ctrl && keyCode === 32) {
+          return {
+            key: {
+              name: 'space',
+              ctrl: true,
+              meta: alt,
+              shift,
+              paste: false,
+              sequence: buffer.slice(0, m[0].length),
+              kittyProtocol: true,
+            },
+            length: m[0].length,
+          };
+        }
+
         // Ctrl+letters
         if (
           ctrl &&
