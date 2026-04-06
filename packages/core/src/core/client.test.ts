@@ -300,6 +300,7 @@ describe('Gemini Client (client.ts)', () => {
     const mockToolRegistry = {
       getFunctionDeclarations: vi.fn().mockReturnValue([]),
       getTool: vi.fn().mockReturnValue(null),
+      getMcpServerInstructions: vi.fn().mockReturnValue(new Map()),
     };
     const fileService = new FileDiscoveryService('/test/dir');
     const contentGeneratorConfig: ContentGeneratorConfig = {
@@ -2747,7 +2748,9 @@ Other open files:
 
       // Manually inject a history length snapshot to simulate what
       // sendMessageStream would do.
-      (client as unknown as { turnHistoryLengths: Map<string, number> }).turnHistoryLengths.set(
+      (
+        client as unknown as { turnHistoryLengths: Map<string, number> }
+      ).turnHistoryLengths.set(
         'turn-1',
         2, // 2 = the initial history set up in the beforeEach mock
       );
@@ -2762,15 +2765,20 @@ Other open files:
       // Simulate the history at checkpoint creation: 2 initial entries
       const snapshotLength = client.getHistory().length; // after initialize()
       checkpointStore.add('turn-1', 'First prompt');
-      (client as unknown as { turnHistoryLengths: Map<string, number> }).turnHistoryLengths.set(
-        'turn-1',
-        snapshotLength,
-      );
+      (
+        client as unknown as { turnHistoryLengths: Map<string, number> }
+      ).turnHistoryLengths.set('turn-1', snapshotLength);
 
       // Add extra messages to simulate what happened after the turn ran
-      await client.addHistory({ role: 'user', parts: [{ text: 'First prompt' }] });
+      await client.addHistory({
+        role: 'user',
+        parts: [{ text: 'First prompt' }],
+      });
       await client.addHistory({ role: 'model', parts: [{ text: 'Response' }] });
-      await client.addHistory({ role: 'user', parts: [{ text: 'Second prompt' }] });
+      await client.addHistory({
+        role: 'user',
+        parts: [{ text: 'Second prompt' }],
+      });
 
       expect(client.getHistory().length).toBe(snapshotLength + 3);
 
@@ -2794,10 +2802,9 @@ Other open files:
       client['chat'] = mockChat;
 
       checkpointStore.add('first-turn', 'Very first message');
-      (client as unknown as { turnHistoryLengths: Map<string, number> }).turnHistoryLengths.set(
-        'first-turn',
-        0,
-      );
+      (
+        client as unknown as { turnHistoryLengths: Map<string, number> }
+      ).turnHistoryLengths.set('first-turn', 0);
 
       const result = client.trimHistoryToCheckpoint('first-turn');
 
@@ -2811,10 +2818,9 @@ Other open files:
       checkpointStore.add('turn-1', 'Some prompt');
       checkpointStore.add('turn-2', 'Another prompt');
 
-      (client as unknown as { turnHistoryLengths: Map<string, number> }).turnHistoryLengths.set(
-        'turn-1',
-        0,
-      );
+      (
+        client as unknown as { turnHistoryLengths: Map<string, number> }
+      ).turnHistoryLengths.set('turn-1', 0);
 
       const sizeBefore = checkpointStore.size;
       client.trimHistoryToCheckpoint('turn-1');

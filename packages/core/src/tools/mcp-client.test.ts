@@ -47,9 +47,9 @@ describe('mcp-client', () => {
       vi.mocked(ClientLib.Client).mockReturnValue(
         mockedClient as unknown as ClientLib.Client,
       );
-      vi.spyOn(SdkClientStdioLib, 'StdioClientTransport').mockReturnValue(
-        {} as SdkClientStdioLib.StdioClientTransport,
-      );
+      vi.spyOn(SdkClientStdioLib, 'StdioClientTransport').mockReturnValue({
+        stderr: { on: vi.fn() },
+      } as unknown as SdkClientStdioLib.StdioClientTransport);
       const mockedMcpToTool = vi.mocked(GenAiLib.mcpToTool).mockReturnValue({
         tool: () => ({
           functionDeclarations: [
@@ -90,9 +90,9 @@ describe('mcp-client', () => {
       vi.mocked(ClientLib.Client).mockReturnValue(
         mockedClient as unknown as ClientLib.Client,
       );
-      vi.spyOn(SdkClientStdioLib, 'StdioClientTransport').mockReturnValue(
-        {} as SdkClientStdioLib.StdioClientTransport,
-      );
+      vi.spyOn(SdkClientStdioLib, 'StdioClientTransport').mockReturnValue({
+        stderr: { on: vi.fn() },
+      } as unknown as SdkClientStdioLib.StdioClientTransport);
       vi.mocked(GenAiLib.mcpToTool).mockReturnValue({
         tool: () =>
           Promise.resolve({
@@ -150,9 +150,9 @@ describe('mcp-client', () => {
       vi.mocked(ClientLib.Client).mockReturnValue(
         mockedClient as unknown as ClientLib.Client,
       );
-      vi.spyOn(SdkClientStdioLib, 'StdioClientTransport').mockReturnValue(
-        {} as SdkClientStdioLib.StdioClientTransport,
-      );
+      vi.spyOn(SdkClientStdioLib, 'StdioClientTransport').mockReturnValue({
+        stderr: { on: vi.fn() },
+      } as unknown as SdkClientStdioLib.StdioClientTransport);
       vi.mocked(GenAiLib.mcpToTool).mockReturnValue({
         tool: () => Promise.resolve({ functionDeclarations: [] }),
       } as unknown as GenAiLib.CallableTool);
@@ -267,7 +267,9 @@ describe('mcp-client', () => {
     it('should connect via command', async () => {
       const mockedTransport = vi
         .spyOn(SdkClientStdioLib, 'StdioClientTransport')
-        .mockReturnValue({} as SdkClientStdioLib.StdioClientTransport);
+        .mockReturnValue({
+          stderr: { on: vi.fn() },
+        } as unknown as SdkClientStdioLib.StdioClientTransport);
 
       await createTransport(
         'test-server',

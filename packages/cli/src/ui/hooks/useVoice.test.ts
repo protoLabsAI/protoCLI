@@ -19,10 +19,12 @@ vi.mock('../../services/sttClient.js', () => ({
   transcribe: vi.fn().mockResolvedValue('hello from voice'),
 }));
 
-// Mock fs.unlink
+// Mock fs.unlink and fs.statSync
 vi.mock('node:fs', () => ({
   default: {
     unlink: vi.fn((_path: string, cb: () => void) => cb()),
+    // Return a size > 44 bytes so the empty-WAV guard passes in tests
+    statSync: vi.fn().mockReturnValue({ size: 1024 }),
   },
 }));
 
