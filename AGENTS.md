@@ -146,6 +146,14 @@ Key config sections:
 
 Set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` (+ optional `LANGFUSE_BASE_URL`) to trace all sessions in Langfuse. Activates automatically — no other config needed. Traces: session turns, LLM calls (all providers) with token counts, tool calls, subagents.
 
+## File Search
+
+For any file search or grep in this repo use the `fff` MCP tools instead of the built-in Glob/Grep tools. FFF is faster, typo-resistant, and builds frecency memory so results improve over time.
+
+- `fff__grep` — search file contents by identifier (default choice)
+- `fff__find_files` — find files by name/topic when you don't have a specific identifier
+- `fff__multi_grep` — search multiple patterns at once (e.g. snake_case + PascalCase variants)
+
 ## Memory System
 
 Proto uses a file-per-memory architecture with YAML frontmatter. Each memory is a `.md` file in `.proto/memory/` (project) or `~/.proto/memory/` (global). Four types: user, feedback, project, reference.

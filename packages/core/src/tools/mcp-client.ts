@@ -200,6 +200,14 @@ export class McpClient {
     return this.status;
   }
 
+  /**
+   * Returns the server-provided instructions from the MCP initialize response,
+   * if any. Only available after a successful connect().
+   */
+  getServerInstructions(): string | undefined {
+    return this.client.getInstructions();
+  }
+
   async readResource(
     uri: string,
     options?: { signal?: AbortSignal },

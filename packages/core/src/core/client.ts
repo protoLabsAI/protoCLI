@@ -280,19 +280,38 @@ export class GeminiClient {
     const overrideSystemPrompt = this.config.getSystemPrompt();
     const appendSystemPrompt = this.config.getAppendSystemPrompt();
 
+    // Collect instructions from MCP servers that provided them in their
+    // initialize response. Append each block under a labelled header so the
+    // model can attribute guidance to the right server.
+    let mcpInstructions = '';
+    const toolRegistry = this.config.getToolRegistry();
+    if (toolRegistry) {
+      const serverInstructions = toolRegistry.getMcpServerInstructions();
+      if (serverInstructions.size > 0) {
+        const blocks = Array.from(serverInstructions.entries())
+          .map(([name, text]) => `## MCP Server: ${name}\n\n${text}`)
+          .join('\n\n');
+        mcpInstructions = `\n\n# MCP Server Instructions\n\n${blocks}`;
+      }
+    }
+
     if (overrideSystemPrompt) {
-      return getCustomSystemPrompt(
-        overrideSystemPrompt,
-        userMemory,
-        appendSystemPrompt,
+      return (
+        getCustomSystemPrompt(
+          overrideSystemPrompt,
+          userMemory,
+          appendSystemPrompt,
+        ) + mcpInstructions
       );
     }
 
-    return getCoreSystemPrompt(
-      userMemory,
-      this.config.getModel(),
-      appendSystemPrompt,
-    ).full;
+    return (
+      getCoreSystemPrompt(
+        userMemory,
+        this.config.getModel(),
+        appendSystemPrompt,
+      ).full + mcpInstructions
+    );
   }
 
   async startChat(extraHistory?: Content[]): Promise<GeminiChat> {

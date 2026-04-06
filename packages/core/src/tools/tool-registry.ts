@@ -284,6 +284,15 @@ export class ToolRegistry {
   }
 
   /**
+   * Returns a map of server name → server-provided instructions for all
+   * connected MCP servers that included an instructions field in their
+   * initialize response.
+   */
+  getMcpServerInstructions(): Map<string, string> {
+    return this.mcpClientManager.getAllServerInstructions();
+  }
+
+  /**
    * Discovers tools from project (if available and configured).
    * Can be called multiple times to update discovered tools.
    * This will discover tools from the command line and from MCP servers.

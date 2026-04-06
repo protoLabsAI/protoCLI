@@ -263,6 +263,22 @@ export class McpClientManager {
   }
 
   /**
+   * Returns a map of server name → server-provided instructions for all
+   * connected servers that supplied an instructions field in their initialize
+   * response.
+   */
+  getAllServerInstructions(): Map<string, string> {
+    const result = new Map<string, string>();
+    for (const [name, client] of this.clients) {
+      const instructions = client.getServerInstructions();
+      if (instructions) {
+        result.set(name, instructions);
+      }
+    }
+    return result;
+  }
+
+  /**
    * Gets the health monitoring configuration
    */
   getHealthConfig(): MCPHealthMonitorConfig {
