@@ -83,6 +83,8 @@ describe('useVoice', () => {
     expect(mockTranscribe).toHaveBeenCalledWith(
       expect.stringContaining('proto-voice-'),
       STT_ENDPOINT,
+      'whisper-1',
+      undefined,
     );
     expect(transcript).toBe('hello from voice');
     expect(result.current.voiceState).toBe('idle');
