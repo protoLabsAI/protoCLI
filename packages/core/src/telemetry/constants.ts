@@ -48,6 +48,16 @@ export const EVENT_ARENA_SESSION_STARTED = 'qwen-code.arena_session_started';
 export const EVENT_ARENA_AGENT_COMPLETED = 'qwen-code.arena_agent_completed';
 export const EVENT_ARENA_SESSION_ENDED = 'qwen-code.arena_session_ended';
 
+// Harness Events — captured for Langfuse fine-tuning datasets
+export const EVENT_HARNESS_DOOM_LOOP = 'proto.harness.doom_loop';
+export const EVENT_HARNESS_SCOPE_VIOLATION = 'proto.harness.scope_violation';
+export const EVENT_HARNESS_VERIFICATION_FAILED =
+  'proto.harness.verification_failed';
+export const EVENT_HARNESS_CHECKPOINT = 'proto.harness.checkpoint';
+export const EVENT_HARNESS_OBSERVATION_MASK = 'proto.harness.observation_mask';
+export const EVENT_HARNESS_SPRINT_CONTRACT = 'proto.harness.sprint_contract';
+export const EVENT_HARNESS_REMINDER = 'proto.harness.reminder';
+
 // Performance Events
 export const EVENT_STARTUP_PERFORMANCE = 'qwen-code.startup.performance';
 export const EVENT_MEMORY_USAGE = 'qwen-code.memory.usage';

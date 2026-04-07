@@ -31,6 +31,7 @@ import path from 'node:path';
 import { CheckpointStore } from './checkpointStore.js';
 import { ToolNames } from '../tools/tool-names.js';
 import type { Config } from '../config/config.js';
+import { recordCheckpoint } from '../telemetry/harnessTelemetry.js';
 
 // ─── Session-scoped singleton ──────────────────────────────────────────────
 
@@ -111,7 +112,9 @@ export async function gitSnapshotBeforeEdit(
     const gitService = await config.getGitService();
     const label = `proto-checkpoint:${toolName}:${path.basename(filePath)}`;
     const hash = await gitService.createFileSnapshot(label);
-    return hash ?? null;
+    const resolvedHash = hash ?? null;
+    recordCheckpoint({ toolName, filePath, commitHash: resolvedHash });
+    return resolvedHash;
   } catch {
     // Snapshot failure must never block tool execution
     return null;

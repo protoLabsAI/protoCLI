@@ -59,7 +59,10 @@ import type {
 import { type AgentEventEmitter, AgentEventType } from './agent-events.js';
 import type { AgentContextCompactedEvent } from './agent-events.js';
 import { estimateTokens, compactMessages } from './compaction.js';
-import { applyObservationMask } from '../../services/chatCompressionService.js';
+import {
+  applyObservationMask,
+  INCREMENTAL_PROTECTED_TAIL,
+} from '../../services/chatCompressionService.js';
 import { AgentStatistics, type AgentStatsSummary } from './agent-statistics.js';
 import { AgentTool } from '../../tools/agent.js';
 import { ToolNames } from '../../tools/tool-names.js';
@@ -74,6 +77,12 @@ import {
   sessionScopeLock,
   formatScopeViolationMessage,
 } from '../../services/scopeLock.js';
+import {
+  recordDoomLoop,
+  recordScopeViolation,
+  recordObservationMask,
+} from '../../telemetry/harnessTelemetry.js';
+import { HarnessReminderService } from '../../services/harnessReminderService.js';
 
 /**
  * Result of a single reasoning loop invocation.
@@ -394,6 +403,9 @@ export class AgentCore {
     let consecutiveAllFailRounds = 0;
     const MAX_FAIL_ROUNDS_BEFORE_REFLECT = 3;
 
+    // ── Harness reminder service ──────────────────────────────
+    const harnessReminder = new HarnessReminderService();
+
     while (true) {
       // Check abort before starting a new round — prevents unnecessary API
       // calls after processFunctionCalls was unblocked by an abort signal.
@@ -450,6 +462,14 @@ export class AgentCore {
           const targetTokens = Math.floor(maxTokens * 0.7);
           // Apply observation masking first (fast, no API call)
           const masked = applyObservationMask(historyBefore);
+          if (masked.length < historyBefore.length) {
+            recordObservationMask({
+              maskedPairCount: historyBefore.length - masked.length,
+              verbatimWindowSize: INCREMENTAL_PROTECTED_TAIL,
+              messagesBefore: historyBefore.length,
+              messagesAfter: masked.length,
+            });
+          }
           const compacted =
             estimateTokens(masked) <= targetTokens
               ? masked
@@ -618,6 +638,17 @@ export class AgentCore {
             ...currentMessages,
             { role: 'user', parts: [{ text: LOOP_RECOVERY_MSG }] },
           ];
+          // Telemetry for Langfuse fine-tuning dataset
+          const topFingerprint = [...fingerprintCounts.entries()].sort(
+            (a, b) => b[1] - a[1],
+          )[0];
+          recordDoomLoop({
+            fingerprint: topFingerprint?.[0] ?? '',
+            windowSize: DOOM_WINDOW_SIZE,
+            repeatCount: topFingerprint?.[1] ?? 0,
+            recoveryMessage: LOOP_RECOVERY_MSG,
+            toolCallCount: turnCounter,
+          });
           recentToolCalls.length = 0;
           loopWarningInjected = true;
         }
@@ -707,6 +738,19 @@ export class AgentCore {
             },
           ];
           consecutiveAllFailRounds = 0;
+        }
+
+        // ── Harness reminders (event-driven, centralized) ─────
+        const reminders = harnessReminder.check({
+          toolCallCount: turnCounter,
+          consecutiveFailures: consecutiveAllFailRounds,
+          turnsWithoutCodeWrite,
+        });
+        for (const r of reminders) {
+          currentMessages = [
+            ...currentMessages,
+            { role: 'user', parts: [{ text: r.message }] },
+          ];
         }
       } else {
         // No tool calls — reset analysis loop counter (model is finalizing).
@@ -873,6 +917,11 @@ export class AgentCore {
             timestamp: Date.now(),
           } as AgentToolResultEvent);
           this.recordToolCallStats(fcName, false, 0, violationMessage);
+          recordScopeViolation({
+            violatingPath: fcArgs['file_path'] as string,
+            permittedCount: sessionScopeLock.getPermittedPaths().size,
+            recoveryMessage: violationMessage,
+          });
           toolResponseParts.push(functionResponsePart);
           continue;
         }

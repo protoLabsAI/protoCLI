@@ -5,6 +5,7 @@
  */
 
 import { execFile } from 'node:child_process';
+import { recordVerificationFailure } from '../telemetry/harnessTelemetry.js';
 
 /**
  * File-modifying tool names that should trigger post-edit verification.
@@ -59,9 +60,16 @@ export async function runPostEditVerify(
             ? output.slice(0, 2000) + '\n...(truncated)'
             : output;
 
-        resolve(
-          `[Post-edit verification FAILED — \`${verifyCommand}\` exited ${error.code ?? 'non-zero'}]\n${truncated}\n\nRemediation:\n1. Read the error above carefully — identify which file(s) caused it\n2. Fix the root cause — do not re-run the failing command until the error is understood\n3. Re-run \`${verifyCommand}\` after fixing to confirm it passes`,
-        );
+        const message = `[Post-edit verification FAILED — \`${verifyCommand}\` exited ${error.code ?? 'non-zero'}]\n${truncated}\n\nRemediation:\n1. Read the error above carefully — identify which file(s) caused it\n2. Fix the root cause — do not re-run the failing command until the error is understood\n3. Re-run \`${verifyCommand}\` after fixing to confirm it passes`;
+
+        recordVerificationFailure({
+          command: verifyCommand,
+          exitCode: error.code ?? 'non-zero',
+          outputSnippet: output,
+          recoveryMessage: message,
+        });
+
+        resolve(message);
       },
     );
   });

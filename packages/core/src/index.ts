@@ -125,6 +125,10 @@ export * from './services/shellExecutionService.js';
 export * from './services/baselineCheck.js';
 export * from './services/postEditVerify.js';
 export * from './services/sessionNotes.js';
+export * from './services/scopeLock.js';
+export * from './services/sprintContractService.js';
+export { HarnessReminderService } from './services/harnessReminderService.js';
+export * from './telemetry/harnessTelemetry.js';
 
 // ============================================================================
 // IDE Support
