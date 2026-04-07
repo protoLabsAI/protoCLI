@@ -42,6 +42,7 @@ import {
 } from '../services/fileSystemService.js';
 import { GitService } from '../services/gitService.js';
 import { CronScheduler } from '../services/cronScheduler.js';
+import { SprintContractService } from '../services/sprintContractService.js';
 
 // Tools
 import { AskUserQuestionTool } from '../tools/askUserQuestion.js';
@@ -1036,6 +1037,14 @@ export class Config {
 
     // Detect and capture runtime model snapshot (from CLI/ENV/credentials)
     this.modelsConfig.detectAndCaptureRuntimeModel();
+
+    // Re-arm scope lock if a sprint contract was left from a previous session
+    const contractResumed = await SprintContractService.resumeFromDisk(
+      this.getWorkingDir(),
+    );
+    if (contractResumed) {
+      this.debugLogger.info('Sprint contract scope lock restored from disk');
+    }
 
     logStartSession(this, new StartSessionEvent(this));
     this.debugLogger.info('Config initialization completed');
