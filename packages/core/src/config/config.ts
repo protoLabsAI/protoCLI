@@ -86,6 +86,7 @@ import { SubagentManager } from '../subagents/subagent-manager.js';
 import type { SubagentConfig } from '../subagents/types.js';
 import {
   DEFAULT_TELEMETRY_TARGET,
+  DEFAULT_OTLP_ENDPOINT,
   initializeTelemetry,
   logStartSession,
   logRipgrepFallback,
@@ -695,10 +696,7 @@ export class Config {
     this.telemetrySettings = {
       enabled: params.telemetry?.enabled ?? false,
       target: params.telemetry?.target ?? DEFAULT_TELEMETRY_TARGET,
-      // No default endpoint — if none is configured, OTLP exporters are not used
-      // and we fall back to console/file exporters. This prevents spurious
-      // "connection refused" errors when no local OTEL collector is running.
-      otlpEndpoint: params.telemetry?.otlpEndpoint,
+      otlpEndpoint: params.telemetry?.otlpEndpoint ?? DEFAULT_OTLP_ENDPOINT,
       otlpProtocol: params.telemetry?.otlpProtocol,
       logPrompts: params.telemetry?.logPrompts ?? true,
       outfile: params.telemetry?.outfile,
@@ -1723,8 +1721,8 @@ export class Config {
     return this.telemetrySettings.logPrompts ?? true;
   }
 
-  getTelemetryOtlpEndpoint(): string | undefined {
-    return this.telemetrySettings.otlpEndpoint;
+  getTelemetryOtlpEndpoint(): string {
+    return this.telemetrySettings.otlpEndpoint ?? DEFAULT_OTLP_ENDPOINT;
   }
 
   getTelemetryOtlpProtocol(): 'grpc' | 'http' {

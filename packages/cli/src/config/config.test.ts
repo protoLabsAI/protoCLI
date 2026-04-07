@@ -884,12 +884,12 @@ describe('loadCliConfig telemetry', () => {
     expect(config.getTelemetryOtlpEndpoint()).toBe('http://cli.example.com');
   });
 
-  it('should return undefined endpoint if no OTLP endpoint is provided via CLI or settings', async () => {
+  it('should return default endpoint if no OTLP endpoint is provided via CLI or settings', async () => {
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments();
     const settings: Settings = { telemetry: { enabled: true } };
     const config = await loadCliConfig(settings, argv);
-    expect(config.getTelemetryOtlpEndpoint()).toBeUndefined();
+    expect(config.getTelemetryOtlpEndpoint()).toBe('http://localhost:4317');
   });
 
   it('should use telemetry target from settings if CLI flag is not present', async () => {

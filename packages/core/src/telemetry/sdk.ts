@@ -119,6 +119,13 @@ export function initializeTelemetry(config: Config): void {
   const telemetryOutfile = config.getTelemetryOutfile();
   const useOtlp = !!parsedEndpoint && !telemetryOutfile;
 
+  // No destination configured — Langfuse handles traces via its own processor,
+  // but if there's no OTLP endpoint and no outfile we have nowhere to send
+  // spans/logs/metrics. Skip SDK init to avoid flooding the console.
+  if (!useOtlp && !telemetryOutfile && !langfuseProcessor) {
+    return;
+  }
+
   let spanExporter:
     | OTLPTraceExporter
     | OTLPTraceExporterHttp
@@ -171,6 +178,9 @@ export function initializeTelemetry(config: Config): void {
       exportIntervalMillis: 10000,
     });
   } else {
+    // Langfuse-only path: no OTLP endpoint and no outfile.
+    // Use console exporters as a no-op placeholder — Langfuse handles its own
+    // spans via the processor below, so these will never emit anything.
     spanExporter = new ConsoleSpanExporter();
     logExporter = new ConsoleLogRecordExporter();
     metricReader = new PeriodicExportingMetricReader({
@@ -179,9 +189,12 @@ export function initializeTelemetry(config: Config): void {
     });
   }
 
-  const spanProcessors: BatchSpanProcessor[] = [
-    new BatchSpanProcessor(spanExporter),
-  ];
+  // When Langfuse is the only destination (no OTLP/file), skip span/log/metric
+  // SDK processors to avoid console spam — Langfuse uses its own processor.
+  const spanProcessors: BatchSpanProcessor[] = [];
+  if (useOtlp || telemetryOutfile) {
+    spanProcessors.push(new BatchSpanProcessor(spanExporter!));
+  }
   if (langfuseProcessor) {
     spanProcessors.push(langfuseProcessor);
     debugLogger.debug('Langfuse span processor enabled.');
