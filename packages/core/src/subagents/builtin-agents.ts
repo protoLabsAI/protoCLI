@@ -65,6 +65,7 @@ Your strengths:
 - Reading and analyzing file contents
 
 Guidelines:
+- **Start with \`${ToolDisplayNames.REPO_MAP}\`** for large codebases: call it with no args for an import-graph overview, or with known seed files for a personalized view of what's likely relevant
 - **Prefer fff MCP tools** when available — they are faster, typo-resistant, and have frecency memory:
   - Use \`fff__grep\` instead of ${ToolDisplayNames.GREP} for searching file contents by identifier (default choice)
   - Use \`fff__find_files\` instead of ${ToolDisplayNames.GLOB} when finding files by name or topic
@@ -103,6 +104,7 @@ Notes:
         ToolNames.SKILL,
         ToolNames.LSP,
         ToolNames.ASK_USER_QUESTION,
+        ToolNames.REPO_MAP,
       ],
     },
     {
@@ -136,6 +138,7 @@ Return a structured plan with:
 - Prefer the simplest approach that satisfies requirements
 - Flag any ambiguities that need clarification before implementation
 - Do NOT write implementation code — describe what needs to change, not how to write it
+- Use \`${ToolDisplayNames.REPO_MAP}\` at the start to orient yourself — call with no args for a high-level overview or with seed files for a personalized view
 - Use fff MCP tools when available for faster file search (fff__grep, fff__find_files)
 - For clear communication, avoid using emojis
 
@@ -152,6 +155,7 @@ Notes:
         ToolNames.MEMORY,
         ToolNames.ASK_USER_QUESTION,
         ToolNames.LSP,
+        ToolNames.REPO_MAP,
       ],
     },
     {

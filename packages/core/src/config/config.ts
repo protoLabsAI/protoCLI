@@ -71,6 +71,7 @@ import { WebFetchTool } from '../tools/web-fetch.js';
 import { WebSearchTool } from '../tools/web-search/index.js';
 import { WriteFileTool } from '../tools/write-file.js';
 import { LspTool } from '../tools/lsp.js';
+import { RepoMapTool } from '../tools/repoMap.js';
 import { CronCreateTool } from '../tools/cron-create.js';
 import { CronListTool } from '../tools/cron-list.js';
 import { CronDeleteTool } from '../tools/cron-delete.js';
@@ -2321,6 +2322,9 @@ export class Config {
       // Register the unified LSP tool
       await registerCoreTool(LspTool, this);
     }
+
+    // Register repo map tool (always available — read-only, no external deps)
+    await registerCoreTool(RepoMapTool, this);
 
     // Register cron tools unless disabled
     if (this.isCronEnabled()) {

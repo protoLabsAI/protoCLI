@@ -129,6 +129,8 @@ export * from './services/scopeLock.js';
 export * from './services/sprintContractService.js';
 export { HarnessReminderService } from './services/harnessReminderService.js';
 export * from './telemetry/harnessTelemetry.js';
+export { RepoMapService } from './services/repoMapService.js';
+export { RepoMapTool } from './tools/repoMap.js';
 
 // ============================================================================
 // IDE Support
