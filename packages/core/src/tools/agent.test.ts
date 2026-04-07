@@ -27,6 +27,11 @@ import type {
 import { partToString } from '../utils/partUtils.js';
 import type { HookSystem } from '../hooks/hookSystem.js';
 import { PermissionMode } from '../hooks/types.js';
+import {
+  runWithMultiSample,
+  shouldRetry,
+} from '../services/multiSampleSelector.js';
+import type { MultiSampleResult } from '../services/multiSampleSelector.js';
 
 // Type for accessing protected methods in tests
 type AgentToolInvocation = {
@@ -48,6 +53,23 @@ type AgentToolWithProtectedMethods = AgentTool & {
 // Mock dependencies
 vi.mock('../subagents/subagent-manager.js');
 vi.mock('../agents/runtime/agent-headless.js');
+vi.mock('../services/behaviorVerifyGate.js', () => ({
+  BehaviorVerifyGate: {
+    loadScenarios: vi.fn().mockResolvedValue([]),
+    runScenarios: vi.fn().mockResolvedValue([]),
+    gateMessage: vi.fn().mockReturnValue(null),
+    formatResults: vi.fn().mockReturnValue(''),
+  },
+}));
+vi.mock('../services/multiSampleSelector.js', () => ({
+  runWithMultiSample: vi.fn(),
+  shouldRetry: vi.fn(),
+  formatMultiSampleResult: vi
+    .fn()
+    .mockReturnValue('Multi-sample: 2 attempt(s), best score 3/3'),
+  DEFAULT_TEMPERATURES: [0.7, 1.0, 1.3],
+  DEFAULT_MAX_ATTEMPTS: 3,
+}));
 
 const MockedSubagentManager = vi.mocked(SubagentManager);
 const MockedContextState = vi.mocked(ContextState);
@@ -87,6 +109,8 @@ describe('AgentTool', () => {
       getGeminiClient: vi.fn().mockReturnValue(undefined),
       getHookSystem: vi.fn().mockReturnValue(undefined),
       getTranscriptPath: vi.fn().mockReturnValue('/test/transcript'),
+      getWorkingDir: vi.fn().mockReturnValue('/test/project'),
+      getTargetDir: vi.fn().mockReturnValue('/test/project'),
     } as unknown as Config;
 
     changeListeners = [];
@@ -547,6 +571,317 @@ describe('AgentTool', () => {
       const description = invocation.getDescription();
 
       expect(description).toBe('Search files');
+    });
+  });
+
+  describe('multi_sample retry', () => {
+    let mockAgent: AgentHeadless;
+    let mockContextState: ContextState;
+
+    const makeAgent = (
+      terminateMode: AgentTerminateMode,
+      text = 'agent output',
+    ): AgentHeadless =>
+      ({
+        execute: vi.fn().mockResolvedValue(undefined),
+        result: text,
+        getFinalText: vi.fn().mockReturnValue(text),
+        formatCompactResult: vi.fn().mockReturnValue('✅'),
+        getExecutionSummary: vi.fn().mockReturnValue({
+          rounds: 1,
+          totalDurationMs: 100,
+          totalToolCalls: 0,
+          successfulToolCalls: 0,
+          failedToolCalls: 0,
+          successRate: 100,
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
+          toolUsage: [],
+        }),
+        getStatistics: vi.fn().mockReturnValue({ rounds: 1 }),
+        getTerminateMode: vi.fn().mockReturnValue(terminateMode),
+      }) as unknown as AgentHeadless;
+
+    beforeEach(() => {
+      mockAgent = makeAgent(AgentTerminateMode.ERROR);
+      mockContextState = { set: vi.fn() } as unknown as ContextState;
+      MockedContextState.mockImplementation(() => mockContextState);
+
+      vi.mocked(mockSubagentManager.loadSubagent).mockResolvedValue(
+        mockSubagents[0],
+      );
+      vi.mocked(mockSubagentManager.createAgentHeadless).mockResolvedValue(
+        mockAgent,
+      );
+
+      // Reset mocks to sensible defaults
+      vi.mocked(shouldRetry).mockReturnValue(false);
+      vi.mocked(runWithMultiSample).mockResolvedValue({
+        attempts: [],
+        best: {
+          attempt: 0,
+          temperature: 0.7,
+          terminateMode: AgentTerminateMode.GOAL,
+          finalText: 'retry succeeded',
+          gatePass: null,
+          score: 3,
+        },
+        success: true,
+      } satisfies MultiSampleResult);
+    });
+
+    it('does not call runWithMultiSample when multi_sample is false', async () => {
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: false,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      await invocation.execute();
+
+      expect(runWithMultiSample).not.toHaveBeenCalled();
+    });
+
+    it('does not retry when shouldRetry returns false', async () => {
+      vi.mocked(shouldRetry).mockReturnValue(false);
+
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: true,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      await invocation.execute();
+
+      expect(runWithMultiSample).not.toHaveBeenCalled();
+    });
+
+    it('calls runWithMultiSample when multi_sample is true and shouldRetry returns true', async () => {
+      vi.mocked(shouldRetry).mockReturnValue(true);
+
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: true,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      await invocation.execute();
+
+      expect(runWithMultiSample).toHaveBeenCalledWith(
+        'Run a task',
+        [], // empty scenarios (loadScenarios mocked to [])
+        '/test/project', // getTargetDir()
+        expect.any(Function),
+        { maxAttempts: 3 },
+      );
+    });
+
+    it('uses createAgentHeadless (not AgentHeadless.create) for retry attempts', async () => {
+      vi.mocked(shouldRetry).mockReturnValue(true);
+
+      // Capture the runAttempt callback and invoke it for attempt index 1
+      vi.mocked(runWithMultiSample).mockImplementation(
+        async (_prompt, _scenarios, _cwd, runAttempt) => {
+          // attempt 0: existing result (no createAgentHeadless call expected)
+          await runAttempt('original prompt', 0.7, 0);
+          // attempt 1: should call createAgentHeadless
+          await runAttempt('retry prompt with context', 1.0, 1);
+          return {
+            attempts: [
+              {
+                attempt: 0,
+                temperature: 0.7,
+                terminateMode: AgentTerminateMode.ERROR,
+                finalText: 'failed',
+                gatePass: null,
+                score: 0,
+              },
+              {
+                attempt: 1,
+                temperature: 1.0,
+                terminateMode: AgentTerminateMode.GOAL,
+                finalText: 'retry succeeded',
+                gatePass: null,
+                score: 3,
+              },
+            ],
+            best: {
+              attempt: 1,
+              temperature: 1.0,
+              terminateMode: AgentTerminateMode.GOAL,
+              finalText: 'retry succeeded',
+              gatePass: null,
+              score: 3,
+            },
+            success: true,
+          };
+        },
+      );
+
+      const retryAgent = makeAgent(AgentTerminateMode.GOAL, 'retry succeeded');
+      vi.mocked(mockSubagentManager.createAgentHeadless)
+        .mockResolvedValueOnce(mockAgent) // initial attempt
+        .mockResolvedValueOnce(retryAgent); // retry attempt
+
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: true,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      await invocation.execute();
+
+      // createAgentHeadless should be called twice: once for initial, once for retry
+      expect(mockSubagentManager.createAgentHeadless).toHaveBeenCalledTimes(2);
+    });
+
+    it('retry config uses the provided temperature', async () => {
+      vi.mocked(shouldRetry).mockReturnValue(true);
+
+      const capturedConfigs: unknown[] = [];
+
+      vi.mocked(runWithMultiSample).mockImplementation(
+        async (_prompt, _scenarios, _cwd, runAttempt) => {
+          await runAttempt('retry prompt', 1.3, 1);
+          return {
+            attempts: [
+              {
+                attempt: 1,
+                temperature: 1.3,
+                terminateMode: AgentTerminateMode.GOAL,
+                finalText: 'done',
+                gatePass: null,
+                score: 3,
+              },
+            ],
+            best: {
+              attempt: 1,
+              temperature: 1.3,
+              terminateMode: AgentTerminateMode.GOAL,
+              finalText: 'done',
+              gatePass: null,
+              score: 3,
+            },
+            success: true,
+          };
+        },
+      );
+
+      vi.mocked(mockSubagentManager.createAgentHeadless).mockImplementation(
+        async (cfg) => {
+          capturedConfigs.push(cfg);
+          return makeAgent(AgentTerminateMode.GOAL, 'done');
+        },
+      );
+
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: true,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      await invocation.execute();
+
+      // The second call (retry) should have temp=1.3
+      const retryConfig = capturedConfigs[1] as {
+        modelConfig?: { temp?: number };
+      };
+      expect(retryConfig?.modelConfig?.temp).toBe(1.3);
+    });
+
+    it('uses best result finalText when multi_sample succeeds on retry', async () => {
+      vi.mocked(shouldRetry).mockReturnValue(true);
+
+      vi.mocked(runWithMultiSample).mockResolvedValue({
+        attempts: [
+          {
+            attempt: 0,
+            temperature: 0.7,
+            terminateMode: AgentTerminateMode.ERROR,
+            finalText: 'first failed',
+            gatePass: null,
+            score: 0,
+          },
+          {
+            attempt: 1,
+            temperature: 1.0,
+            terminateMode: AgentTerminateMode.GOAL,
+            finalText: 'second succeeded',
+            gatePass: null,
+            score: 3,
+          },
+        ],
+        best: {
+          attempt: 1,
+          temperature: 1.0,
+          terminateMode: AgentTerminateMode.GOAL,
+          finalText: 'second succeeded',
+          gatePass: null,
+          score: 3,
+        },
+        success: true,
+      });
+
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: true,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      const result = await invocation.execute();
+
+      const text = partToString(result.llmContent);
+      expect(text).toContain('second succeeded');
+    });
+
+    it('uses getTargetDir (not getWorkingDir) for .proto/ lookups', async () => {
+      vi.mocked(shouldRetry).mockReturnValue(true);
+      vi.mocked(config.getTargetDir).mockReturnValue('/my/project/root');
+
+      const params: AgentParams = {
+        description: 'Do task',
+        prompt: 'Run a task',
+        subagent_type: 'file-search',
+        multi_sample: true,
+      };
+
+      const invocation = (
+        agentTool as AgentToolWithProtectedMethods
+      ).createInvocation(params);
+      await invocation.execute();
+
+      expect(runWithMultiSample).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Array),
+        '/my/project/root', // must be getTargetDir, not getWorkingDir
+        expect.any(Function),
+        expect.any(Object),
+      );
     });
   });
 

@@ -1040,8 +1040,9 @@ export class Config {
     this.modelsConfig.detectAndCaptureRuntimeModel();
 
     // Re-arm scope lock if a sprint contract was left from a previous session
+    // Use targetDir (project root) — this is where .proto/ lives regardless of cwd.
     const contractResumed = await SprintContractService.resumeFromDisk(
-      this.getWorkingDir(),
+      this.getTargetDir(),
     );
     if (contractResumed) {
       this.debugLogger.info('Sprint contract scope lock restored from disk');

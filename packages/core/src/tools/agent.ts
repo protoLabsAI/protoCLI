@@ -55,7 +55,6 @@ import {
   shouldRetry,
   formatMultiSampleResult,
 } from '../services/multiSampleSelector.js';
-import { AgentHeadless } from '../agents/runtime/agent-headless.js';
 
 export interface AgentParams {
   description: string;
@@ -907,13 +906,14 @@ class AgentToolInvocation extends BaseToolInvocation<AgentParams, ToolResult> {
           !signal?.aborted &&
           shouldRetry(terminateMode ?? AgentTerminateMode.ERROR)
         ) {
-          const behaviorScenarios = await BehaviorVerifyGate.loadScenarios(
-            this.config.getWorkingDir(),
-          );
+          // Use targetDir (project root) for .proto/ lookups — same as behavior gate below.
+          const projectRoot = this.config.getTargetDir();
+          const behaviorScenarios =
+            await BehaviorVerifyGate.loadScenarios(projectRoot);
           const multiResult = await runWithMultiSample(
             this.params.prompt,
             behaviorScenarios,
-            this.config.getWorkingDir(),
+            projectRoot,
             async (retryPrompt, temperature, attemptIndex) => {
               // Attempt 0 already ran — return the result we have
               if (attemptIndex === 0) {
@@ -922,7 +922,8 @@ class AgentToolInvocation extends BaseToolInvocation<AgentParams, ToolResult> {
                   finalText,
                 };
               }
-              // Create a new subagent with modified temperature for retry
+              // Route through SubagentManager so tool filtering (allowlist/denylist)
+              // is applied identically to the original attempt.
               const retryConfig: SubagentConfig = {
                 ...subagentConfig,
                 modelConfig: {
@@ -930,15 +931,12 @@ class AgentToolInvocation extends BaseToolInvocation<AgentParams, ToolResult> {
                   temp: temperature,
                 },
               };
-              const retrySubagent = await AgentHeadless.create(
-                subagentConfig.name,
-                this.config,
-                { systemPrompt: subagentConfig.systemPrompt },
-                retryConfig.modelConfig ?? {},
-                retryConfig.runConfig ?? {},
-                undefined,
-                this.eventEmitter,
-              );
+              const retrySubagent =
+                await this.subagentManager.createAgentHeadless(
+                  retryConfig,
+                  this.config,
+                  { eventEmitter: this.eventEmitter },
+                );
               const retryCtx = new ContextState();
               retryCtx.set('task_prompt', retryPrompt);
               await retrySubagent.execute(retryCtx, signal ?? undefined);
@@ -999,15 +997,16 @@ class AgentToolInvocation extends BaseToolInvocation<AgentParams, ToolResult> {
           );
         }
 
-        // Run behavior verification scenarios only when the subagent completed its goal
+        // Run behavior verification scenarios only when the subagent completed its goal.
+        // Use targetDir (project root) — that's where .proto/verify-scenarios.json lives.
         if (terminateMode === AgentTerminateMode.GOAL) {
           const behaviorScenarios = await BehaviorVerifyGate.loadScenarios(
-            this.config.getWorkingDir(),
+            this.config.getTargetDir(),
           );
           if (behaviorScenarios.length > 0) {
             const scenarioResults = await BehaviorVerifyGate.runScenarios(
               behaviorScenarios,
-              this.config.getWorkingDir(),
+              this.config.getTargetDir(),
             );
             const gateMsg = BehaviorVerifyGate.gateMessage(scenarioResults);
             if (gateMsg) {
