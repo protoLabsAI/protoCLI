@@ -15,6 +15,11 @@ import { createMockCommandContext } from '../../test-utils/mockCommandContext.js
 import { MessageType } from '../types.js';
 
 describe('compressCommand', () => {
+  it('should expose compact and summarize as altNames', () => {
+    expect(compressCommand.altNames).toContain('compact');
+    expect(compressCommand.altNames).toContain('summarize');
+  });
+
   let context: ReturnType<typeof createMockCommandContext>;
   let mockTryCompressChat: ReturnType<typeof vi.fn>;
 
