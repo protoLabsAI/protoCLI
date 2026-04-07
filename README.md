@@ -262,9 +262,74 @@ A `MEMORY.md` index is auto-generated and loaded into the system prompt at the s
 
 After each conversation turn, a background extraction agent reviews recent messages and auto-creates memories for notable facts. This runs fire-and-forget with restricted tools (read/write/glob in the memory directory only).
 
+## Agent Harness
+
+proto includes a harness system that enforces quality gates, limits scope, and recovers from failures automatically.
+
+### Sprint Contract (Scope Lock)
+
+Prevents agents from modifying files outside an agreed scope. Before coding begins, negotiate a contract that defines exactly which files will be created or modified. The scope lock is armed — any write outside scope is rejected with a recovery message.
+
+**Workflow:**
+
+```bash
+proto
+/sprint-contract
+> Task: Refactor auth module
+> Files: src/auth.ts, src/utils.ts
+> Confirm
+```
+
+**Behavior:**
+
+- Write to `src/auth.ts` → ALLOWED
+- Write to `tests/foo.test.ts` → BLOCKED with scope violation message
+
+Contracts persist at `.proto/sprint-contract.json` and auto-restore on session resume.
+
+### Behavior Verification Gate
+
+Post-run smoke tests that verify changes actually work. After a subagent completes, the gate runs your defined scenarios (shell commands) in parallel. Failures inject a remediation message back to the agent for self-correction.
+
+**Setup** — create `.proto/verify-scenarios.json`:
+
+```json
+[
+  { "name": "tests pass", "command": "npm test -- --run", "timeoutMs": 60000 },
+  { "name": "build works", "command": "npm run build", "timeoutMs": 30000 },
+  { "name": "no TypeScript errors", "command": "npm run typecheck" }
+]
+```
+
+**Behavior:**
+
+1. Agent completes task, reports GOAL
+2. Gate fires, runs all scenarios in parallel
+3. If any fail → remediation message injected, agent self-corrects
+4. Gate fires again until all pass
+
+### Multi-Sample Retry
+
+When a subagent fails (ERROR, MAX_TURNS, or TIMEOUT), proto retries up to 2 more times with escalating temperatures (0.7 → 1.0 → 1.3). Each retry gets a `[RETRY CONTEXT]` block summarizing previous failures. Best result by score is returned.
+
+This reduces false negatives from single-run failures and gives the model multiple chances with different sampling strategies.
+
+### Repo Map
+
+PageRank-based file importance ranking. Analyzes the project's TypeScript/JS import graph to surface the most central files. Useful for understanding codebase structure or finding related files.
+
+**Usage:**
+
+```bash
+proto -p "Use the repo_map tool to find the most important files in this codebase"
+proto -p "Use repo_map with seedFiles=['src/auth.ts'] to find related files"
+```
+
+Results are cached at `.proto/repo-map-cache.json` and auto-invalidate on file changes.
+
 ## Skills
 
-proto ships with 16 bundled skills for agentic workflows:
+proto ships with 21 bundled skills for agentic workflows:
 
 - **brainstorming** — Structured ideation
 - **dispatching-parallel-agents** — Fan-out/fan-in subagent patterns
