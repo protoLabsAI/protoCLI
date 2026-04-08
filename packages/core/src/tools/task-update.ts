@@ -94,6 +94,7 @@ class TaskUpdateToolInvocation extends BaseToolInvocation<
         type: 'task_update_diff' as const,
         taskId: task.id,
         title: task.title,
+        status: task.status,
         changes,
       },
     };

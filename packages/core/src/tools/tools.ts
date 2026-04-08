@@ -588,6 +588,8 @@ export interface TaskUpdateDiffDisplay {
   taskId: string;
   /** Post-update task title, used as display header */
   title: string;
+  /** Current status of the task after the update */
+  status: string;
   changes: Array<{
     field: 'status' | 'title' | 'priority' | 'description';
     from: string;

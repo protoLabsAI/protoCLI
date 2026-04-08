@@ -30,7 +30,8 @@ export const TaskUpdateDiffDisplay: React.FC<Props> = ({ data }) => (
 
     {data.changes.length === 0 ? (
       <Box>
-        <Text color={theme.text.secondary}>no changes</Text>
+        <Text color={theme.text.secondary}>status: </Text>
+        <Text color={Colors.AccentGreen}>{data.status}</Text>
       </Box>
     ) : (
       data.changes.map(({ field, from, to }) => {
