@@ -93,9 +93,7 @@ describe('agentCore — snapshotFileBeforeEdit()', () => {
       file_path: '/project/file.ts',
     });
     expect(result).toBe(false);
-    expect(checkpointStore.getByPromptId(promptId)!.fileSnapshots.size).toBe(
-      0,
-    );
+    expect(checkpointStore.getByPromptId(promptId)!.fileSnapshots.size).toBe(0);
   });
 
   it('returns false when file_path arg is missing', () => {

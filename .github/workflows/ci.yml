@@ -86,8 +86,7 @@ jobs:
       - name: 'Build CLI package'
         run: 'npm run build --workspace=packages/cli'
 
-
-#
+  #
   # Test: Node
   #
   test:

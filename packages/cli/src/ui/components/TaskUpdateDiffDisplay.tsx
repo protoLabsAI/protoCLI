@@ -22,37 +22,37 @@ interface Props {
 }
 
 export const TaskUpdateDiffDisplay: React.FC<Props> = ({ data }) => (
-    <Box flexDirection="column">
-      {/* Task title header */}
-      <Box>
-        <Text color={theme.text.primary}>{data.title}</Text>
-      </Box>
-
-      {data.changes.length === 0 ? (
-        <Box>
-          <Text color={theme.text.secondary}>no changes</Text>
-        </Box>
-      ) : (
-        data.changes.map(({ field, from, to }) => {
-          const isString = field === 'title' || field === 'description';
-          const fromDisplay = isString
-            ? `"${truncate(from, DESC_MAX_LEN)}"`
-            : from;
-          const toDisplay = isString ? `"${truncate(to, DESC_MAX_LEN)}"` : to;
-
-          return (
-            <Box key={field} flexDirection="row">
-              <Box width={FIELD_COL_WIDTH}>
-                <Text color={theme.text.secondary}>{field}</Text>
-              </Box>
-              <Text color={theme.text.secondary}>
-                {fromDisplay}
-                {' → '}
-              </Text>
-              <Text color={Colors.AccentGreen}>{toDisplay}</Text>
-            </Box>
-          );
-        })
-      )}
+  <Box flexDirection="column">
+    {/* Task title header */}
+    <Box>
+      <Text color={theme.text.primary}>{data.title}</Text>
     </Box>
-  );
+
+    {data.changes.length === 0 ? (
+      <Box>
+        <Text color={theme.text.secondary}>no changes</Text>
+      </Box>
+    ) : (
+      data.changes.map(({ field, from, to }) => {
+        const isString = field === 'title' || field === 'description';
+        const fromDisplay = isString
+          ? `"${truncate(from, DESC_MAX_LEN)}"`
+          : from;
+        const toDisplay = isString ? `"${truncate(to, DESC_MAX_LEN)}"` : to;
+
+        return (
+          <Box key={field} flexDirection="row">
+            <Box width={FIELD_COL_WIDTH}>
+              <Text color={theme.text.secondary}>{field}</Text>
+            </Box>
+            <Text color={theme.text.secondary}>
+              {fromDisplay}
+              {' → '}
+            </Text>
+            <Text color={Colors.AccentGreen}>{toDisplay}</Text>
+          </Box>
+        );
+      })
+    )}
+  </Box>
+);

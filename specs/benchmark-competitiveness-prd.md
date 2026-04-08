@@ -166,13 +166,13 @@ In `session/system.ts` `environment()`, add workspace file extension stats:
 
 ```typescript
 // Only in git repos
-const files = await $`git ls-files`.text()
-const extensions = countExtensions(files) // { ".ts": 47, ".py": 12, ".c": 3 }
+const files = await $`git ls-files`.text();
+const extensions = countExtensions(files); // { ".ts": 47, ".py": 12, ".c": 3 }
 const summary = Object.entries(extensions)
   .sort(([, a], [, b]) => b - a)
   .slice(0, 8)
   .map(([ext, n]) => `${n} ${ext}`)
-  .join(", ")
+  .join(', ');
 // Emits: "Workspace: 47 .ts, 12 .py, 3 .c files"
 ```
 

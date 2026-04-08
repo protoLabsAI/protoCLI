@@ -23,9 +23,7 @@ export interface RewindDialogProps {
  * Also detects whether each turn triggered bash (shell) tool calls, which
  * cannot be undone by rewind.
  */
-function extractUserTurns(
-  history: HistoryItem[],
-): Array<{
+function extractUserTurns(history: HistoryItem[]): Array<{
   historyIndex: number;
   text: string;
   turnNumber: number;
@@ -55,7 +53,12 @@ function extractUserTurns(
           break;
         }
       }
-      turns.push({ historyIndex: i, text: item.text ?? '', turnNumber, hasBashCalls });
+      turns.push({
+        historyIndex: i,
+        text: item.text ?? '',
+        turnNumber,
+        hasBashCalls,
+      });
     }
   }
   return turns;

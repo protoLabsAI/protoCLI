@@ -13,5 +13,11 @@ export const rewindCommand: SlashCommand = {
   description:
     'Open the rewind dialog to select a conversation turn to rewind to',
   kind: CommandKind.BUILT_IN,
-  action: async (_context, _args): Promise<void | SlashCommandActionReturn> => ({ type: 'dialog', dialog: 'rewind' }),
+  action: async (
+    _context,
+    _args,
+  ): Promise<void | SlashCommandActionReturn> => ({
+    type: 'dialog',
+    dialog: 'rewind',
+  }),
 };
