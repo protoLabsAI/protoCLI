@@ -1,5 +1,5 @@
 {
-  "name": "@proto/sdk",
+  "name": "@protolabsai/sdk",
   "version": "0.2.0",
   "description": "TypeScript SDK for programmatic access to protoCLI",
   "main": "./dist/index.cjs",

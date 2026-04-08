@@ -13,7 +13,7 @@ import {
   type SDKMessage,
   type SDKSystemMessage,
   type SDKAssistantMessage,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   extractText,

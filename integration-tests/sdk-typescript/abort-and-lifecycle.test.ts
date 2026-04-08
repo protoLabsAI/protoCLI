@@ -15,7 +15,7 @@ import {
   isSDKResultMessage,
   type TextBlock,
   type SDKUserMessage,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   createSharedTestOptions,

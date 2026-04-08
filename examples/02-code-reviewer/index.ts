@@ -14,8 +14,8 @@
  *   npx tsx examples/02-code-reviewer/index.ts [path-to-file]
  */
 
-import { query } from '@proto/sdk';
-import type { SubagentConfig } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
+import type { SubagentConfig } from '@protolabsai/sdk';
 
 const targetFile = process.argv[2] ?? 'src/index.ts';
 

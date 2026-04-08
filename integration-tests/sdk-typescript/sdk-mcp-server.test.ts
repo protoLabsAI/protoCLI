@@ -22,7 +22,7 @@ import {
   isSDKSystemMessage,
   type SDKMessage,
   type SDKSystemMessage,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   extractText,

@@ -6,7 +6,7 @@ Examples of creating in-process MCP tools that proto can call directly from your
 
 ```typescript
 import { z } from 'zod';
-import { query, tool, createSdkMcpServer } from '@proto/sdk';
+import { query, tool, createSdkMcpServer } from '@protolabsai/sdk';
 
 const lookupUser = tool(
   'lookup_user',

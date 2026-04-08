@@ -136,7 +136,7 @@ DEBUG=lsp* proto --lsp
 ## SDK usage
 
 ```typescript
-import { query } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
 
 const conversation = query({
   prompt: 'Fix all type errors in the auth module',

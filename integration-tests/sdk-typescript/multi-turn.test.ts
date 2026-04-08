@@ -21,7 +21,7 @@ import {
   type SDKMessage,
   type ControlMessage,
   type ToolUseBlock,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   createSharedTestOptions,

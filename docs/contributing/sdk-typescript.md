@@ -1,11 +1,11 @@
 # TypeScript SDK
 
-`@proto/sdk` provides programmatic access to proto for building integrations, tools, and automation.
+`@protolabsai/sdk` provides programmatic access to proto for building integrations, tools, and automation.
 
 ## Install
 
 ```bash
-npm install @proto/sdk
+npm install @protolabsai/sdk
 ```
 
 **Requirements:** Node.js ≥ 20.0.0 and proto installed and in PATH.
@@ -16,7 +16,7 @@ npm install @proto/sdk
 ## Quick start
 
 ```typescript
-import { query } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
 
 const session = query({
   prompt: 'What files are in the current directory?',
@@ -75,7 +75,7 @@ const session = query({
 ## Sub-agents
 
 ```typescript
-import { query, type SubagentConfig } from '@proto/sdk';
+import { query, type SubagentConfig } from '@protolabsai/sdk';
 
 const reviewer: SubagentConfig = {
   name: 'code-reviewer',
@@ -95,7 +95,7 @@ const session = query({
 ## Hook callbacks
 
 ```typescript
-import { query, type HookCallback } from '@proto/sdk';
+import { query, type HookCallback } from '@protolabsai/sdk';
 
 const securityGate: HookCallback = async (input) => {
   const data = input as {

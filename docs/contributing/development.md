@@ -61,7 +61,7 @@ npm run typecheck    # TypeScript type check
 | ------------------------------- | ---------------------------------------------- |
 | `packages/cli`                  | Terminal UI, command parsing, user interaction |
 | `packages/core`                 | Backend: API client, tools, agents, memory     |
-| `packages/sdk-typescript`       | TypeScript SDK (`@proto/sdk`)                  |
+| `packages/sdk-typescript`       | TypeScript SDK (`@protolabsai/sdk`)            |
 | `packages/test-utils`           | Shared test utilities                          |
 | `packages/vscode-ide-companion` | VS Code extension                              |
 | `packages/webui`                | Web UI components                              |

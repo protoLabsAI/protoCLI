@@ -17,7 +17,7 @@ import {
   type SubagentConfig,
   type ContentBlock,
   type ToolUseBlock,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   extractText,

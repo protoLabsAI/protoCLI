@@ -1,11 +1,11 @@
 # SDK API Reference
 
-Complete API reference for `@proto/sdk`. For a guided introduction, see [Contributing → TypeScript SDK](../contributing/sdk-typescript).
+Complete API reference for `@protolabsai/sdk`. For a guided introduction, see [Contributing → TypeScript SDK](../contributing/sdk-typescript).
 
 ## Installation
 
 ```bash
-npm install @proto/sdk
+npm install @protolabsai/sdk
 ```
 
 Requires Node.js ≥ 20.0.0 and proto installed in PATH.
@@ -15,7 +15,7 @@ Requires Node.js ≥ 20.0.0 and proto installed in PATH.
 Creates a new agentic session with the proto CLI.
 
 ```typescript
-import { query } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
 
 const conversation = query({
   prompt: 'What files are in the current directory?',
@@ -111,7 +111,7 @@ import {
   isResultMessage,
   isLspDiagnosticEvent,
   abortQuery,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 ```
 
 ## Multi-turn conversations
@@ -142,7 +142,7 @@ for await (const msg of session) { ... }
 ## Hook callbacks
 
 ```typescript
-import { query, type HookCallback } from '@proto/sdk';
+import { query, type HookCallback } from '@protolabsai/sdk';
 
 const gate: HookCallback = async (input) => {
   const data = input as {
@@ -169,7 +169,7 @@ Supported events: `PreToolUse`, `PostToolUse`, `Stop`, `Notification`, `Subagent
 ## Sub-agent configuration
 
 ```typescript
-import { query, type SubagentConfig } from '@proto/sdk';
+import { query, type SubagentConfig } from '@protolabsai/sdk';
 
 const reviewer: SubagentConfig = {
   name: 'code-reviewer',

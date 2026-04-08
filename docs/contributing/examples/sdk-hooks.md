@@ -7,7 +7,7 @@ Examples of SDK-side hook callbacks using `hookCallbacks` in `QueryOptions`.
 Log every tool call:
 
 ```typescript
-import { query, type HookCallback } from '@proto/sdk';
+import { query, type HookCallback } from '@protolabsai/sdk';
 
 const auditLogger: HookCallback = async (input, toolUseId) => {
   const data = input as { tool_name?: string };

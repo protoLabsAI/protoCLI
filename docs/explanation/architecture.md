@@ -8,7 +8,7 @@ proto is organized as an npm workspace with the main work split between two pack
 packages/
 ├── cli/              # Terminal UI and user interaction
 ├── core/             # Backend: API client, tools, subagents, memory
-├── sdk-typescript/   # TypeScript SDK (@proto/sdk)
+├── sdk-typescript/   # TypeScript SDK (@protolabsai/sdk)
 ├── test-utils/       # Shared testing utilities
 ├── vscode-ide-companion/  # VS Code extension
 ├── webui/            # Web UI components

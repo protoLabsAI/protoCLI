@@ -11,7 +11,7 @@
     "04": "tsx 04-hook-security-gate/index.ts"
   },
   "dependencies": {
-    "@proto/sdk": "*"
+    "@protolabsai/sdk": "*"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

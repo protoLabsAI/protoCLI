@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { query, isSDKSystemMessage, type SDKMessage } from '@proto/sdk';
+import { query, isSDKSystemMessage, type SDKMessage } from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   createSharedTestOptions,

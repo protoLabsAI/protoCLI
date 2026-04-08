@@ -1,6 +1,6 @@
 name: 'SDK Release'
 
-# Publishes @proto/sdk to npm whenever a tag matching sdk-v* is pushed.
+# Publishes @protolabsai/sdk to npm whenever a tag matching sdk-v* is pushed.
 # To cut an SDK release:
 #   npm version patch --workspace packages/sdk-typescript --no-git-tag-version
 #   git add packages/sdk-typescript/package.json
@@ -73,11 +73,11 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           gh release create "${{ steps.version.outputs.tag }}" \
-            --title "@proto/sdk ${{ steps.version.outputs.tag }}" \
-            --notes "## @proto/sdk ${{ steps.version.outputs.version }}
+            --title "@protolabsai/sdk ${{ steps.version.outputs.tag }}" \
+            --notes "## @protolabsai/sdk ${{ steps.version.outputs.version }}
 
           \`\`\`bash
-          npm install @proto/sdk
+          npm install @protolabsai/sdk
           \`\`\`
 
           See [CHANGELOG](packages/sdk-typescript/CHANGELOG.md) for details." \

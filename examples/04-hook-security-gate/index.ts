@@ -14,8 +14,8 @@
  *   SAFE_DIR=/tmp/sandbox npx tsx examples/04-hook-security-gate/index.ts
  */
 
-import { query } from '@proto/sdk';
-import type { HookCallback } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
+import type { HookCallback } from '@protolabsai/sdk';
 import * as path from 'node:path';
 
 // Directory the agent is allowed to write to.

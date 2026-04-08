@@ -21,12 +21,12 @@ import type {
   ContentBlock,
   TextBlock,
   ToolUseBlock,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   isSDKAssistantMessage,
   isSDKSystemMessage,
   isSDKResultMessage,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 
 // ============================================================================
 // Core Test Helper Class

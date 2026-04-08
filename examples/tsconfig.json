@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "paths": {
-      "@proto/sdk": ["../packages/sdk-typescript/src/index.ts"]
+      "@protolabsai/sdk": ["../packages/sdk-typescript/src/index.ts"]
     }
   },
   "include": ["**/*.ts"],

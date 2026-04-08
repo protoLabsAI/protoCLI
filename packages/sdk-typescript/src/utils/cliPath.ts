@@ -69,7 +69,7 @@ function getCurrentModuleDir(): string {
 function findSdkPackageRoot(): string | null {
   try {
     const require = createRequire(import.meta.url);
-    const packageJsonPath = require.resolve('@proto/sdk/package.json');
+    const packageJsonPath = require.resolve('@protolabsai/sdk/package.json');
     const packageRoot = path.dirname(packageJsonPath);
     const cliPath = path.join(packageRoot, 'dist', 'cli', 'cli.js');
     if (fs.existsSync(cliPath)) {
@@ -93,7 +93,7 @@ function findSdkPackageRoot(): string | null {
           const packageJson = JSON.parse(
             fs.readFileSync(packageJsonPath, 'utf-8'),
           );
-          if (packageJson.name === '@proto/sdk') {
+          if (packageJson.name === '@protolabsai/sdk') {
             return dir;
           }
           if (!bestMatch) {

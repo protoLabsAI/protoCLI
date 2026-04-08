@@ -5,7 +5,7 @@ Examples of configuring sub-agents via the `agents` option in `QueryOptions`.
 ## Code reviewer
 
 ```typescript
-import { query, type SubagentConfig } from '@proto/sdk';
+import { query, type SubagentConfig } from '@protolabsai/sdk';
 
 const codeReviewer: SubagentConfig = {
   name: 'code-reviewer',

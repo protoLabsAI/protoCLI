@@ -8,7 +8,7 @@
  *   npx tsx examples/01-basic-query/index.ts
  */
 
-import { query } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
 
 const session = query({
   prompt: 'List the top-level directories in the current working directory.',

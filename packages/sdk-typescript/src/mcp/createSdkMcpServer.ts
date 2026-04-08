@@ -37,7 +37,7 @@ export type McpSdkServerConfigWithInstance = {
  * @example
  * ```typescript
  * import { z } from 'zod';
- * import { tool, createSdkMcpServer } from '@proto/sdk';
+ * import { tool, createSdkMcpServer } from '@protolabsai/sdk';
  *
  * const calculatorTool = tool(
  *   'calculate_sum',

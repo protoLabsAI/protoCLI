@@ -174,7 +174,7 @@ Matchers are regex patterns on tool names (`^bash$`, `read.*`) or agent types (`
 Register hook callbacks directly in TypeScript instead of shell scripts:
 
 ```typescript
-import { query, type HookCallback } from '@proto/sdk';
+import { query, type HookCallback } from '@protolabsai/sdk';
 
 const securityGate: HookCallback = async (input) => {
   const data = input as {

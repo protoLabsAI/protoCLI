@@ -1,6 +1,6 @@
 # proto SDK — Runnable Examples
 
-Hands-on examples for `@proto/sdk`. Each folder is self-contained and runnable with `tsx`.
+Hands-on examples for `@protolabsai/sdk`. Each folder is self-contained and runnable with `tsx`.
 
 ## Setup
 

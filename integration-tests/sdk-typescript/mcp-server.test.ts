@@ -20,7 +20,7 @@ import {
   type ToolUseBlock,
   type SDKSystemMessage,
   type SDKUserMessage,
-} from '@proto/sdk';
+} from '@protolabsai/sdk';
 import {
   SDKTestHelper,
   createMCPServer,

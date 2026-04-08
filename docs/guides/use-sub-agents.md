@@ -203,7 +203,7 @@ description: Reviews code for security vulnerabilities, performance issues, and 
 When using the TypeScript SDK, pass subagent configs via the `agents` option:
 
 ```typescript
-import { query, type SubagentConfig } from '@proto/sdk';
+import { query, type SubagentConfig } from '@protolabsai/sdk';
 
 const reviewer: SubagentConfig = {
   name: 'code-reviewer',

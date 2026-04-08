@@ -14,8 +14,8 @@
  *   npx tsx examples/03-multi-agent-pipeline/index.ts "add input validation to the login handler"
  */
 
-import { query } from '@proto/sdk';
-import type { SubagentConfig, SDKUserMessage } from '@proto/sdk';
+import { query } from '@protolabsai/sdk';
+import type { SubagentConfig, SDKUserMessage } from '@protolabsai/sdk';
 import { randomUUID } from 'node:crypto';
 
 const featureRequest =
