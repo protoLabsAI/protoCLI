@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type React from 'react';
 import { Box, Text } from 'ink';
 import path from 'node:path';
 import os from 'node:os';
@@ -41,7 +42,9 @@ const Sep = () => <Text color={theme.border.default}> │ </Text>;
 /** Collapse $HOME to ~ in a path string. */
 function tildify(p: string): string {
   const home = os.homedir();
-  return p.startsWith(home) ? '~' + p.slice(home.length) : p;
+  if (p === home) return '~';
+  const homePrefix = home.endsWith(path.sep) ? home : `${home}${path.sep}`;
+  return p.startsWith(homePrefix) ? `~${p.slice(home.length)}` : p;
 }
 
 // ─── StatusBar ────────────────────────────────────────────────────────────────
