@@ -100,6 +100,20 @@ export class OpenAIContentConverter {
   private streamingToolCallParser: StreamingToolCallParser =
     new StreamingToolCallParser();
 
+  /**
+   * Stateful buffer for streaming `<think>` tag parsing.
+   *
+   * Some models (e.g. Minimax, QwQ) emit chain-of-thought as raw XML in the
+   * `content` field rather than via a dedicated `reasoning_content` field:
+   *
+   *   <think>reasoning here</think>actual answer
+   *
+   * Because tags may be split across multiple stream chunks we accumulate
+   * state here across calls to `convertOpenAIChunkToGemini`.
+   */
+  private _thinkBuffer = '';
+  private _inThinkTag = false;
+
   constructor(
     model: string,
     schemaCompliance: SchemaComplianceMode = 'auto',
@@ -132,6 +146,114 @@ export class OpenAIContentConverter {
    */
   resetStreamingToolCalls(): void {
     this.streamingToolCallParser.reset();
+    this._thinkBuffer = '';
+    this._inThinkTag = false;
+  }
+
+  /**
+   * Extract `<think>…</think>` content from a text string.
+   *
+   * Returns the thought content (if any) and the remaining text with the tags
+   * stripped out.  Handles multiple tag pairs in a single string.
+   *
+   * Used for non-streaming responses where the full content is available at once.
+   */
+  private extractThinkTags(text: string): { thought: string; text: string } {
+    let thought = '';
+    let remaining = text;
+
+    // Match one or more <think>…</think> blocks (including multiline content).
+    const thinkRe = /<think>([\s\S]*?)<\/think>/g;
+    remaining = remaining.replace(thinkRe, (_match, inner: string) => {
+      thought += (thought ? '\n' : '') + inner;
+      return '';
+    });
+
+    return { thought: thought.trim(), text: remaining.trimStart() };
+  }
+
+  /**
+   * Process a streaming text chunk that may contain partial or complete
+   * `<think>` XML tags.
+   *
+   * Mutates `this._thinkBuffer` / `this._inThinkTag` to track cross-chunk state.
+   *
+   * Returns `{ thoughtDelta, textDelta }` where either (or both) may be empty
+   * strings when there is nothing to emit yet.
+   */
+  private processThinkChunk(chunk: string): {
+    thoughtDelta: string;
+    textDelta: string;
+  } {
+    // Prepend any buffered partial opening tag from the previous chunk.
+    if (this._thinkBuffer) {
+      chunk = this._thinkBuffer + chunk;
+      this._thinkBuffer = '';
+    }
+
+    let thoughtDelta = '';
+    let textDelta = '';
+    let i = 0;
+
+    while (i < chunk.length) {
+      if (this._inThinkTag) {
+        // We are inside a <think> block — scan for the closing tag.
+        const closeIdx = chunk.indexOf('</think>', i);
+        if (closeIdx === -1) {
+          // Closing tag not yet arrived — buffer everything.
+          thoughtDelta += chunk.slice(i);
+          i = chunk.length;
+        } else {
+          // Found the closing tag.
+          thoughtDelta += chunk.slice(i, closeIdx);
+          this._inThinkTag = false;
+          i = closeIdx + '</think>'.length;
+        }
+      } else {
+        // Outside a <think> block — scan for the opening tag.
+        // We also have to handle a partial opening tag split across chunks
+        // (e.g. chunk ends with "<thi").
+        const openIdx = chunk.indexOf('<think>', i);
+        if (openIdx === -1) {
+          // No opening tag.  Check if the tail could be the start of a split tag.
+          const tail = chunk.slice(i);
+          const partialOpen = this._partialOpenMatch(tail);
+          if (partialOpen > 0) {
+            // Buffer the possible partial tag; emit everything before it as text.
+            textDelta += tail.slice(0, tail.length - partialOpen);
+            this._thinkBuffer = tail.slice(tail.length - partialOpen);
+          } else {
+            // Flush any buffered partial tag as text now that we know it wasn't
+            // a real <think>.
+            textDelta += this._thinkBuffer + tail;
+            this._thinkBuffer = '';
+          }
+          i = chunk.length;
+        } else {
+          // Flush buffered partial + text before the tag.
+          textDelta += this._thinkBuffer + chunk.slice(i, openIdx);
+          this._thinkBuffer = '';
+          this._inThinkTag = true;
+          i = openIdx + '<think>'.length;
+        }
+      }
+    }
+
+    return { thoughtDelta, textDelta };
+  }
+
+  /**
+   * Returns how many trailing characters of `text` could be the beginning of
+   * a `<think>` opening tag (used to detect cross-chunk split tags).
+   */
+  private _partialOpenMatch(text: string): number {
+    const open = '<think>';
+    for (let len = Math.min(text.length, open.length - 1); len > 0; len--) {
+      if (open.startsWith(text.slice(text.length - len))) {
+        return len;
+      }
+    }
+    return 0;
   }
 
   /**
@@ -835,9 +957,22 @@ export class OpenAIContentConverter {
         parts.push({ text: reasoningText, thought: true });
       }
 
-      // Handle text content
+      // Handle text content — strip any inline <think>…</think> tags emitted
+      // by models like Minimax that embed CoT in the content field rather than
+      // providing a dedicated reasoning_content field.
       if (choice.message.content) {
-        parts.push({ text: choice.message.content });
+        const { thought: inlineThought, text: cleanText } =
+          this.extractThinkTags(choice.message.content);
+        if (inlineThought && !reasoningText) {
+          parts.push({ text: inlineThought, thought: true });
+        }
+        if (cleanText) {
+          parts.push({ text: cleanText });
+        } else if (!inlineThought) {
+          // Original content was non-empty but purely whitespace after stripping
+          // — preserve it so downstream code doesn't see an empty response.
+          parts.push({ text: choice.message.content });
+        }
       }
 
       // Handle tool calls
@@ -944,10 +1079,22 @@ export class OpenAIContentConverter {
         parts.push({ text: reasoningText, thought: true });
       }
 
-      // Handle text content
+      // Handle text content — parse inline <think> tags emitted by models like
+      // Minimax that embed CoT in the content field rather than a dedicated
+      // reasoning_content/reasoning delta field.
       if (choice.delta?.content) {
         if (typeof choice.delta.content === 'string') {
-          parts.push({ text: choice.delta.content });
+          const { thoughtDelta, textDelta } = this.processThinkChunk(
+            choice.delta.content,
+          );
+          // Only emit a thought part when there is no dedicated reasoning field
+          // (avoid double-counting when a model provides both).
+          if (thoughtDelta && !reasoningText) {
+            parts.push({ text: thoughtDelta, thought: true });
+          }
+          if (textDelta) {
+            parts.push({ text: textDelta });
+          }
         }
       }
 

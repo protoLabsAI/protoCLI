@@ -1165,6 +1165,179 @@ describe('OpenAIContentConverter', () => {
     });
   });
 
+  describe('inline <think> tag parsing (Minimax / QwQ style)', () => {
+    function makeCompletion(content: string): OpenAI.Chat.ChatCompletion {
+      return {
+        object: 'chat.completion',
+        id: 'chatcmpl-think',
+        created: 123,
+        model: 'minimax-test',
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content },
+            finish_reason: 'stop',
+            logprobs: null,
+          },
+        ],
+      } as unknown as OpenAI.Chat.ChatCompletion;
+    }
+
+    function makeChunk(content: string): OpenAI.Chat.ChatCompletionChunk {
+      return {
+        object: 'chat.completion.chunk',
+        id: 'chunk-think',
+        created: 456,
+        model: 'minimax-test',
+        choices: [
+          {
+            index: 0,
+            delta: { content },
+            finish_reason: null,
+            logprobs: null,
+          },
+        ],
+      } as unknown as OpenAI.Chat.ChatCompletionChunk;
+    }
+
+    describe('non-streaming (convertOpenAIResponseToGemini)', () => {
+      it('extracts <think> block as a thought part', () => {
+        const response = converter.convertOpenAIResponseToGemini(
+          makeCompletion('<think>chain of thought</think>actual answer'),
+        );
+        const parts = response.candidates?.[0]?.content?.parts;
+        expect(parts).toHaveLength(2);
+        expect(parts?.[0]).toEqual(
+          expect.objectContaining({ thought: true, text: 'chain of thought' }),
+        );
+        expect(parts?.[1]).toEqual(
+          expect.objectContaining({ text: 'actual answer' }),
+        );
+      });
+
+      it('handles content with no think tags unchanged', () => {
+        const response = converter.convertOpenAIResponseToGemini(
+          makeCompletion('plain response'),
+        );
+        const parts = response.candidates?.[0]?.content?.parts;
+        expect(parts).toHaveLength(1);
+        expect(parts?.[0]).toEqual(
+          expect.objectContaining({ text: 'plain response' }),
+        );
+        expect(parts?.[0]).not.toHaveProperty('thought', true);
+      });
+
+      it('handles multiple <think> blocks', () => {
+        const response = converter.convertOpenAIResponseToGemini(
+          makeCompletion('<think>step 1</think><think>step 2</think>answer'),
+        );
+        const parts = response.candidates?.[0]?.content?.parts;
+        const thought = parts?.find(
+          (p) => (p as { thought?: boolean }).thought,
+        );
+        expect(thought?.text).toContain('step 1');
+        expect(thought?.text).toContain('step 2');
+      });
+
+      it('does not double-count when reasoning_content is also present', () => {
+        const response = converter.convertOpenAIResponseToGemini({
+          object: 'chat.completion',
+          id: 'chatcmpl-double',
+          created: 123,
+          model: 'test',
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: 'assistant',
+                content: '<think>inline cot</think>answer',
+                reasoning_content: 'structured cot',
+              },
+              finish_reason: 'stop',
+              logprobs: null,
+            },
+          ],
+        } as unknown as OpenAI.Chat.ChatCompletion);
+        const parts = response.candidates?.[0]?.content?.parts;
+        const thoughtParts = parts?.filter(
+          (p) => (p as { thought?: boolean }).thought,
+        );
+        // Only the structured reasoning_content should be a thought part.
+        expect(thoughtParts).toHaveLength(1);
+        expect(thoughtParts?.[0]?.text).toBe('structured cot');
+      });
+    });
+
+    describe('streaming (convertOpenAIChunkToGemini)', () => {
+      beforeEach(() => {
+        converter.resetStreamingToolCalls();
+      });
+
+      it('extracts <think> content arriving in a single chunk', () => {
+        const chunk = converter.convertOpenAIChunkToGemini(
+          makeChunk('<think>reasoning</think>answer'),
+        );
+        const parts = chunk.candidates?.[0]?.content?.parts;
+        expect(
+          parts?.find((p) => (p as { thought?: boolean }).thought)?.text,
+        ).toBe('reasoning');
+        expect(
+          parts?.find((p) => !(p as { thought?: boolean }).thought)?.text,
+        ).toBe('answer');
+      });
+
+      it('accumulates <think> content split across chunks', () => {
+        // Chunk 1: opening tag only
+        const c1 = converter.convertOpenAIChunkToGemini(
+          makeChunk('<think>rea'),
+        );
+        // Chunk 2: rest of thought + closing tag + answer
+        const c2 = converter.convertOpenAIChunkToGemini(
+          makeChunk('soning</think>answer'),
+        );
+
+        const thoughtParts1 = c1.candidates?.[0]?.content?.parts?.filter(
+          (p) => (p as { thought?: boolean }).thought,
+        );
+        const thoughtParts2 = c2.candidates?.[0]?.content?.parts?.filter(
+          (p) => (p as { thought?: boolean }).thought,
+        );
+        const allThought =
+          (thoughtParts1?.map((p) => p.text).join('') ?? '') +
+          (thoughtParts2?.map((p) => p.text).join('') ?? '');
+        expect(allThought).toBe('reasoning');
+
+        const textParts2 = c2.candidates?.[0]?.content?.parts?.filter(
+          (p) => !(p as { thought?: boolean }).thought,
+        );
+        expect(textParts2?.[0]?.text).toBe('answer');
+      });
+
+      it('handles opening tag split across chunks', () => {
+        converter.convertOpenAIChunkToGemini(makeChunk('<thi'));
+        converter.convertOpenAIChunkToGemini(makeChunk('nk>reasoning'));
+        const c3 = converter.convertOpenAIChunkToGemini(
+          makeChunk('</think>done'),
+        );
+
+        const textPart = c3.candidates?.[0]?.content?.parts?.find(
+          (p) => !(p as { thought?: boolean }).thought,
+        );
+        expect(textPart?.text).toBe('done');
+      });
+
+      it('resets state between streams via resetStreamingToolCalls', () => {
+        converter.convertOpenAIChunkToGemini(makeChunk('<think>orphaned'));
+        converter.resetStreamingToolCalls();
+        const c = converter.convertOpenAIChunkToGemini(makeChunk('clean text'));
+        const parts = c.candidates?.[0]?.content?.parts;
+        expect(parts).toHaveLength(1);
+        expect(parts?.[0]?.text).toBe('clean text');
+        expect((parts?.[0] as { thought?: boolean }).thought).toBeFalsy();
+      });
+    });
+  });
+
   describe('convertGeminiToolsToOpenAI', () => {
     it('should convert Gemini tools with parameters field', async () => {
       const geminiTools = [
