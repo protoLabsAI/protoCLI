@@ -42,6 +42,7 @@ import {
   ChatCompressionService,
   COMPRESSION_PRESERVE_THRESHOLD,
   COMPRESSION_TOKEN_THRESHOLD,
+  applyObservationMask,
 } from '../services/chatCompressionService.js';
 import { LoopDetectionService } from '../services/loopDetectionService.js';
 
@@ -1186,6 +1187,16 @@ export class GeminiClient {
       // Track failed attempts (only mark as failed if not forced)
       if (!force) {
         this.hasFailedCompressionAttempt = true;
+      }
+
+      // Fallback: apply observation masking so we at least drop old tool
+      // call/result pairs when LLM compression fails. This is free (no API
+      // call) and prevents the session from silently drifting to the hard
+      // context limit after a failed compression attempt.
+      const current = this.getChat().getHistory();
+      const masked = applyObservationMask(current);
+      if (masked.length < current.length) {
+        await this.startChat(masked);
       }
     }
 
