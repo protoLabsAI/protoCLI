@@ -1,4 +1,5 @@
 export default {
+  index: 'Overview',
   // --- Models & Auth ---
   'configure-models': 'Configure Models & Auth',
   // --- Core agentic features ---

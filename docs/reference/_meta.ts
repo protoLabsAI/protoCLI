@@ -1,4 +1,5 @@
 export default {
+  index: 'Overview',
   settings: 'Settings',
   'model-providers': 'Model Providers',
   auth: 'Authentication',

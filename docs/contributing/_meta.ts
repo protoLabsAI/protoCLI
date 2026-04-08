@@ -1,4 +1,5 @@
 export default {
+  index: 'Overview',
   overview: 'Contributing Guide',
   development: 'Development Workflow',
   'sdk-typescript': 'TypeScript SDK',
