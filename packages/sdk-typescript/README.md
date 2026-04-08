@@ -1,4 +1,4 @@
-# @qwen-code/sdk
+# @proto/sdk
 
 A minimum experimental TypeScript SDK for programmatic access to Qwen Code.
 
@@ -7,7 +7,7 @@ Feel free to submit a feature request/issue/PR.
 ## Installation
 
 ```bash
-npm install @qwen-code/sdk
+npm install @proto/sdk
 ```
 
 ## Requirements
@@ -19,7 +19,7 @@ npm install @qwen-code/sdk
 ## Quick Start
 
 ```typescript
-import { query } from '@qwen-code/sdk';
+import { query } from '@proto/sdk';
 
 // Single-turn query
 const result = query({
@@ -59,7 +59,8 @@ Creates a new query session with the Qwen Code.
 | `pathToQwenExecutable`   | `string`                                       | Auto-detected    | Path to the Qwen Code executable. Supports multiple formats: `'qwen'` (native binary from PATH), `'/path/to/qwen'` (explicit path), `'/path/to/cli.js'` (Node.js bundle), `'node:/path/to/cli.js'` (force Node.js runtime), `'bun:/path/to/cli.js'` (force Bun runtime). If not provided, auto-detects from: `QWEN_CODE_CLI_PATH` env var, `~/.volta/bin/qwen`, `~/.npm-global/bin/qwen`, `/usr/local/bin/qwen`, `~/.local/bin/qwen`, `~/node_modules/.bin/qwen`, `~/.yarn/bin/qwen`. |
 | `permissionMode`         | `'default' \| 'plan' \| 'auto-edit' \| 'yolo'` | `'default'`      | Permission mode controlling tool execution approval. See [Permission Modes](#permission-modes) for details.                                                                                                                                                                                                                                                                                                                                                                           |
 | `canUseTool`             | `CanUseTool`                                   | -                | Custom permission handler for tool execution approval. Invoked when a tool requires confirmation. Must respond within 60 seconds or the request will be auto-denied. See [Custom Permission Handler](#custom-permission-handler).                                                                                                                                                                                                                                                     |
-| `env`                    | `Record<string, string>`                       | -                | Environment variables to pass to the Qwen Code process. Merged with the current process environment.                                                                                                                                                                                                                                                                                                                                                                                  |
+| `baseURL`                | `string`                                       | -                | Base URL for the AI provider API. Routes requests through a custom gateway or proxy instead of calling the provider directly. Sets `OPENAI_BASE_URL` in the CLI process environment. Example: `'http://gateway:4000/v1'`.                                                                                                                                                                                                                                                             |
+| `env`                    | `Record<string, string>`                       | -                | Environment variables to pass to the proto CLI process. Merged with the current process environment.                                                                                                                                                                                                                                                                                                                                                                                  |
 | `systemPrompt`           | `string \| QuerySystemPromptPreset`            | -                | System prompt configuration for the main session. Use a string to fully override the built-in Qwen Code system prompt, or a preset object to keep the built-in prompt and append extra instructions.                                                                                                                                                                                                                                                                                  |
 | `mcpServers`             | `Record<string, McpServerConfig>`              | -                | MCP (Model Context Protocol) servers to connect. Supports external servers (stdio/SSE/HTTP) and SDK-embedded servers. External servers are configured with transport options like `command`, `args`, `url`, `httpUrl`, etc. SDK servers use `{ type: 'sdk', name: string, instance: Server }`.                                                                                                                                                                                        |
 | `abortController`        | `AbortController`                              | -                | Controller to cancel the query session. Call `abortController.abort()` to terminate the session and cleanup resources.                                                                                                                                                                                                                                                                                                                                                                |
@@ -112,7 +113,7 @@ import {
   isSDKSystemMessage,
   isSDKResultMessage,
   isSDKPartialAssistantMessage,
-} from '@qwen-code/sdk';
+} from '@proto/sdk';
 
 for await (const message of result) {
   if (isSDKAssistantMessage(message)) {
@@ -177,7 +178,7 @@ The first matching rule wins.
 ### Multi-turn Conversation
 
 ```typescript
-import { query, type SDKUserMessage } from '@qwen-code/sdk';
+import { query, type SDKUserMessage } from '@proto/sdk';
 
 async function* generateMessages(): AsyncIterable<SDKUserMessage> {
   yield {
@@ -211,7 +212,7 @@ for await (const message of result) {
 ### Custom Permission Handler
 
 ```typescript
-import { query, type CanUseTool } from '@qwen-code/sdk';
+import { query, type CanUseTool } from '@proto/sdk';
 
 const canUseTool: CanUseTool = async (toolName, input, { signal }) => {
   // Allow all read operations
@@ -240,7 +241,7 @@ const result = query({
 ### With External MCP Servers
 
 ```typescript
-import { query } from '@qwen-code/sdk';
+import { query } from '@proto/sdk';
 
 const result = query({
   prompt: 'Use the custom tool from my MCP server',
@@ -259,7 +260,7 @@ const result = query({
 ### Override the System Prompt
 
 ```typescript
-import { query } from '@qwen-code/sdk';
+import { query } from '@proto/sdk';
 
 const result = query({
   prompt: 'Say hello in one sentence.',
@@ -272,7 +273,7 @@ const result = query({
 ### Append to the Built-in System Prompt
 
 ```typescript
-import { query } from '@qwen-code/sdk';
+import { query } from '@proto/sdk';
 
 const result = query({
   prompt: 'Review the current directory.',
@@ -330,7 +331,7 @@ Returns a `McpSdkServerConfigWithInstance` object that can be passed directly to
 
 ```typescript
 import { z } from 'zod';
-import { query, tool, createSdkMcpServer } from '@qwen-code/sdk';
+import { query, tool, createSdkMcpServer } from '@proto/sdk';
 
 // Define a tool with Zod schema
 const calculatorTool = tool(
@@ -367,7 +368,7 @@ for await (const message of result) {
 ### Abort a Query
 
 ```typescript
-import { query, isAbortError } from '@qwen-code/sdk';
+import { query, isAbortError } from '@proto/sdk';
 
 const abortController = new AbortController();
 
@@ -399,7 +400,7 @@ try {
 The SDK provides an `AbortError` class for handling aborted queries:
 
 ```typescript
-import { AbortError, isAbortError } from '@qwen-code/sdk';
+import { AbortError, isAbortError } from '@proto/sdk';
 
 try {
   // ... query operations
