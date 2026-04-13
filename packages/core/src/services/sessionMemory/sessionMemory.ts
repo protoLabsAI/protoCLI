@@ -30,6 +30,7 @@ import {
   SESSION_MEMORY_TEMPLATE,
 } from './prompts.js';
 import {
+  isExtractionInProgress,
   markExtractionCompleted,
   markExtractionStarted,
   recordExtractionTokenCount,
@@ -74,6 +75,7 @@ export async function extractSessionMemory(
   tokenCount: number,
 ): Promise<void> {
   if (!(config.getSessionMemory()?.enabled ?? true)) return;
+  if (isExtractionInProgress()) return;
   if (!shouldExtractSessionMemory(tokenCount)) return;
 
   markExtractionStarted();
@@ -145,7 +147,11 @@ async function _runExtraction(
     { tools: [ToolNames.EDIT] },
   );
 
-  await agent.execute(new ContextState());
+  // Hard wall: abort the agent if it hasn't finished within the time budget.
+  // AbortSignal.timeout() propagates through execute() → runReasoningLoop()
+  // → sendMessageStream(), so a hanging model call will be cancelled.
+  const timeoutSignal = AbortSignal.timeout(MAX_EXTRACTOR_MINUTES * 60 * 1000);
+  await agent.execute(new ContextState(), timeoutSignal);
 
   // Update compaction boundary markers after successful extraction
   recordExtractionTokenCount(tokenCount);
