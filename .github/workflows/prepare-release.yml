@@ -1,16 +1,16 @@
 name: 'Prepare Release'
 
-# Bumps version on main via a PR with auto-merge. When the PR merges,
-# release.yml picks up the commit automatically via commit message filter.
+# Bumps version on dev via a PR with auto-merge. When the PR merges,
+# the dev→main promotion PR can be opened and release.yml will fire on merge.
 #
-# Fires automatically when any non-release PR merges to main (patch bump).
+# Fires automatically when any non-release PR merges to dev (patch bump).
 # Can also be triggered manually via Actions → Prepare Release to choose bump type.
 
 on:
   pull_request:
     types: [closed]
     branches:
-      - main
+      - dev
   workflow_dispatch:
     inputs:
       bump:
@@ -50,7 +50,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: dev
           fetch-depth: 0
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
@@ -98,7 +98,7 @@ jobs:
           git push origin "${BRANCH}"
 
           PR_URL=$(gh pr create \
-            --base main \
+            --base dev \
             --head "${BRANCH}" \
             --title "chore: release v${VERSION}" \
             --body "Version bump to v${VERSION} (${TRIGGER})." \

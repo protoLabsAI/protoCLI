@@ -1,10 +1,14 @@
 name: 'Release'
 
-# Fires when a version bump commit lands on main (pushed by prepare-release.yml).
+# Fires when the dev→main promotion PR is merged.
 # Builds the bundle, publishes @protolabsai/proto to npm, tags, and creates a GitHub Release.
+#
+# Flow: feature PRs → dev → prepare-release.yml bumps version on dev
+#       → dev→main promotion PR merges → this workflow tags and releases.
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
   workflow_dispatch:
@@ -16,8 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       github.repository == 'protoLabsAI/protoCLI' &&
-      (github.event_name == 'workflow_dispatch' ||
-       startsWith(github.event.head_commit.message, 'chore: release v'))
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.pull_request.merged == true &&
+          github.event.pull_request.head.ref == 'dev'
+        )
+      )
     timeout-minutes: 30
     permissions:
       contents: write
@@ -119,8 +128,18 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
 
+      - name: Sync main back to dev
+        if: steps.version.outputs.already_tagged != 'true'
+        continue-on-error: true
+        run: |
+          # After tagging on main, merge back to dev so the branches stay aligned.
+          git fetch origin dev
+          git checkout dev
+          git merge origin/main --no-edit -m "chore: sync main back to dev after release"
+          git push origin dev
+
       - name: Alert on already-tagged
         if: steps.version.outputs.already_tagged == 'true'
         run: |
-          echo "::warning::${{ steps.version.outputs.tag }} is already tagged. Run prepare-release.yml first to bump the version."
+          echo "::warning::${{ steps.version.outputs.tag }} is already tagged. Ensure prepare-release.yml ran on dev first."
           exit 1
