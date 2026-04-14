@@ -37,12 +37,13 @@ import { withChunkTimeout, StreamStallError } from '../utils/streamStall.js';
 
 /**
  * Max ms to wait between individual stream chunks before declaring a stall.
- * 30 s is conservative enough for slow-but-valid model responses while still
- * catching genuine frozen connections well before the 120 s SDK timeout.
+ * 60 s gives complex agentic responses (e.g. parallel subagent dispatch)
+ * enough room for Gemini's mid-stream planning pauses while still catching
+ * genuine frozen connections well before the 120 s SDK timeout.
  * Override via PROTO_STREAM_STALL_TIMEOUT_MS env var.
  */
 const STREAM_STALL_TIMEOUT_MS = parseInt(
-  process.env['PROTO_STREAM_STALL_TIMEOUT_MS'] ?? '30000',
+  process.env['PROTO_STREAM_STALL_TIMEOUT_MS'] ?? '60000',
   10,
 );
 
