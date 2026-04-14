@@ -39,24 +39,12 @@ import {
   getAllGeminiMdFilenames,
   ShellExecutionService,
   Storage,
-  SessionEndReason,
-  SessionStartSource,
-  generatePromptSuggestion,
-  logPromptSuggestion,
-  PromptSuggestionEvent,
-  logSpeculation,
-  SpeculationEvent,
-  startSpeculation,
   acceptSpeculation,
   abortSpeculation,
-  type SpeculationState,
+  logSpeculation,
+  SpeculationEvent,
   IDLE_SPECULATION,
-  ApprovalMode,
-  type PermissionMode,
-  runBaselineCheck,
-  formatBaseline,
 } from '@qwen-code/qwen-code-core';
-import { buildResumedHistoryItems } from './utils/resumeHistoryUtils.js';
 import { validateAuthMethod } from '../config/auth.js';
 import { loadHierarchicalGeminiMemory } from '../config/config.js';
 import process from 'node:process';
@@ -78,8 +66,6 @@ import { calculatePromptWidths } from './components/InputPrompt.js';
 import { useStdin, useStdout } from 'ink';
 import ansiEscapes from 'ansi-escapes';
 import * as fs from 'node:fs';
-import { basename } from 'node:path';
-import { computeWindowTitle } from '../utils/windowTitle.js';
 import { clearScreen } from '../utils/stdioHelpers.js';
 import { useTextBuffer } from './components/shared/text-buffer.js';
 import { useLogger } from './hooks/useLogger.js';
@@ -90,18 +76,22 @@ import { type LoadedSettings, SettingScope } from '../config/settings.js';
 import { type InitializationResult } from '../core/initializer.js';
 import { useFocus } from './hooks/useFocus.js';
 import { useBracketedPaste } from './hooks/useBracketedPaste.js';
-import { useKeypress, type Key } from './hooks/useKeypress.js';
-import { keyMatchers, Command } from './keyMatchers.js';
+import { useKeyboardHandling } from './hooks/useKeyboardHandling.js';
 import { useLoadingIndicator } from './hooks/useLoadingIndicator.js';
 import { useFolderTrust } from './hooks/useFolderTrust.js';
 import { useIdeTrustListener } from './hooks/useIdeTrustListener.js';
 import { type IdeIntegrationNudgeResult } from './IdeIntegrationNudge.js';
 import { type CommandMigrationNudgeResult } from './CommandFormatMigrationNudge.js';
 import { useCommandMigration } from './hooks/useCommandMigration.js';
+import { useIdleMessageDrain } from './hooks/useIdleMessageDrain.js';
+import { useWindowTitle } from './hooks/useWindowTitle.js';
+import { useInitializationEffects } from './hooks/useInitializationEffects.js';
+import { usePromptSuggestions } from './hooks/usePromptSuggestions.js';
+import { useExitHandling } from './hooks/useExitHandling.js';
 import { migrateTomlCommands } from '../services/command-migration-tool.js';
 import { type UpdateObject } from './utils/updateCheck.js';
 import { setUpdateHandler } from '../utils/handleAutoUpdate.js';
-import { registerCleanup, runExitCleanup } from '../utils/cleanup.js';
+import { runExitCleanup } from '../utils/cleanup.js';
 import { useMessageQueue } from './hooks/useMessageQueue.js';
 import { useAutoAcceptIndicator } from './hooks/useAutoAcceptIndicator.js';
 import { useSessionStats } from './contexts/SessionContext.js';
@@ -132,7 +122,6 @@ import {
 import { useVoice } from './hooks/useVoice.js';
 import { DEFAULT_STT_ENDPOINT } from './commands/voiceCommand.js';
 
-const CTRL_EXIT_PROMPT_DURATION_MS = 1000;
 const debugLogger = createDebugLogger('APP_CONTAINER');
 
 function isToolExecuting(pendingHistoryItems: HistoryItemWithoutId[]) {
@@ -293,101 +282,10 @@ export const AppContainer = (props: AppContainerProps) => {
 
   // Layout measurements
   const mainControlsRef = useRef<DOMElement>(null);
-  const originalTitleRef = useRef(
-    computeWindowTitle(basename(config.getTargetDir())),
-  );
-  const lastTitleRef = useRef<string | null>(null);
   const staticExtraHeight = 3;
 
   // Initialize config (runs once on mount)
-  useEffect(() => {
-    (async () => {
-      // Note: the program will not work if this fails so let errors be
-      // handled by the global catch.
-      await config.initialize();
-      setConfigInitialized(true);
-
-      // Pre-flight baseline check: establish project state before the
-      // agent touches anything. Surfaces dirty working trees, recent
-      // commits, and optional verification command results.
-      const projectRoot = config.getProjectRoot?.() ?? config.getTargetDir();
-      if (projectRoot) {
-        runBaselineCheck(projectRoot)
-          .then((result) => {
-            const formatted = formatBaseline(result);
-            historyManager.addItem(
-              { type: MessageType.INFO, text: formatted },
-              Date.now(),
-            );
-            if (result.isDirty) {
-              historyManager.addItem(
-                {
-                  type: MessageType.WARNING,
-                  text: `Working tree has ${result.dirtyFiles.length} uncommitted change(s). The agent may build on top of unstaged work.`,
-                },
-                Date.now(),
-              );
-            }
-          })
-          .catch(() => {
-            // Not a git repo or git not available — skip silently
-          });
-      }
-
-      const resumedSessionData = config.getResumedSessionData();
-      if (resumedSessionData) {
-        const historyItems = buildResumedHistoryItems(
-          resumedSessionData,
-          config,
-        );
-        historyManager.loadHistory(historyItems);
-      }
-
-      // Fire SessionStart event after config is initialized
-      const sessionStartSource = resumedSessionData
-        ? SessionStartSource.Resume
-        : SessionStartSource.Startup;
-
-      const hookSystem = config.getHookSystem();
-
-      if (hookSystem) {
-        hookSystem
-          .fireSessionStartEvent(
-            sessionStartSource,
-            config.getModel() ?? '',
-            String(config.getApprovalMode()) as PermissionMode,
-          )
-          .then(() => {
-            debugLogger.debug('SessionStart event completed successfully');
-          })
-          .catch((err) => {
-            debugLogger.warn(`SessionStart hook failed: ${err}`);
-          });
-      } else {
-        debugLogger.debug(
-          'SessionStart: HookSystem not available, skipping event',
-        );
-      }
-    })();
-
-    // Register SessionEnd cleanup for process exit
-    registerCleanup(async () => {
-      try {
-        await config
-          .getHookSystem()
-          ?.fireSessionEndEvent(SessionEndReason.PromptInputExit);
-        debugLogger.debug('SessionEnd event completed successfully!!!');
-      } catch (err) {
-        debugLogger.error(`SessionEnd hook failed: ${err}`);
-      }
-    });
-
-    registerCleanup(async () => {
-      const ideClient = await IdeClient.getInstance();
-      await ideClient.disconnect();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config]);
+  useInitializationEffects(config, historyManager, setConfigInitialized);
 
   useEffect(
     () => setUpdateHandler(historyManager.addItem, setUpdateInfo),
@@ -802,35 +700,18 @@ export const AppContainer = (props: AppContainerProps) => {
   // Idle drain: submit any messages still in the queue when the turn ends.
   // Most messages are injected mid-turn via handleCompletedTools.drain(),
   // but pure text turns (no tool calls) need this fallback.
-  useEffect(() => {
-    if (
-      isConfigInitialized &&
-      streamingState === StreamingState.Idle &&
-      messageQueue.length > 0
-    ) {
-      const combined = messageQueue.join('\n\n');
-      drain();
-      submitQuery(combined);
-    }
-  }, [isConfigInitialized, streamingState, messageQueue, drain, submitQuery]);
+  useIdleMessageDrain(
+    isConfigInitialized,
+    streamingState,
+    messageQueue,
+    drain,
+    submitQuery,
+  );
 
   // Track whether suggestions are visible for Tab key handling
   const [hasSuggestionsVisible, setHasSuggestionsVisible] = useState(false);
 
   const agentViewState = useAgentViewState();
-
-  // Prompt suggestion state
-  const [promptSuggestion, setPromptSuggestion] = useState<string | null>(null);
-  const prevStreamingStateRef = useRef<StreamingState>(StreamingState.Idle);
-  const speculationRef = useRef<SpeculationState>(IDLE_SPECULATION);
-  const suggestionAbortRef = useRef<AbortController | null>(null);
-
-  // Dismiss callback — clears suggestion + aborts in-flight generation/speculation
-  const dismissPromptSuggestion = useCallback(() => {
-    setPromptSuggestion(null);
-    suggestionAbortRef.current?.abort();
-    suggestionAbortRef.current = null;
-  }, []);
 
   // Auto-accept indicator — disabled on agent tabs (agents handle their own)
   const geminiClient = config.getGeminiClient();
@@ -841,6 +722,26 @@ export const AppContainer = (props: AppContainerProps) => {
     onApprovalModeChange: handleApprovalModeChange,
     shouldBlockTab: () => hasSuggestionsVisible,
     disabled: agentViewState.activeView !== 'main',
+  });
+
+  // Prompt suggestions (generation, speculation, dismissal)
+  const {
+    promptSuggestion,
+    setPromptSuggestion,
+    dismissPromptSuggestion,
+    speculationRef,
+  } = usePromptSuggestions({
+    config,
+    settings,
+    streamingState,
+    geminiClient,
+    historyManager,
+    shellConfirmationRequest,
+    confirmationRequest,
+    loopDetectionConfirmationRequest,
+    isPermissionsDialogOpen,
+    settingInputRequests,
+    pendingGeminiHistoryItems,
   });
 
   // Callback for handling final submit (must be after addMessage from useMessageQueue)
@@ -990,6 +891,8 @@ export const AppContainer = (props: AppContainerProps) => {
       config,
       geminiClient,
       historyManager,
+      setPromptSuggestion,
+      speculationRef,
     ],
   );
 
@@ -1154,132 +1057,6 @@ export const AppContainer = (props: AppContainerProps) => {
     geminiClient,
   ]);
 
-  // Generate prompt suggestions when streaming completes
-  const followupSuggestionsEnabled =
-    settings.merged.ui?.enableFollowupSuggestions !== false;
-
-  useEffect(() => {
-    // Clear suggestion when feature is disabled at runtime
-    if (!followupSuggestionsEnabled) {
-      suggestionAbortRef.current?.abort();
-      setPromptSuggestion(null);
-      if (speculationRef.current.status === 'running') {
-        abortSpeculation(speculationRef.current).catch(() => {});
-        speculationRef.current = IDLE_SPECULATION;
-      }
-    }
-
-    // Clear suggestion and abort pending generation/speculation when a new turn starts
-    if (
-      prevStreamingStateRef.current === StreamingState.Idle &&
-      streamingState === StreamingState.Responding
-    ) {
-      suggestionAbortRef.current?.abort();
-      setPromptSuggestion(null);
-      if (speculationRef.current.status !== 'idle') {
-        abortSpeculation(speculationRef.current).catch(() => {});
-        speculationRef.current = IDLE_SPECULATION;
-      }
-    }
-
-    // Only trigger when transitioning from Responding to Idle (and enabled)
-    // Skip when dialogs are active, in plan mode, elicitation pending, or last response was error
-    if (
-      followupSuggestionsEnabled &&
-      config.isInteractive() &&
-      !config.getSdkMode() &&
-      prevStreamingStateRef.current === StreamingState.Responding &&
-      streamingState === StreamingState.Idle &&
-      // Check both committed history and pending items for errors
-      // (API errors go to pendingGeminiHistoryItems, not historyManager.history)
-      historyManager.history[historyManager.history.length - 1]?.type !==
-        'error' &&
-      !pendingGeminiHistoryItems.some((item) => item.type === 'error') &&
-      !shellConfirmationRequest &&
-      !confirmationRequest &&
-      !loopDetectionConfirmationRequest &&
-      !isPermissionsDialogOpen &&
-      settingInputRequests.length === 0 &&
-      config.getApprovalMode() !== ApprovalMode.PLAN
-    ) {
-      const ac = new AbortController();
-      suggestionAbortRef.current = ac;
-
-      // Use curated history to avoid invalid/empty entries causing API errors
-      const fullHistory = geminiClient.getChat().getHistory(true);
-      const conversationHistory =
-        fullHistory.length > 40 ? fullHistory.slice(-40) : fullHistory;
-      generatePromptSuggestion(config, conversationHistory, ac.signal, {
-        enableCacheSharing: settings.merged.ui?.enableCacheSharing === true,
-        model: settings.merged.fastModel || undefined,
-      })
-        .then((result) => {
-          if (ac.signal.aborted) return;
-          if (result.suggestion) {
-            setPromptSuggestion(result.suggestion);
-            // Start speculation if enabled (runs in background)
-            if (settings.merged.ui?.enableSpeculation) {
-              startSpeculation(config, result.suggestion, ac.signal, {
-                model: settings.merged.fastModel || undefined,
-              })
-                .then((state) => {
-                  speculationRef.current = state;
-                })
-                .catch(() => {
-                  // Speculation failure is non-blocking
-                });
-            }
-          } else if (result.filterReason) {
-            // Log suppressed suggestion for analytics
-            logPromptSuggestion(
-              config,
-              new PromptSuggestionEvent({
-                outcome: 'suppressed',
-                reason: result.filterReason,
-              }),
-            );
-          }
-        })
-        .catch(() => {
-          // Silently degrade — don't disrupt the user experience
-        });
-    }
-
-    // Only update prev ref when streamingState actually changes, so that
-    // dialog-dependency re-runs don't cause us to miss a Responding→Idle transition.
-    if (prevStreamingStateRef.current !== streamingState) {
-      prevStreamingStateRef.current = streamingState;
-    }
-
-    return () => {
-      suggestionAbortRef.current?.abort();
-      // Cleanup speculation on unmount (#21)
-      if (speculationRef.current.status !== 'idle') {
-        abortSpeculation(speculationRef.current).catch(() => {});
-        speculationRef.current = IDLE_SPECULATION;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- guards may change independently
-  }, [
-    streamingState,
-    followupSuggestionsEnabled,
-    shellConfirmationRequest,
-    confirmationRequest,
-    loopDetectionConfirmationRequest,
-    isPermissionsDialogOpen,
-    settingInputRequests,
-  ]);
-
-  // Abort speculation when promptSuggestion is cleared (new turn, feature toggle, or
-  // user-initiated dismiss via typing/paste). InputPrompt calls onPromptSuggestionDismiss
-  // on user input, which clears promptSuggestion, triggering this effect to abort speculation.
-  useEffect(() => {
-    if (!promptSuggestion && speculationRef.current.status !== 'idle') {
-      abortSpeculation(speculationRef.current).catch(() => {});
-      speculationRef.current = IDLE_SPECULATION;
-    }
-  }, [promptSuggestion]);
-
   const [idePromptAnswered, setIdePromptAnswered] = useState(false);
   const [currentIDE, setCurrentIDE] = useState<IdeInfo | null>(null);
 
@@ -1305,21 +1082,9 @@ export const AppContainer = (props: AppContainerProps) => {
     setShowMigrationNudge: setShowCommandMigrationNudge,
   } = useCommandMigration(settings, config.storage);
 
-  const [showToolDescriptions, setShowToolDescriptions] =
-    useState<boolean>(false);
-
-  const [ctrlCPressedOnce, setCtrlCPressedOnce] = useState(false);
-  const ctrlCTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [ctrlDPressedOnce, setCtrlDPressedOnce] = useState(false);
-  const ctrlDTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [escapePressedOnce, setEscapePressedOnce] = useState(false);
-  const escapeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const dialogsVisibleRef = useRef(false);
-  const [constrainHeight, setConstrainHeight] = useState<boolean>(true);
   const [ideContextState, setIdeContextState] = useState<
     IdeContext | undefined
   >();
-  const [showEscapePrompt, setShowEscapePrompt] = useState(false);
   const [showIdeRestartPrompt, setShowIdeRestartPrompt] = useState(false);
 
   const { isFolderTrustDialogOpen, handleFolderTrustSelect, isRestarting } =
@@ -1356,10 +1121,6 @@ export const AppContainer = (props: AppContainerProps) => {
     const unsubscribe = ideContextStore.subscribe(setIdeContextState);
     setIdeContextState(ideContextStore.get());
     return unsubscribe;
-  }, []);
-
-  const handleEscapePromptChange = useCallback((showPrompt: boolean) => {
-    setShowEscapePrompt(showPrompt);
   }, []);
 
   const handleIdePromptComplete = useCallback(
@@ -1505,285 +1266,51 @@ export const AppContainer = (props: AppContainerProps) => {
     handleWelcomeBackClose,
   });
 
-  const handleExit = useCallback(
-    (
-      pressedOnce: boolean,
-      setPressedOnce: (value: boolean) => void,
-      timerRef: React.MutableRefObject<NodeJS.Timeout | null>,
-    ) => {
-      // Fast double-press: Direct quit (preserve user habit)
-      if (pressedOnce) {
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-        }
-        // Exit directly
-        handleSlashCommand('/quit');
-        return;
-      }
+  const { handleExit } = useExitHandling({
+    isAuthDialogOpen,
+    handleSlashCommand,
+    closeAnyOpenDialog,
+    streamingState,
+    cancelOngoingRequest,
+    buffer,
+  });
 
-      // First press: Prioritize cleanup tasks
-
-      // 1. Close other dialogs (highest priority)
-      /**
-       * For AuthDialog it is required to complete the authentication process,
-       * otherwise user cannot proceed to the next step.
-       * So a quit on AuthDialog should go with normal two press quit.
-       */
-      if (isAuthDialogOpen) {
-        setPressedOnce(true);
-        timerRef.current = setTimeout(() => {
-          setPressedOnce(false);
-        }, 500);
-        return;
-      }
-
-      // 2. Close other dialogs (highest priority)
-      if (closeAnyOpenDialog()) {
-        return; // Dialog closed, end processing
-      }
-
-      // 3. Cancel ongoing requests
-      if (streamingState === StreamingState.Responding) {
-        cancelOngoingRequest?.();
-        return; // Request cancelled, end processing
-      }
-
-      // 4. Clear input buffer (if has content)
-      if (buffer.text.length > 0) {
-        buffer.setText('');
-        return; // Input cleared, end processing
-      }
-
-      // All cleanup tasks completed, set flag for double-press to quit
-      setPressedOnce(true);
-      timerRef.current = setTimeout(() => {
-        setPressedOnce(false);
-      }, CTRL_EXIT_PROMPT_DURATION_MS);
-    },
-    [
-      isAuthDialogOpen,
-      handleSlashCommand,
-      closeAnyOpenDialog,
-      streamingState,
-      cancelOngoingRequest,
-      buffer,
-    ],
-  );
-
-  const handleGlobalKeypress = useCallback(
-    (key: Key) => {
-      // Debug log keystrokes if enabled
-      if (settings.merged.general?.debugKeystrokeLogging) {
-        debugLogger.debug('[DEBUG] Keystroke:', JSON.stringify(key));
-      }
-
-      if (keyMatchers[Command.QUIT](key)) {
-        if (isAuthenticating) {
-          return;
-        }
-
-        // On first press: set flag, start timer, and call handleExit for cleanup
-        // On second press (within timeout): handleExit sees flag and does fast quit
-        if (!ctrlCPressedOnce) {
-          setCtrlCPressedOnce(true);
-          ctrlCTimerRef.current = setTimeout(() => {
-            setCtrlCPressedOnce(false);
-            ctrlCTimerRef.current = null;
-          }, CTRL_EXIT_PROMPT_DURATION_MS);
-        }
-
-        handleExit(ctrlCPressedOnce, setCtrlCPressedOnce, ctrlCTimerRef);
-        return;
-      } else if (keyMatchers[Command.EXIT](key)) {
-        if (buffer.text.length > 0) {
-          return;
-        }
-        handleExit(ctrlDPressedOnce, setCtrlDPressedOnce, ctrlDTimerRef);
-        return;
-      } else if (keyMatchers[Command.ESCAPE](key)) {
-        // Dismiss or cancel btw side-question on Escape,
-        // but only when btw is actually visible (not hidden behind a dialog).
-        if (btwItem && !dialogsVisibleRef.current) {
-          cancelBtw();
-          return;
-        }
-
-        // Skip if shell is focused (to allow shell's own escape handling)
-        if (embeddedShellFocused) {
-          return;
-        }
-
-        // If input has content, use double-press to clear
-        if (buffer.text.length > 0) {
-          if (escapePressedOnce) {
-            // Second press: clear input, keep the flag to allow immediate cancel
-            buffer.setText('');
-            return;
-          }
-          // First press: set flag and show prompt
-          setEscapePressedOnce(true);
-          escapeTimerRef.current = setTimeout(() => {
-            setEscapePressedOnce(false);
-            escapeTimerRef.current = null;
-          }, CTRL_EXIT_PROMPT_DURATION_MS);
-          return;
-        }
-
-        // Input is empty, cancel request immediately (no double-press needed)
-        if (streamingState === StreamingState.Responding) {
-          if (escapeTimerRef.current) {
-            clearTimeout(escapeTimerRef.current);
-            escapeTimerRef.current = null;
-          }
-          cancelOngoingRequest?.();
-          setEscapePressedOnce(false);
-          return;
-        }
-
-        // Double-ESC with empty input and not streaming: open rewind dialog
-        if (escapePressedOnce) {
-          if (escapeTimerRef.current) {
-            clearTimeout(escapeTimerRef.current);
-            escapeTimerRef.current = null;
-          }
-          setEscapePressedOnce(false);
-          openRewindDialog();
-          return;
-        }
-
-        // First ESC with empty input and not streaming: set flag for double-press
-        if (!escapePressedOnce) {
-          setEscapePressedOnce(true);
-          escapeTimerRef.current = setTimeout(() => {
-            setEscapePressedOnce(false);
-            escapeTimerRef.current = null;
-          }, CTRL_EXIT_PROMPT_DURATION_MS);
-          return;
-        }
-
-        // No action available, reset the flag
-        if (escapeTimerRef.current) {
-          clearTimeout(escapeTimerRef.current);
-          escapeTimerRef.current = null;
-        }
-        setEscapePressedOnce(false);
-        return;
-      }
-
-      // Dismiss completed btw side-question on Space or Enter,
-      // but only when btw is visible and the input buffer is empty.
-      if (
-        btwItem &&
-        !btwItem.btw.isPending &&
-        !dialogsVisibleRef.current &&
-        buffer.text.length === 0
-      ) {
-        if (key.name === 'return' || key.sequence === ' ') {
-          setBtwItem(null);
-          return;
-        }
-      }
-
-      let enteringConstrainHeightMode = false;
-      if (!constrainHeight) {
-        enteringConstrainHeightMode = true;
-        setConstrainHeight(true);
-      }
-
-      if (keyMatchers[Command.TOGGLE_TOOL_DESCRIPTIONS](key)) {
-        const newValue = !showToolDescriptions;
-        setShowToolDescriptions(newValue);
-
-        const mcpServers = config.getMcpServers();
-        if (Object.keys(mcpServers || {}).length > 0) {
-          handleSlashCommand(newValue ? '/mcp desc' : '/mcp nodesc');
-        }
-      } else if (
-        keyMatchers[Command.TOGGLE_IDE_CONTEXT_DETAIL](key) &&
-        config.getIdeMode() &&
-        ideContextState
-      ) {
-        handleSlashCommand('/ide status');
-      } else if (
-        keyMatchers[Command.SHOW_MORE_LINES](key) &&
-        !enteringConstrainHeightMode
-      ) {
-        setConstrainHeight(false);
-      } else if (keyMatchers[Command.TOGGLE_SHELL_INPUT_FOCUS](key)) {
-        if (activePtyId || embeddedShellFocused) {
-          setEmbeddedShellFocused((prev) => !prev);
-        }
-      }
-    },
-    [
-      constrainHeight,
-      setConstrainHeight,
-      showToolDescriptions,
-      setShowToolDescriptions,
-      config,
-      ideContextState,
-      handleExit,
-      ctrlCPressedOnce,
-      setCtrlCPressedOnce,
-      ctrlCTimerRef,
-      ctrlDPressedOnce,
-      setCtrlDPressedOnce,
-      ctrlDTimerRef,
-      escapePressedOnce,
-      setEscapePressedOnce,
-      escapeTimerRef,
-      streamingState,
-      cancelOngoingRequest,
-      buffer,
-      handleSlashCommand,
-      activePtyId,
-      embeddedShellFocused,
-      btwItem,
-      setBtwItem,
-      cancelBtw,
-      settings.merged.general?.debugKeystrokeLogging,
-      isAuthenticating,
-      openRewindDialog,
-    ],
-  );
-
-  useKeypress(handleGlobalKeypress, { isActive: true });
+  const {
+    showToolDescriptions,
+    ctrlCPressedOnce,
+    ctrlDPressedOnce,
+    showEscapePrompt,
+    handleEscapePromptChange,
+    constrainHeight,
+    setConstrainHeight,
+    dialogsVisibleRef,
+  } = useKeyboardHandling({
+    buffer,
+    streamingState,
+    btwItem,
+    cancelBtw,
+    setBtwItem,
+    embeddedShellFocused,
+    handleSlashCommand,
+    cancelOngoingRequest,
+    isAuthenticating,
+    openRewindDialog,
+    activePtyId,
+    setEmbeddedShellFocused,
+    config,
+    ideContextState,
+    handleExit,
+    debugKeystrokeLogging: settings.merged.general?.debugKeystrokeLogging,
+  });
 
   // Update terminal title with proto status and thoughts
-  useEffect(() => {
-    // Respect both showStatusInTitle and hideWindowTitle settings
-    if (
-      !settings.merged.ui?.showStatusInTitle ||
-      settings.merged.ui?.hideWindowTitle
-    )
-      return;
-
-    let title;
-    if (streamingState === StreamingState.Idle) {
-      title = originalTitleRef.current;
-    } else {
-      const statusText = thought?.subject
-        ?.replace(/[\r\n]+/g, ' ')
-        .substring(0, 80);
-      title = statusText || originalTitleRef.current;
-    }
-
-    // Pad the title to a fixed width to prevent taskbar icon resizing.
-    const paddedTitle = title.padEnd(80, ' ');
-
-    // Only update the title if it's different from the last value we set
-    if (lastTitleRef.current !== paddedTitle) {
-      lastTitleRef.current = paddedTitle;
-      stdout.write(`\x1b[?2026h\x1b]2;${paddedTitle}\x07\x1b[?2026l`);
-    }
-    // Note: We don't need to reset the window title on exit because proto is already doing that elsewhere
-  }, [
+  useWindowTitle(
     streamingState,
     thought,
-    settings.merged.ui?.showStatusInTitle,
-    settings.merged.ui?.hideWindowTitle,
+    settings,
     stdout,
-  ]);
+    config.getTargetDir(),
+  );
 
   const nightly = props.version.includes('nightly');
 
