@@ -23,6 +23,8 @@ export enum PackageManager {
 
 const debugLogger = createDebugLogger('INSTALLATION_INFO');
 
+const PACKAGE_SPEC = '@protolabsai/proto@latest';
+
 export interface InstallationInfo {
   packageManager: PackageManager;
   isGlobal: boolean;
@@ -96,7 +98,7 @@ export function getInstallationInfo(
 
     // Check for pnpm
     if (realPath.includes('/.pnpm/global')) {
-      const updateCommand = 'pnpm add -g @protolabs/proto@latest';
+      const updateCommand = `pnpm add -g ${PACKAGE_SPEC}`;
       return {
         packageManager: PackageManager.PNPM,
         isGlobal: true,
@@ -109,7 +111,7 @@ export function getInstallationInfo(
 
     // Check for yarn
     if (realPath.includes('/.yarn/global')) {
-      const updateCommand = 'yarn global add @protolabs/proto@latest';
+      const updateCommand = `yarn global add ${PACKAGE_SPEC}`;
       return {
         packageManager: PackageManager.YARN,
         isGlobal: true,
@@ -129,7 +131,7 @@ export function getInstallationInfo(
       };
     }
     if (realPath.includes('/.bun/bin')) {
-      const updateCommand = 'bun add -g @protolabs/proto@latest';
+      const updateCommand = `bun add -g ${PACKAGE_SPEC}`;
       return {
         packageManager: PackageManager.BUN,
         isGlobal: true,
@@ -162,7 +164,7 @@ export function getInstallationInfo(
     }
 
     // Assume global npm
-    const updateCommand = 'npm install -g @protolabs/proto@latest';
+    const updateCommand = `npm install -g ${PACKAGE_SPEC}`;
     return {
       packageManager: PackageManager.NPM,
       isGlobal: true,
