@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type React from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { type Config, type IdeContext } from '@qwen-code/qwen-code-core';
 import { useKeypress, type Key } from './useKeypress.js';
 import { keyMatchers, Command } from '../keyMatchers.js';
@@ -26,7 +27,7 @@ interface UseKeyboardHandlingParams {
   isAuthenticating: boolean;
   openRewindDialog: () => void;
   activePtyId: number | undefined;
-  setEmbeddedShellFocused: (v: boolean) => void;
+  setEmbeddedShellFocused: Dispatch<SetStateAction<boolean>>;
   config: Config;
   ideContextState: IdeContext | undefined;
   handleExit: (
@@ -234,7 +235,7 @@ export function useKeyboardHandling(
       setConstrainHeight(false);
     } else if (keyMatchers[Command.TOGGLE_SHELL_INPUT_FOCUS](key)) {
       if (activePtyId || embeddedShellFocused) {
-        setEmbeddedShellFocused(!embeddedShellFocused);
+        setEmbeddedShellFocused((prev) => !prev);
       }
     }
   };

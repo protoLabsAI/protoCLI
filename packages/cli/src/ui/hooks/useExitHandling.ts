@@ -7,8 +7,7 @@
 import { useCallback } from 'react';
 import type React from 'react';
 import { StreamingState } from '../types.js';
-
-const CTRL_EXIT_PROMPT_DURATION_MS = 1000;
+import { CTRL_EXIT_PROMPT_DURATION_MS } from './useKeyboardHandling.js';
 
 interface UseExitHandlingParams {
   isAuthDialogOpen: boolean;
