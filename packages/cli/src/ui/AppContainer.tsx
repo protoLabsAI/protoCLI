@@ -1570,181 +1570,159 @@ export const AppContainer = (props: AppContainerProps) => {
     ],
   );
 
-  const handleGlobalKeypress = useCallback(
-    (key: Key) => {
-      // Debug log keystrokes if enabled
-      if (settings.merged.general?.debugKeystrokeLogging) {
-        debugLogger.debug('[DEBUG] Keystroke:', JSON.stringify(key));
+  // Keep a ref to the latest version of the handler so the subscription never
+  // needs to be torn down and re-created. Eliminates the keypress-loss window
+  // that occurred every time any dependency (streamingState, buffer, …) changed.
+  const globalKeypressHandlerRef = useRef<(key: Key) => void>(() => {});
+  globalKeypressHandlerRef.current = (key: Key) => {
+    // Debug log keystrokes if enabled
+    if (settings.merged.general?.debugKeystrokeLogging) {
+      debugLogger.debug('[DEBUG] Keystroke:', JSON.stringify(key));
+    }
+
+    if (keyMatchers[Command.QUIT](key)) {
+      if (isAuthenticating) {
+        return;
       }
 
-      if (keyMatchers[Command.QUIT](key)) {
-        if (isAuthenticating) {
-          return;
-        }
+      // On first press: set flag, start timer, and call handleExit for cleanup
+      // On second press (within timeout): handleExit sees flag and does fast quit
+      if (!ctrlCPressedOnce) {
+        setCtrlCPressedOnce(true);
+        ctrlCTimerRef.current = setTimeout(() => {
+          setCtrlCPressedOnce(false);
+          ctrlCTimerRef.current = null;
+        }, CTRL_EXIT_PROMPT_DURATION_MS);
+      }
 
-        // On first press: set flag, start timer, and call handleExit for cleanup
-        // On second press (within timeout): handleExit sees flag and does fast quit
-        if (!ctrlCPressedOnce) {
-          setCtrlCPressedOnce(true);
-          ctrlCTimerRef.current = setTimeout(() => {
-            setCtrlCPressedOnce(false);
-            ctrlCTimerRef.current = null;
-          }, CTRL_EXIT_PROMPT_DURATION_MS);
-        }
-
-        handleExit(ctrlCPressedOnce, setCtrlCPressedOnce, ctrlCTimerRef);
+      handleExit(ctrlCPressedOnce, setCtrlCPressedOnce, ctrlCTimerRef);
+      return;
+    } else if (keyMatchers[Command.EXIT](key)) {
+      if (buffer.text.length > 0) {
         return;
-      } else if (keyMatchers[Command.EXIT](key)) {
-        if (buffer.text.length > 0) {
-          return;
-        }
-        handleExit(ctrlDPressedOnce, setCtrlDPressedOnce, ctrlDTimerRef);
+      }
+      handleExit(ctrlDPressedOnce, setCtrlDPressedOnce, ctrlDTimerRef);
+      return;
+    } else if (keyMatchers[Command.ESCAPE](key)) {
+      // Dismiss or cancel btw side-question on Escape,
+      // but only when btw is actually visible (not hidden behind a dialog).
+      if (btwItem && !dialogsVisibleRef.current) {
+        cancelBtw();
         return;
-      } else if (keyMatchers[Command.ESCAPE](key)) {
-        // Dismiss or cancel btw side-question on Escape,
-        // but only when btw is actually visible (not hidden behind a dialog).
-        if (btwItem && !dialogsVisibleRef.current) {
-          cancelBtw();
-          return;
-        }
+      }
 
-        // Skip if shell is focused (to allow shell's own escape handling)
-        if (embeddedShellFocused) {
-          return;
-        }
+      // Skip if shell is focused (to allow shell's own escape handling)
+      if (embeddedShellFocused) {
+        return;
+      }
 
-        // If input has content, use double-press to clear
-        if (buffer.text.length > 0) {
-          if (escapePressedOnce) {
-            // Second press: clear input, keep the flag to allow immediate cancel
-            buffer.setText('');
-            return;
-          }
-          // First press: set flag and show prompt
-          setEscapePressedOnce(true);
-          escapeTimerRef.current = setTimeout(() => {
-            setEscapePressedOnce(false);
-            escapeTimerRef.current = null;
-          }, CTRL_EXIT_PROMPT_DURATION_MS);
-          return;
-        }
-
-        // Input is empty, cancel request immediately (no double-press needed)
-        if (streamingState === StreamingState.Responding) {
-          if (escapeTimerRef.current) {
-            clearTimeout(escapeTimerRef.current);
-            escapeTimerRef.current = null;
-          }
-          cancelOngoingRequest?.();
-          setEscapePressedOnce(false);
-          return;
-        }
-
-        // Double-ESC with empty input and not streaming: open rewind dialog
+      // If input has content, use double-press to clear
+      if (buffer.text.length > 0) {
         if (escapePressedOnce) {
-          if (escapeTimerRef.current) {
-            clearTimeout(escapeTimerRef.current);
-            escapeTimerRef.current = null;
-          }
+          // Second press: clear input, keep the flag to allow immediate cancel
+          buffer.setText('');
+          return;
+        }
+        // First press: set flag and show prompt
+        setEscapePressedOnce(true);
+        escapeTimerRef.current = setTimeout(() => {
           setEscapePressedOnce(false);
-          openRewindDialog();
-          return;
-        }
+          escapeTimerRef.current = null;
+        }, CTRL_EXIT_PROMPT_DURATION_MS);
+        return;
+      }
 
-        // First ESC with empty input and not streaming: set flag for double-press
-        if (!escapePressedOnce) {
-          setEscapePressedOnce(true);
-          escapeTimerRef.current = setTimeout(() => {
-            setEscapePressedOnce(false);
-            escapeTimerRef.current = null;
-          }, CTRL_EXIT_PROMPT_DURATION_MS);
-          return;
+      // Input is empty, cancel request immediately (no double-press needed)
+      if (streamingState === StreamingState.Responding) {
+        if (escapeTimerRef.current) {
+          clearTimeout(escapeTimerRef.current);
+          escapeTimerRef.current = null;
         }
+        cancelOngoingRequest?.();
+        setEscapePressedOnce(false);
+        return;
+      }
 
-        // No action available, reset the flag
+      // Double-ESC with empty input and not streaming: open rewind dialog
+      if (escapePressedOnce) {
         if (escapeTimerRef.current) {
           clearTimeout(escapeTimerRef.current);
           escapeTimerRef.current = null;
         }
         setEscapePressedOnce(false);
+        openRewindDialog();
         return;
       }
 
-      // Dismiss completed btw side-question on Space or Enter,
-      // but only when btw is visible and the input buffer is empty.
-      if (
-        btwItem &&
-        !btwItem.btw.isPending &&
-        !dialogsVisibleRef.current &&
-        buffer.text.length === 0
-      ) {
-        if (key.name === 'return' || key.sequence === ' ') {
-          setBtwItem(null);
-          return;
-        }
+      // First ESC with empty input and not streaming: set flag for double-press
+      if (!escapePressedOnce) {
+        setEscapePressedOnce(true);
+        escapeTimerRef.current = setTimeout(() => {
+          setEscapePressedOnce(false);
+          escapeTimerRef.current = null;
+        }, CTRL_EXIT_PROMPT_DURATION_MS);
+        return;
       }
 
-      let enteringConstrainHeightMode = false;
-      if (!constrainHeight) {
-        enteringConstrainHeightMode = true;
-        setConstrainHeight(true);
+      // No action available, reset the flag
+      if (escapeTimerRef.current) {
+        clearTimeout(escapeTimerRef.current);
+        escapeTimerRef.current = null;
       }
+      setEscapePressedOnce(false);
+      return;
+    }
 
-      if (keyMatchers[Command.TOGGLE_TOOL_DESCRIPTIONS](key)) {
-        const newValue = !showToolDescriptions;
-        setShowToolDescriptions(newValue);
-
-        const mcpServers = config.getMcpServers();
-        if (Object.keys(mcpServers || {}).length > 0) {
-          handleSlashCommand(newValue ? '/mcp desc' : '/mcp nodesc');
-        }
-      } else if (
-        keyMatchers[Command.TOGGLE_IDE_CONTEXT_DETAIL](key) &&
-        config.getIdeMode() &&
-        ideContextState
-      ) {
-        handleSlashCommand('/ide status');
-      } else if (
-        keyMatchers[Command.SHOW_MORE_LINES](key) &&
-        !enteringConstrainHeightMode
-      ) {
-        setConstrainHeight(false);
-      } else if (keyMatchers[Command.TOGGLE_SHELL_INPUT_FOCUS](key)) {
-        if (activePtyId || embeddedShellFocused) {
-          setEmbeddedShellFocused((prev) => !prev);
-        }
+    // Dismiss completed btw side-question on Space or Enter,
+    // but only when btw is visible and the input buffer is empty.
+    if (
+      btwItem &&
+      !btwItem.btw.isPending &&
+      !dialogsVisibleRef.current &&
+      buffer.text.length === 0
+    ) {
+      if (key.name === 'return' || key.sequence === ' ') {
+        setBtwItem(null);
+        return;
       }
-    },
-    [
-      constrainHeight,
-      setConstrainHeight,
-      showToolDescriptions,
-      setShowToolDescriptions,
-      config,
-      ideContextState,
-      handleExit,
-      ctrlCPressedOnce,
-      setCtrlCPressedOnce,
-      ctrlCTimerRef,
-      ctrlDPressedOnce,
-      setCtrlDPressedOnce,
-      ctrlDTimerRef,
-      escapePressedOnce,
-      setEscapePressedOnce,
-      escapeTimerRef,
-      streamingState,
-      cancelOngoingRequest,
-      buffer,
-      handleSlashCommand,
-      activePtyId,
-      embeddedShellFocused,
-      btwItem,
-      setBtwItem,
-      cancelBtw,
-      settings.merged.general?.debugKeystrokeLogging,
-      isAuthenticating,
-      openRewindDialog,
-    ],
+    }
+
+    let enteringConstrainHeightMode = false;
+    if (!constrainHeight) {
+      enteringConstrainHeightMode = true;
+      setConstrainHeight(true);
+    }
+
+    if (keyMatchers[Command.TOGGLE_TOOL_DESCRIPTIONS](key)) {
+      const newValue = !showToolDescriptions;
+      setShowToolDescriptions(newValue);
+
+      const mcpServers = config.getMcpServers();
+      if (Object.keys(mcpServers || {}).length > 0) {
+        handleSlashCommand(newValue ? '/mcp desc' : '/mcp nodesc');
+      }
+    } else if (
+      keyMatchers[Command.TOGGLE_IDE_CONTEXT_DETAIL](key) &&
+      config.getIdeMode() &&
+      ideContextState
+    ) {
+      handleSlashCommand('/ide status');
+    } else if (
+      keyMatchers[Command.SHOW_MORE_LINES](key) &&
+      !enteringConstrainHeightMode
+    ) {
+      setConstrainHeight(false);
+    } else if (keyMatchers[Command.TOGGLE_SHELL_INPUT_FOCUS](key)) {
+      if (activePtyId || embeddedShellFocused) {
+        setEmbeddedShellFocused((prev) => !prev);
+      }
+    }
+  };
+
+  // Stable reference — never recreated, so useKeypress never re-subscribes.
+  const handleGlobalKeypress = useCallback(
+    (key: Key) => globalKeypressHandlerRef.current(key),
+    [],
   );
 
   useKeypress(handleGlobalKeypress, { isActive: true });
