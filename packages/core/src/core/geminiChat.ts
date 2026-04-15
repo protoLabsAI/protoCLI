@@ -201,6 +201,84 @@ function extractCuratedHistory(comprehensiveHistory: Content[]): Content[] {
   return curatedHistory;
 }
 
+// Substring present in errors injected when wasOutputTruncated=true
+// (see coreToolScheduler.ts TRUNCATION_PARAM_GUIDANCE).
+const TRUNCATION_CASCADE_MARKER = 'truncated due to max_tokens limit';
+
+// Cap applied to large successful tool responses when recovering from a
+// MAX_TOKENS cascade. 10 K chars ≈ 2.5 K tokens — generous but prevents a
+// single tool result from consuming the model's entire output budget.
+const LARGE_TOOL_RESPONSE_TRIM_CHARS = 10_000;
+
+/**
+ * Returns true when the context tail looks like a MAX_TOKENS cascade:
+ * the last user turn contains at least one functionResponse whose error field
+ * includes the truncation-guidance string injected by coreToolScheduler.
+ */
+function hasTruncationCascade(contents: Content[]): boolean {
+  if (contents.length === 0) return false;
+  const last = contents[contents.length - 1];
+  if (last.role !== 'user') return false;
+  return (
+    last.parts?.some((p) => {
+      const err = (p.functionResponse?.response as Record<string, unknown>)?.[
+        'error'
+      ];
+      return typeof err === 'string' && err.includes(TRUNCATION_CASCADE_MARKER);
+    }) ?? false
+  );
+}
+
+/**
+ * Caps large successful tool-response outputs in place (returns a new array).
+ * Applied after trimToolErrorsFromContext when recovering from a MAX_TOKENS
+ * cascade — shrinking the context lets the model complete its next tool call.
+ */
+function trimLargeToolResponsesFromContext(contents: Content[]): Content[] {
+  return contents.map((content) => {
+    if (content.role !== 'user' || !content.parts) return content;
+
+    const needsTrim = content.parts.some((p) => {
+      const out = (p.functionResponse?.response as Record<string, unknown>)?.[
+        'output'
+      ];
+      return (
+        typeof out === 'string' && out.length > LARGE_TOOL_RESPONSE_TRIM_CHARS
+      );
+    });
+    if (!needsTrim) return content;
+
+    return {
+      ...content,
+      parts: content.parts.map((p) => {
+        const out = (p.functionResponse?.response as Record<string, unknown>)?.[
+          'output'
+        ];
+        if (
+          typeof out !== 'string' ||
+          out.length <= LARGE_TOOL_RESPONSE_TRIM_CHARS
+        )
+          return p;
+
+        const trimmed =
+          out.slice(0, LARGE_TOOL_RESPONSE_TRIM_CHARS) +
+          `\n\n[... output trimmed from ${out.length} to ${LARGE_TOOL_RESPONSE_TRIM_CHARS} chars to reduce context size ...]`;
+
+        return {
+          ...p,
+          functionResponse: {
+            ...p.functionResponse,
+            response: {
+              ...(p.functionResponse!.response as object),
+              output: trimmed,
+            },
+          },
+        };
+      }),
+    };
+  });
+}
+
 /**
  * Trims recent tool-error exchanges from history when a model returns an
  * empty response — a symptom of context overflow from a truncation cascade.
@@ -338,7 +416,21 @@ export class GeminiChat {
 
     // Add user content to history ONCE before any attempts.
     this.history.push(userContent);
-    const requestContents = this.getHistory(true);
+    let requestContents = this.getHistory(true);
+
+    // If the incoming context ends with MAX_TOKENS truncation errors, trim
+    // both the error exchanges and any large preceding tool responses before
+    // sending. This prevents the cascade where the model repeatedly hits
+    // max_tokens and produces empty/malformed tool-call parameters.
+    if (hasTruncationCascade(requestContents)) {
+      const withoutErrors = trimToolErrorsFromContext(requestContents);
+      requestContents = trimLargeToolResponsesFromContext(withoutErrors);
+      debugLogger.warn(
+        `MAX_TOKENS cascade detected: trimmed context from ` +
+          `${this.getHistory(true).length} to ${requestContents.length} entries ` +
+          `and capped large tool responses.`,
+      );
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
