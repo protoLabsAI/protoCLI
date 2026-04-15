@@ -17,6 +17,8 @@ const IS_SANDBOX =
   process.env['QWEN_SANDBOX'] &&
   process.env['QWEN_SANDBOX']!.toLowerCase() !== 'false';
 
+const SKIP_ACP = IS_SANDBOX || !process.env['OPENAI_API_KEY'];
+
 type PendingRequest = {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -273,7 +275,7 @@ function setupAcpTest(
   };
 }
 
-(IS_SANDBOX ? describe.skip : describe)('acp integration', () => {
+(SKIP_ACP ? describe.skip : describe)('acp integration', () => {
   it('basic smoke test', async () => {
     const rig = new TestRig();
     rig.setup('acp load session');
@@ -291,7 +293,7 @@ function setupAcpTest(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((initResult as any).agentInfo.version).toBeDefined();
 
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       const newSession = (await sendRequest('session/new', {
         cwd: rig.testDir!,
@@ -333,7 +335,7 @@ function setupAcpTest(
       expect(initResult.protocolVersion).toBe(1);
 
       // Test 2: Authenticate
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       // Test 3: Create a new session
       const newSession = (await sendRequest('session/new', {
@@ -378,8 +380,7 @@ function setupAcpTest(
     }
   });
 
-  // Skipped: qwen-oauth model type is Qwen-specific and does not exist in protoCLI.
-  it.skip('returns internal error details when model auth is required', async () => {
+  it('returns internal error details when model auth is required', async () => {
     const rig = new TestRig();
     rig.setup('acp auth methods in error data');
 
@@ -449,7 +450,7 @@ function setupAcpTest(
         },
       });
 
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       // Create a new session
       const newSession = (await sendRequest('session/new', {
@@ -497,16 +498,16 @@ function setupAcpTest(
       expect(modelOption!.currentValue).toBeTruthy();
 
       // Test: Set model using set_config_option
-      // Use anthropic model to avoid auth issues
-      const anthropicModel = newSession.models.availableModels.find((model) =>
-        model.modelId.includes('anthropic'),
+      // Use openai model to avoid auth issues
+      const openaiModel = newSession.models.availableModels.find((model) =>
+        model.modelId.includes('openai'),
       );
-      expect(anthropicModel).toBeDefined();
+      expect(openaiModel).toBeDefined();
 
       const setModelResult = (await sendRequest('session/set_config_option', {
         sessionId: newSession.sessionId,
         configId: 'model',
-        value: anthropicModel!.modelId,
+        value: openaiModel!.modelId,
       })) as {
         configOptions: Array<{
           id: string;
@@ -523,7 +524,7 @@ function setupAcpTest(
         (opt) => opt.id === 'model',
       );
       expect(updatedModelOption).toBeDefined();
-      expect(updatedModelOption!.currentValue).toBe(anthropicModel!.modelId);
+      expect(updatedModelOption!.currentValue).toBe(openaiModel!.modelId);
     } catch (e) {
       if (stderr.length) {
         console.error('Agent stderr:', stderr.join(''));
@@ -549,7 +550,7 @@ function setupAcpTest(
         },
       });
 
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       // Create a new session
       const newSession = (await sendRequest('session/new', {
@@ -596,7 +597,7 @@ function setupAcpTest(
         },
       });
 
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       // Create a new session
       const newSession = (await sendRequest('session/new', {
@@ -672,7 +673,7 @@ function setupAcpTest(
         },
       });
 
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       // Create a new session
       const newSession = (await sendRequest('session/new', {
@@ -782,7 +783,7 @@ function setupAcpTest(
         protocolVersion: 1,
         clientCapabilities: { fs: { readTextFile: true, writeTextFile: true } },
       });
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       const newSession = (await sendRequest('session/new', {
         cwd: rig.testDir!,
@@ -869,7 +870,7 @@ function setupAcpTest(
         protocolVersion: 1,
         clientCapabilities: { fs: { readTextFile: true, writeTextFile: true } },
       });
-      await sendRequest('authenticate', { methodId: 'anthropic' });
+      await sendRequest('authenticate', { methodId: 'openai' });
 
       const newSession = (await sendRequest('session/new', {
         cwd: rig.testDir!,
@@ -907,98 +908,95 @@ function setupAcpTest(
   });
 });
 
-(IS_SANDBOX ? describe.skip : describe)(
-  'acp flag backward compatibility',
-  () => {
-    it('should work with deprecated --experimental-acp flag and show warning', async () => {
-      const rig = new TestRig();
-      rig.setup('acp backward compatibility');
+(SKIP_ACP ? describe.skip : describe)('acp flag backward compatibility', () => {
+  it('should work with deprecated --experimental-acp flag and show warning', async () => {
+    const rig = new TestRig();
+    rig.setup('acp backward compatibility');
 
-      const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
-        useNewFlag: false,
-      });
-
-      try {
-        const initResult = await sendRequest('initialize', {
-          protocolVersion: 1,
-          clientCapabilities: {
-            fs: { readTextFile: true, writeTextFile: true },
-          },
-        });
-        expect(initResult).toBeDefined();
-
-        // Verify deprecation warning is shown
-        const stderrOutput = stderr.join('');
-        expect(stderrOutput).toContain('--experimental-acp is deprecated');
-        expect(stderrOutput).toContain('Please use --acp instead');
-
-        await sendRequest('authenticate', { methodId: 'anthropic' });
-
-        const newSession = (await sendRequest('session/new', {
-          cwd: rig.testDir!,
-          mcpServers: [],
-        })) as { sessionId: string };
-        expect(newSession.sessionId).toBeTruthy();
-
-        // Verify functionality still works
-        const promptResult = await sendRequest('session/prompt', {
-          sessionId: newSession.sessionId,
-          prompt: [{ type: 'text', text: 'Say hello.' }],
-        });
-        expect(promptResult).toBeDefined();
-      } catch (e) {
-        if (stderr.length) {
-          console.error('Agent stderr:', stderr.join(''));
-        }
-        throw e;
-      } finally {
-        await cleanup();
-      }
+    const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
+      useNewFlag: false,
     });
 
-    it('should work with new --acp flag without warnings', async () => {
-      const rig = new TestRig();
-      rig.setup('acp new flag');
-
-      const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
-        useNewFlag: true,
+    try {
+      const initResult = await sendRequest('initialize', {
+        protocolVersion: 1,
+        clientCapabilities: {
+          fs: { readTextFile: true, writeTextFile: true },
+        },
       });
+      expect(initResult).toBeDefined();
 
-      try {
-        const initResult = await sendRequest('initialize', {
-          protocolVersion: 1,
-          clientCapabilities: {
-            fs: { readTextFile: true, writeTextFile: true },
-          },
-        });
-        expect(initResult).toBeDefined();
+      // Verify deprecation warning is shown
+      const stderrOutput = stderr.join('');
+      expect(stderrOutput).toContain('--experimental-acp is deprecated');
+      expect(stderrOutput).toContain('Please use --acp instead');
 
-        // Verify no deprecation warning is shown
-        const stderrOutput = stderr.join('');
-        expect(stderrOutput).not.toContain('--experimental-acp is deprecated');
+      await sendRequest('authenticate', { methodId: 'openai' });
 
-        await sendRequest('authenticate', { methodId: 'anthropic' });
+      const newSession = (await sendRequest('session/new', {
+        cwd: rig.testDir!,
+        mcpServers: [],
+      })) as { sessionId: string };
+      expect(newSession.sessionId).toBeTruthy();
 
-        const newSession = (await sendRequest('session/new', {
-          cwd: rig.testDir!,
-          mcpServers: [],
-        })) as { sessionId: string };
-        expect(newSession.sessionId).toBeTruthy();
-
-        // Verify functionality works
-        const promptResult = await sendRequest('session/prompt', {
-          sessionId: newSession.sessionId,
-          prompt: [{ type: 'text', text: 'Say hello.' }],
-        });
-        expect(promptResult).toBeDefined();
-      } catch (e) {
-        if (stderr.length) {
-          console.error('Agent stderr:', stderr.join(''));
-        }
-        throw e;
-      } finally {
-        await cleanup();
+      // Verify functionality still works
+      const promptResult = await sendRequest('session/prompt', {
+        sessionId: newSession.sessionId,
+        prompt: [{ type: 'text', text: 'Say hello.' }],
+      });
+      expect(promptResult).toBeDefined();
+    } catch (e) {
+      if (stderr.length) {
+        console.error('Agent stderr:', stderr.join(''));
       }
+      throw e;
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('should work with new --acp flag without warnings', async () => {
+    const rig = new TestRig();
+    rig.setup('acp new flag');
+
+    const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
+      useNewFlag: true,
     });
-  },
-);
+
+    try {
+      const initResult = await sendRequest('initialize', {
+        protocolVersion: 1,
+        clientCapabilities: {
+          fs: { readTextFile: true, writeTextFile: true },
+        },
+      });
+      expect(initResult).toBeDefined();
+
+      // Verify no deprecation warning is shown
+      const stderrOutput = stderr.join('');
+      expect(stderrOutput).not.toContain('--experimental-acp is deprecated');
+
+      await sendRequest('authenticate', { methodId: 'openai' });
+
+      const newSession = (await sendRequest('session/new', {
+        cwd: rig.testDir!,
+        mcpServers: [],
+      })) as { sessionId: string };
+      expect(newSession.sessionId).toBeTruthy();
+
+      // Verify functionality works
+      const promptResult = await sendRequest('session/prompt', {
+        sessionId: newSession.sessionId,
+        prompt: [{ type: 'text', text: 'Say hello.' }],
+      });
+      expect(promptResult).toBeDefined();
+    } catch (e) {
+      if (stderr.length) {
+        console.error('Agent stderr:', stderr.join(''));
+      }
+      throw e;
+    } finally {
+      await cleanup();
+    }
+  });
+});
