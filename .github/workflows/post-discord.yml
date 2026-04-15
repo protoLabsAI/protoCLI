@@ -1,0 +1,52 @@
+name: 'Post Release to Discord'
+
+# Manual trigger to (re)post release notes for a specific version.
+# Use when the automatic Discord post was skipped (e.g. squash-merge history).
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag to post (e.g. v0.25.15)'
+        required: true
+      previous_version:
+        description: 'Previous release tag (e.g. v0.25.12)'
+        required: true
+      dry_run:
+        description: 'Dry run — print notes without posting'
+        type: boolean
+        default: false
+
+permissions: read-all
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    if: github.repository == 'protoLabsAI/protoCLI'
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Post release notes to Discord
+        run: |
+          node scripts/rewrite-release-notes.mjs \
+            "${{ inputs.version }}" \
+            "${{ inputs.previous_version }}" \
+            ${{ inputs.dry_run == true && '--dry-run' || '--post-discord' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}

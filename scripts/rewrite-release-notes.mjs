@@ -32,6 +32,26 @@ function getCommitsBetween(fromTag, toTag) {
     .filter(Boolean);
 }
 
+/**
+ * Fallback: fetch commits from origin/dev that are reachable from fromTag but
+ * not yet on main. Used when dev→main is squash-merged (collapsing individual
+ * commits into a single "chore: release" commit that gets filtered out).
+ */
+function getCommitsFromDev(fromTag) {
+  const SEPARATOR = '<<<COMMIT>>>';
+  try {
+    const log = run(
+      `git log ${fromTag}..origin/dev --pretty=format:"${SEPARATOR}%s%n%b"`,
+    );
+    return log
+      .split(SEPARATOR)
+      .map((block) => block.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 // ─── Prompt ──────────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are a technical writer for protoLabs, a developer tools company.
@@ -176,7 +196,22 @@ console.log(`Generating release notes: ${previousVersion} → ${version}`);
 const commits = getCommitsBetween(previousVersion, version);
 console.log(`Found ${commits.length} commits`);
 
-const { prompt: userPrompt, filteredCount } = buildUserPrompt(version, previousVersion, commits);
+let { prompt: userPrompt, filteredCount } = buildUserPrompt(version, previousVersion, commits);
+
+// Fallback: when dev→main is squash-merged, the tag-to-tag range only contains
+// "chore: release" commits. Try origin/dev which preserves the individual commits.
+if (filteredCount === 0) {
+  console.log('No user-facing commits in tag range — checking origin/dev for squash-merged commits...');
+  const devCommits = getCommitsFromDev(previousVersion);
+  if (devCommits.length > 0) {
+    const devResult = buildUserPrompt(version, previousVersion, devCommits);
+    if (devResult.filteredCount > 0) {
+      console.log(`Found ${devResult.filteredCount} user-facing commits on origin/dev.`);
+      userPrompt = devResult.prompt;
+      filteredCount = devResult.filteredCount;
+    }
+  }
+}
 
 if (dryRun) {
   console.log('\n── System Prompt ──\n', SYSTEM_PROMPT);
