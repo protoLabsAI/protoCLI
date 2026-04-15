@@ -17,6 +17,8 @@ const IS_SANDBOX =
   process.env['QWEN_SANDBOX'] &&
   process.env['QWEN_SANDBOX']!.toLowerCase() !== 'false';
 
+const SKIP_ACP = IS_SANDBOX || !process.env['OPENAI_API_KEY'];
+
 type PendingRequest = {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -273,7 +275,7 @@ function setupAcpTest(
   };
 }
 
-(IS_SANDBOX ? describe.skip : describe)('acp integration', () => {
+(SKIP_ACP ? describe.skip : describe)('acp integration', () => {
   it('basic smoke test', async () => {
     const rig = new TestRig();
     rig.setup('acp load session');
@@ -906,98 +908,95 @@ function setupAcpTest(
   });
 });
 
-(IS_SANDBOX ? describe.skip : describe)(
-  'acp flag backward compatibility',
-  () => {
-    it('should work with deprecated --experimental-acp flag and show warning', async () => {
-      const rig = new TestRig();
-      rig.setup('acp backward compatibility');
+(SKIP_ACP ? describe.skip : describe)('acp flag backward compatibility', () => {
+  it('should work with deprecated --experimental-acp flag and show warning', async () => {
+    const rig = new TestRig();
+    rig.setup('acp backward compatibility');
 
-      const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
-        useNewFlag: false,
-      });
-
-      try {
-        const initResult = await sendRequest('initialize', {
-          protocolVersion: 1,
-          clientCapabilities: {
-            fs: { readTextFile: true, writeTextFile: true },
-          },
-        });
-        expect(initResult).toBeDefined();
-
-        // Verify deprecation warning is shown
-        const stderrOutput = stderr.join('');
-        expect(stderrOutput).toContain('--experimental-acp is deprecated');
-        expect(stderrOutput).toContain('Please use --acp instead');
-
-        await sendRequest('authenticate', { methodId: 'openai' });
-
-        const newSession = (await sendRequest('session/new', {
-          cwd: rig.testDir!,
-          mcpServers: [],
-        })) as { sessionId: string };
-        expect(newSession.sessionId).toBeTruthy();
-
-        // Verify functionality still works
-        const promptResult = await sendRequest('session/prompt', {
-          sessionId: newSession.sessionId,
-          prompt: [{ type: 'text', text: 'Say hello.' }],
-        });
-        expect(promptResult).toBeDefined();
-      } catch (e) {
-        if (stderr.length) {
-          console.error('Agent stderr:', stderr.join(''));
-        }
-        throw e;
-      } finally {
-        await cleanup();
-      }
+    const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
+      useNewFlag: false,
     });
 
-    it('should work with new --acp flag without warnings', async () => {
-      const rig = new TestRig();
-      rig.setup('acp new flag');
-
-      const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
-        useNewFlag: true,
+    try {
+      const initResult = await sendRequest('initialize', {
+        protocolVersion: 1,
+        clientCapabilities: {
+          fs: { readTextFile: true, writeTextFile: true },
+        },
       });
+      expect(initResult).toBeDefined();
 
-      try {
-        const initResult = await sendRequest('initialize', {
-          protocolVersion: 1,
-          clientCapabilities: {
-            fs: { readTextFile: true, writeTextFile: true },
-          },
-        });
-        expect(initResult).toBeDefined();
+      // Verify deprecation warning is shown
+      const stderrOutput = stderr.join('');
+      expect(stderrOutput).toContain('--experimental-acp is deprecated');
+      expect(stderrOutput).toContain('Please use --acp instead');
 
-        // Verify no deprecation warning is shown
-        const stderrOutput = stderr.join('');
-        expect(stderrOutput).not.toContain('--experimental-acp is deprecated');
+      await sendRequest('authenticate', { methodId: 'openai' });
 
-        await sendRequest('authenticate', { methodId: 'openai' });
+      const newSession = (await sendRequest('session/new', {
+        cwd: rig.testDir!,
+        mcpServers: [],
+      })) as { sessionId: string };
+      expect(newSession.sessionId).toBeTruthy();
 
-        const newSession = (await sendRequest('session/new', {
-          cwd: rig.testDir!,
-          mcpServers: [],
-        })) as { sessionId: string };
-        expect(newSession.sessionId).toBeTruthy();
-
-        // Verify functionality works
-        const promptResult = await sendRequest('session/prompt', {
-          sessionId: newSession.sessionId,
-          prompt: [{ type: 'text', text: 'Say hello.' }],
-        });
-        expect(promptResult).toBeDefined();
-      } catch (e) {
-        if (stderr.length) {
-          console.error('Agent stderr:', stderr.join(''));
-        }
-        throw e;
-      } finally {
-        await cleanup();
+      // Verify functionality still works
+      const promptResult = await sendRequest('session/prompt', {
+        sessionId: newSession.sessionId,
+        prompt: [{ type: 'text', text: 'Say hello.' }],
+      });
+      expect(promptResult).toBeDefined();
+    } catch (e) {
+      if (stderr.length) {
+        console.error('Agent stderr:', stderr.join(''));
       }
+      throw e;
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('should work with new --acp flag without warnings', async () => {
+    const rig = new TestRig();
+    rig.setup('acp new flag');
+
+    const { sendRequest, cleanup, stderr } = setupAcpTest(rig, {
+      useNewFlag: true,
     });
-  },
-);
+
+    try {
+      const initResult = await sendRequest('initialize', {
+        protocolVersion: 1,
+        clientCapabilities: {
+          fs: { readTextFile: true, writeTextFile: true },
+        },
+      });
+      expect(initResult).toBeDefined();
+
+      // Verify no deprecation warning is shown
+      const stderrOutput = stderr.join('');
+      expect(stderrOutput).not.toContain('--experimental-acp is deprecated');
+
+      await sendRequest('authenticate', { methodId: 'openai' });
+
+      const newSession = (await sendRequest('session/new', {
+        cwd: rig.testDir!,
+        mcpServers: [],
+      })) as { sessionId: string };
+      expect(newSession.sessionId).toBeTruthy();
+
+      // Verify functionality works
+      const promptResult = await sendRequest('session/prompt', {
+        sessionId: newSession.sessionId,
+        prompt: [{ type: 'text', text: 'Say hello.' }],
+      });
+      expect(promptResult).toBeDefined();
+    } catch (e) {
+      if (stderr.length) {
+        console.error('Agent stderr:', stderr.join(''));
+      }
+      throw e;
+    } finally {
+      await cleanup();
+    }
+  });
+});

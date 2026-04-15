@@ -30,6 +30,8 @@ const IS_SANDBOX =
   process.env['QWEN_SANDBOX'] &&
   process.env['QWEN_SANDBOX']!.toLowerCase() !== 'false';
 
+const SKIP_ACP = IS_SANDBOX || !process.env['OPENAI_API_KEY'];
+
 type PendingRequest = {
   resolve: (value: unknown) => void;
   reject: (reason: Error) => void;
@@ -284,7 +286,7 @@ async function initSession(
   return newSession.sessionId;
 }
 
-(IS_SANDBOX ? describe.skip : describe)('acp cron integration', () => {
+(SKIP_ACP ? describe.skip : describe)('acp cron integration', () => {
   it(
     'cron job fires and streams results via sessionUpdate after prompt returns',
     async () => {
