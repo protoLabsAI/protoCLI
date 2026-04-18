@@ -199,12 +199,12 @@ const getErrorMessage = (error: unknown): string =>
 
 const isExpectedPtyReadExitError = (error: unknown): boolean => {
   const code = getErrnoCode(error);
-  if (code === 'EIO') {
+  if (code === 'EIO' || code === 'EAGAIN') {
     return true;
   }
 
   const message = getErrorMessage(error);
-  return message.includes('read EIO');
+  return message.includes('read EIO') || message.includes('EAGAIN');
 };
 
 const isExpectedPtyExitRaceError = (error: unknown): boolean => {
@@ -747,10 +747,10 @@ export class ShellExecutionService {
           const finalOutput = shellExecutionConfig.disableDynamicLineTrimming
             ? newOutput
             : trimmedOutput;
-          const finalOutputComparison = shellExecutionConfig
-            .disableDynamicLineTrimming
-            ? newOutputComparison
-            : trimmedOutputComparison;
+          const finalOutputComparison =
+            shellExecutionConfig.disableDynamicLineTrimming
+              ? newOutputComparison
+              : trimmedOutputComparison;
 
           if (!areAnsiOutputsEqual(outputComparison, finalOutputComparison)) {
             outputComparison = finalOutputComparison;
