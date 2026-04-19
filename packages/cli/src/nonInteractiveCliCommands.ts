@@ -37,6 +37,8 @@ const debugLogger = createDebugLogger('NON_INTERACTIVE_COMMANDS');
  * - init: Initialize project configuration
  * - summary: Generate session summary
  * - compress: Compress conversation history
+ * - context: Show context window usage (read-only diagnostic)
+ * - doctor: Run installation and environment diagnostics (read-only diagnostic)
  */
 export const ALLOWED_BUILTIN_COMMANDS_NON_INTERACTIVE = [
   'init',
@@ -44,6 +46,8 @@ export const ALLOWED_BUILTIN_COMMANDS_NON_INTERACTIVE = [
   'compress',
   'btw',
   'bug',
+  'context',
+  'doctor',
 ] as const;
 
 /**
