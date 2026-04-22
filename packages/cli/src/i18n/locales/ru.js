@@ -368,6 +368,8 @@ export default {
   'Tool Schema Compliance': 'Соответствие схеме инструмента',
   // Варианты перечислений настроек
   'Auto (detect from system)': 'Авто (определить из системы)',
+  'Auto (detect terminal theme)': 'Авто (определить тему терминала)',
+  Auto: 'Авто',
   Text: 'Текст',
   JSON: 'JSON',
   Plan: 'План',
