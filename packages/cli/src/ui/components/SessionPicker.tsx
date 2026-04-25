@@ -18,6 +18,7 @@ import {
 } from '../utils/sessionPickerUtils.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { t } from '../../i18n/index.js';
+import { SessionPreview } from './SessionPreview.js';
 
 export interface SessionPickerProps {
   sessionService: SessionService | null;
@@ -30,6 +31,14 @@ export interface SessionPickerProps {
    * Defaults to true so dialog + standalone behave identically.
    */
   centerSelection?: boolean;
+
+  /**
+   * Enable Space-to-preview. Off by default — preview's Enter shortcut
+   * forwards to `onSelect`, which for resume flows is "resume", but for
+   * destructive flows (e.g. delete) would commit the action. Only opt in
+   * for non-destructive selection flows.
+   */
+  enablePreview?: boolean;
 }
 
 const PREFIX_CHARS = {
@@ -123,6 +132,7 @@ export function SessionPicker(props: SessionPickerProps) {
     onCancel,
     currentBranch,
     centerSelection = true,
+    enablePreview = false,
   } = props;
 
   const { columns: width, rows: height } = useTerminalSize();
@@ -147,7 +157,31 @@ export function SessionPicker(props: SessionPickerProps) {
     maxVisibleItems,
     centerSelection,
     isActive: true,
+    enablePreview,
   });
+
+  if (
+    enablePreview &&
+    picker.viewMode === 'preview' &&
+    picker.previewSessionId &&
+    sessionService
+  ) {
+    const previewed = picker.filteredSessions.find(
+      (s) => s.sessionId === picker.previewSessionId,
+    );
+    return (
+      <SessionPreview
+        sessionService={sessionService}
+        sessionId={picker.previewSessionId}
+        sessionTitle={previewed?.prompt ?? undefined}
+        messageCount={previewed?.messageCount}
+        mtime={previewed?.mtime}
+        gitBranch={previewed?.gitBranch}
+        onExit={picker.exitPreview}
+        onResume={onSelect}
+      />
+    );
+  }
 
   return (
     <Box
@@ -237,7 +271,12 @@ export function SessionPicker(props: SessionPickerProps) {
                 >
                   B
                 </Text>
-                {t(' to toggle branch')} ·
+                {t(' to toggle branch · ')}
+              </Text>
+            )}
+            {enablePreview && (
+              <Text color={theme.text.secondary}>
+                {t('Space to preview · ')}
               </Text>
             )}
             <Text color={theme.text.secondary}>
