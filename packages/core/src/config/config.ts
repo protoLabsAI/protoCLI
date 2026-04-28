@@ -692,6 +692,7 @@ export class Config {
   private readonly hooks?: Record<string, unknown>;
   private hookSystem?: HookSystem;
   private messageBus?: MessageBus;
+  private readonly modelChangeListeners = new Set<(model: string) => void>();
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId ?? randomUUID();
@@ -1314,6 +1315,20 @@ export class Config {
     return this.contentGeneratorConfig?.model || this.modelsConfig.getModel();
   }
 
+  onModelChange(listener: (model: string) => void): () => void {
+    this.modelChangeListeners.add(listener);
+    return () => {
+      this.modelChangeListeners.delete(listener);
+    };
+  }
+
+  private notifyModelChangeListeners(): void {
+    const model = this.getModel();
+    for (const listener of this.modelChangeListeners) {
+      listener(model);
+    }
+  }
+
   /**
    * Set model programmatically (e.g., VLM auto-switch, fallback).
    * Delegates to ModelsConfig.
@@ -1327,6 +1342,7 @@ export class Config {
     if (this.contentGeneratorConfig) {
       this.contentGeneratorConfig.model = newModel;
     }
+    this.notifyModelChangeListeners();
   }
 
   /**
@@ -1395,6 +1411,7 @@ export class Config {
    */
   async switchModel(authType: AuthType, modelId: string): Promise<void> {
     await this.modelsConfig.switchModel(authType, modelId);
+    this.notifyModelChangeListeners();
   }
 
   getMaxSessionTurns(): number {

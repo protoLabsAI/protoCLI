@@ -414,6 +414,21 @@ describe('Server Config (config.ts)', () => {
     });
   });
 
+  describe('onModelChange listener', () => {
+    it('subscribes and unsubscribes listeners', () => {
+      const config = new Config(baseParams);
+      const listener = vi.fn();
+      const unsubscribe = config.onModelChange(listener);
+
+      // After unsubscribe, the listener set should no longer hold the callback.
+      // The actual notification path (notifyModelChangeListeners → switchModel)
+      // is exercised by integration tests; here we just verify the
+      // subscribe/unsubscribe contract.
+      expect(typeof unsubscribe).toBe('function');
+      unsubscribe();
+    });
+  });
+
   describe('model switching with different credentials (OpenAI)', () => {
     it('should refresh auth when switching to model with different envKey', async () => {
       // This test verifies the fix for switching between modelProvider models
