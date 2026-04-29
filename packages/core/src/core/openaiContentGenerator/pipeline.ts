@@ -429,33 +429,70 @@ export class ContentGenerationPipeline {
     }
 
     // Add tools if present
-    if (request.config?.tools) {
+    if (request.config?.tools && request.config.tools.length > 0) {
       baseRequest.tools = await this.converter.convertGeminiToolsToOpenAI(
         request.config.tools,
       );
     } else {
-      // If no tools are defined but the message history contains tool call or
-      // tool result messages (e.g. /btw using full conversation history),
-      // strip those messages. Anthropic (and LiteLLM routing to Anthropic)
-      // rejects requests that have tool-related messages without a tools param.
-      const hasToolMessages = baseRequest.messages.some(
-        (m) =>
-          m.role === 'tool' ||
-          (m.role === 'assistant' &&
-            Array.isArray((m as { tool_calls?: unknown }).tool_calls) &&
-            ((m as { tool_calls?: unknown[] }).tool_calls?.length ?? 0) > 0),
-      );
-      if (hasToolMessages) {
-        baseRequest.messages = baseRequest.messages.filter(
-          (m) =>
-            m.role !== 'tool' &&
-            !(
-              m.role === 'assistant' &&
-              Array.isArray((m as { tool_calls?: unknown }).tool_calls) &&
-              ((m as { tool_calls?: unknown[] }).tool_calls?.length ?? 0) > 0
-            ),
-        );
-      }
+      // If no tools are declared but the message history contains tool_call /
+      // tool_result messages (e.g. /recap, /btw, away_summary using full
+      // conversation history), the upstream provider (Anthropic, LiteLLM
+      // routing to Anthropic) rejects the request. Rather than dropping those
+      // assistant turns whole — which loses any prose content the model
+      // emitted alongside its tool_calls and starves callers of context —
+      // strip only the tool-specific fields and flatten tool results into
+      // assistant-readable notes.
+      baseRequest.messages = baseRequest.messages.flatMap((m) => {
+        if (m.role === 'tool') {
+          const content =
+            typeof m.content === 'string'
+              ? m.content
+              : Array.isArray(m.content)
+                ? m.content
+                    .map((p) =>
+                      typeof p === 'string'
+                        ? p
+                        : 'text' in p && typeof p.text === 'string'
+                          ? p.text
+                          : '',
+                    )
+                    .join('')
+                : '';
+          if (!content) return [];
+          const truncated =
+            content.length > 2000 ? content.slice(0, 2000) + '…' : content;
+          return [
+            {
+              role: 'assistant' as const,
+              content: `[tool result] ${truncated}`,
+            },
+          ];
+        }
+        if (
+          m.role === 'assistant' &&
+          Array.isArray((m as { tool_calls?: unknown }).tool_calls) &&
+          ((m as { tool_calls?: unknown[] }).tool_calls?.length ?? 0) > 0
+        ) {
+          const { tool_calls: _toolCalls, ...rest } = m as {
+            tool_calls?: unknown;
+          } & OpenAI.Chat.ChatCompletionMessageParam;
+          // If the assistant turn had no text content (pure tool_call), give
+          // it a minimal placeholder so the message stays valid.
+          if (
+            !rest.content ||
+            (Array.isArray(rest.content) && rest.content.length === 0)
+          ) {
+            return [
+              {
+                ...rest,
+                content: '[tool call elided]',
+              } as OpenAI.Chat.ChatCompletionMessageParam,
+            ];
+          }
+          return [rest as OpenAI.Chat.ChatCompletionMessageParam];
+        }
+        return [m];
+      });
     }
 
     // Let provider enhance the request (e.g., add metadata, cache control)
