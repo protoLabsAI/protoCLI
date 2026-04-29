@@ -51,6 +51,11 @@ export async function generateRecap(
         config: {
           abortSignal,
           thinkingConfig: { includeThoughts: false },
+          // Empty tools array (truthy) bypasses pipeline.ts buildRequest's
+          // tool-stripping path. Without this, assistant turns containing
+          // tool_calls — i.e. most of the agent's actual work — are dropped
+          // before the request leaves, starving the recap of context.
+          tools: [],
         },
       },
       'recap',
