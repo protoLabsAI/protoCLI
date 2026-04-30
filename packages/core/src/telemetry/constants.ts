@@ -34,6 +34,8 @@ export const EVENT_FILE_OPERATION = 'proto.file_operation';
 export const EVENT_MODEL_SLASH_COMMAND = 'proto.slash_command.model';
 export const EVENT_SUBAGENT_EXECUTION = 'proto.subagent_execution';
 export const EVENT_SKILL_LAUNCH = 'proto.skill_launch';
+export const EVENT_HOOK_CALL = 'proto.hook_call';
+export const EVENT_LOOP_DETECTION_DISABLED = 'proto.loop_detection_disabled';
 export const EVENT_AUTH = 'proto.auth';
 export const EVENT_USER_FEEDBACK = 'proto.user_feedback';
 

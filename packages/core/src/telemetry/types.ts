@@ -803,7 +803,8 @@ export class AuthEvent implements BaseTelemetryEvent {
 }
 
 /**
- * Hook call telemetry event
+ * Hook call telemetry event — captures user-defined hook executions
+ * (UserPromptSubmit, PreToolUse, etc.) for Langfuse observability.
  */
 export class HookCallEvent implements BaseTelemetryEvent {
   'event.name': string;
