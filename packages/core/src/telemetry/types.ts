@@ -803,7 +803,8 @@ export class AuthEvent implements BaseTelemetryEvent {
 }
 
 /**
- * Hook call telemetry event
+ * Hook call telemetry event — captures user-defined hook executions
+ * (UserPromptSubmit, PreToolUse, etc.) for Langfuse observability.
  */
 export class HookCallEvent implements BaseTelemetryEvent {
   'event.name': string;
@@ -1064,7 +1065,7 @@ export class ExtensionDisableEvent implements BaseTelemetryEvent {
 }
 
 export class PromptSuggestionEvent implements BaseTelemetryEvent {
-  'event.name': 'qwen-code.prompt_suggestion';
+  'event.name': 'proto.prompt_suggestion';
   'event.timestamp': string;
   outcome: 'accepted' | 'ignored' | 'suppressed';
   prompt_id?: string;
@@ -1089,7 +1090,7 @@ export class PromptSuggestionEvent implements BaseTelemetryEvent {
     was_focused_when_shown?: boolean;
     reason?: string;
   }) {
-    this['event.name'] = 'qwen-code.prompt_suggestion';
+    this['event.name'] = 'proto.prompt_suggestion';
     this['event.timestamp'] = new Date().toISOString();
     this.outcome = params.outcome;
     this.prompt_id = params.prompt_id ?? 'user_intent';
@@ -1105,7 +1106,7 @@ export class PromptSuggestionEvent implements BaseTelemetryEvent {
 }
 
 export class SpeculationEvent implements BaseTelemetryEvent {
-  'event.name': 'qwen-code.speculation';
+  'event.name': 'proto.speculation';
   'event.timestamp': string;
   outcome: 'accepted' | 'aborted' | 'failed';
   turns_used: number;
@@ -1124,7 +1125,7 @@ export class SpeculationEvent implements BaseTelemetryEvent {
     boundary_type?: string;
     had_pipelined_suggestion: boolean;
   }) {
-    this['event.name'] = 'qwen-code.speculation';
+    this['event.name'] = 'proto.speculation';
     this['event.timestamp'] = new Date().toISOString();
     this.outcome = params.outcome;
     this.turns_used = params.turns_used;

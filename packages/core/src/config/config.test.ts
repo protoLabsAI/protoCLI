@@ -13,7 +13,6 @@ import { setGeminiMdFilename as mockSetGeminiMdFilename } from '../tools/memoryT
 import {
   DEFAULT_TELEMETRY_TARGET,
   DEFAULT_OTLP_ENDPOINT,
-  QwenLogger,
 } from '../telemetry/index.js';
 import type {
   ContentGenerator,
@@ -235,9 +234,6 @@ describe('Server Config (config.ts)', () => {
   beforeEach(() => {
     // Reset mocks if necessary
     vi.clearAllMocks();
-    vi.spyOn(QwenLogger.prototype, 'logStartSessionEvent').mockImplementation(
-      async () => undefined,
-    );
 
     // Setup default mock for resolveContentGeneratorConfigWithSources
     vi.mocked(resolveContentGeneratorConfigWithSources).mockImplementation(
@@ -635,16 +631,6 @@ describe('Server Config (config.ts)', () => {
         expect(config.getUsageStatisticsEnabled()).toBe(enabled);
       },
     );
-
-    it('logs the session start event', async () => {
-      const config = new Config({
-        ...baseParams,
-        usageStatisticsEnabled: true,
-      });
-      await config.initialize();
-
-      expect(QwenLogger.prototype.logStartSessionEvent).toHaveBeenCalledOnce();
-    });
   });
 
   describe('Telemetry Settings', () => {

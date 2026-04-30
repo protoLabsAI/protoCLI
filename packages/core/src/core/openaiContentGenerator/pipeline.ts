@@ -18,7 +18,7 @@ import type { ErrorHandler, RequestContext } from './errorHandler.js';
 import { createDebugLogger } from '../../utils/debugLogger.js';
 
 const debugLogger = createDebugLogger('OPENAI_PIPELINE');
-const tracer = trace.getTracer('qwen-code.openai-pipeline', '1.0.0');
+const tracer = trace.getTracer('proto.openai-pipeline', '1.0.0');
 
 /**
  * Error thrown when the API returns an error embedded as stream content
