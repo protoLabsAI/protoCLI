@@ -471,10 +471,14 @@ export class AgentCore {
               messagesAfter: masked.length,
             });
           }
-          const compacted =
-            estimateTokens(masked) <= targetTokens
-              ? masked
-              : compactMessages(masked, targetTokens);
+          let compacted: Content[];
+          if (estimateTokens(masked) <= targetTokens) {
+            compacted = masked;
+          } else {
+            const taskStore = this.runtimeContext.getTaskStore?.();
+            const result = compactMessages(masked, targetTokens, { taskStore });
+            compacted = result instanceof Promise ? await result : result;
+          }
           if (compacted.length < historyBefore.length) {
             chat.setHistory(compacted);
             const tokensAfter = estimateTokens(compacted);
