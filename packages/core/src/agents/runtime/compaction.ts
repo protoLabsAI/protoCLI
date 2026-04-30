@@ -12,6 +12,78 @@
  */
 
 import type { Content, Part } from '@google/genai';
+import type { TaskStore } from '../../services/task-store.js';
+
+export interface CompactMessagesOptions {
+  /** Optional task store for preserving task plan state in compaction summary. */
+  taskStore?: TaskStore;
+}
+
+/**
+ * Query the task store and produce a structured XML summary of current task states.
+ * Format: [x] completed, [~] in_progress, [ ] pending, [-] cancelled, [!] blocked
+ * Recursively renders tasks at arbitrary nesting depth.
+ * Returns empty string if no tasks exist.
+ */
+export async function extractTaskPlanSummary(
+  taskStore: TaskStore,
+): Promise<string> {
+  const tasks = taskStore.list();
+  if (tasks.length === 0) return '';
+
+  const STATUS_MARKERS: Record<string, string> = {
+    completed: '[x]',
+    in_progress: '[~]',
+    pending: '[ ]',
+    cancelled: '[-]',
+    blocked: '[!]',
+  };
+
+  // Build lookup structures
+  const taskMap = new Map<string, (typeof tasks)[0]>();
+  for (const t of tasks) taskMap.set(t.id, t);
+
+  const childrenMap = new Map<string, typeof tasks>();
+  for (const t of tasks) {
+    if (t.parentTaskId) {
+      if (!childrenMap.has(t.parentTaskId)) childrenMap.set(t.parentTaskId, []);
+      childrenMap.get(t.parentTaskId)!.push(t);
+    }
+  }
+
+  const rootTasks = tasks.filter((t) => !t.parentTaskId);
+
+  const lines: string[] = ['<task-plan>'];
+
+  function renderTask(task: (typeof tasks)[0], indent: string) {
+    const marker = STATUS_MARKERS[task.status] ?? '[ ]';
+    const priority = task.priority ? ` (${task.priority})` : '';
+    lines.push(`${indent}${marker} ${task.title}${priority}`);
+
+    const children = childrenMap.get(task.id) ?? [];
+    for (const child of children) {
+      renderTask(child, indent + '  ');
+    }
+  }
+
+  // Render root tasks and their recursive children
+  for (const task of rootTasks) {
+    renderTask(task, '  ');
+  }
+
+  // Handle orphan subtasks (parent ID references a task not in the store)
+  const allIds = new Set(taskMap.keys());
+  for (const task of tasks) {
+    if (task.parentTaskId && !allIds.has(task.parentTaskId)) {
+      const marker = STATUS_MARKERS[task.status] ?? '[ ]';
+      const priority = task.priority ? ` (${task.priority})` : '';
+      lines.push(`  ${marker} ${task.title}${priority} (orphan)`);
+    }
+  }
+
+  lines.push('</task-plan>');
+  return lines.join('\n');
+}
 
 /** Rough token estimation: ~4 chars per token */
 export function estimateTokens(messages: Content[]): number {
@@ -25,14 +97,20 @@ export function estimateTokens(messages: Content[]): number {
  * Compact the chat history by summarizing completed tool call/result pairs.
  * Preserves recent messages intact. Tool call/result pairs are kept atomic.
  *
+ * When `options.taskStore` is provided, also appends a structured task plan
+ * summary so the agent retains awareness of completed/in-progress/pending work
+ * after compaction.
+ *
  * @param history - Full Content[] history from GeminiChat.getHistory()
  * @param targetTokens - Target token count after compaction (usually 70% of max)
- * @returns Compacted Content[] array
+ * @param options - Optional config (taskStore for todo preservation)
+ * @returns Compacted Content[] array (sync) or Promise<Content[]> if taskStore provided
  */
 export function compactMessages(
   history: Content[],
   _targetTokens: number,
-): Content[] {
+  options?: CompactMessagesOptions,
+): Content[] | Promise<Content[]> {
   if (history.length === 0) return history;
 
   // Always keep last N messages verbatim to preserve recent context
@@ -45,6 +123,33 @@ export function compactMessages(
 
   // Build summary of compactable section, keeping tool pairs atomic
   const summary = summarizeHistory(compactable);
+
+  // If taskStore is provided, we need async — return a Promise
+  if (options?.taskStore) {
+    return (async () => {
+      let taskPlan = '';
+      try {
+        taskPlan = await extractTaskPlanSummary(options.taskStore!);
+      } catch {
+        // Task plan extraction failed — proceed with plain summary
+        // to avoid breaking compaction
+      }
+      const fullSummary = taskPlan
+        ? summary + '\n\nCurrent task plan state:\n' + taskPlan
+        : summary;
+      const summaryContent: Content = {
+        role: 'user',
+        parts: [
+          {
+            text: `[Context compacted — summary of earlier work:\n${fullSummary}]`,
+          },
+        ],
+      };
+      return [summaryContent, ...recent];
+    })();
+  }
+
+  // Sync path — no task store
   const summaryContent: Content = {
     role: 'user',
     parts: [
