@@ -225,6 +225,43 @@ describe('extractTaskPlanSummary', () => {
     expect(result).toContain('[-]'); // cancelled marker
     expect(result).toContain('[!]'); // blocked marker
   });
+
+  it('recursively renders multi-level nesting', async () => {
+    const store = mockTaskStore([
+      { id: 'task-0', title: 'Root', status: 'in_progress' },
+      {
+        id: 'task-1',
+        title: 'Level 1',
+        status: 'pending',
+        parentTaskId: 'task-0',
+      },
+      {
+        id: 'task-2',
+        title: 'Level 2',
+        status: 'pending',
+        parentTaskId: 'task-1',
+      },
+      {
+        id: 'task-3',
+        title: 'Level 3',
+        status: 'pending',
+        parentTaskId: 'task-2',
+      },
+    ]);
+    const result = await extractTaskPlanSummary(store);
+    expect(result).toContain('Root');
+    expect(result).toContain('Level 1');
+    expect(result).toContain('Level 2');
+    expect(result).toContain('Level 3');
+    // Verify indentation increases with depth
+    const rootIdx = result.indexOf('Root');
+    const l1Idx = result.indexOf('Level 1');
+    const l2Idx = result.indexOf('Level 2');
+    const l3Idx = result.indexOf('Level 3');
+    expect(l1Idx).toBeGreaterThan(rootIdx);
+    expect(l2Idx).toBeGreaterThan(l1Idx);
+    expect(l3Idx).toBeGreaterThan(l2Idx);
+  });
 });
 
 describe('compactMessages with task plan', () => {
@@ -275,5 +312,28 @@ describe('compactMessages with task plan', () => {
     const store = mockTaskStore([{ title: 'Some task', status: 'pending' }]);
     const result = await compactMessages(msgs, 1000, { taskStore: store });
     expect(result).toHaveLength(2);
+  });
+
+  it('gracefully handles taskStore errors and falls back to plain summary', async () => {
+    const msgs: Content[] = Array.from({ length: 20 }, (_, i) => ({
+      role: i % 2 === 0 ? 'user' : 'model',
+      parts: [
+        {
+          text: `message ${i} with enough content to trigger compaction logic`,
+        },
+      ],
+    }));
+    const failingStore = {
+      list: () => {
+        throw new Error('store is broken');
+      },
+    } as unknown as TaskStore;
+    const result = await compactMessages(msgs, 100, {
+      taskStore: failingStore,
+    });
+    // Should not throw — falls back to plain summary
+    const summaryText = result[0]?.parts?.[0]?.text ?? '';
+    expect(summaryText).toContain('Context compacted');
+    expect(summaryText).not.toContain('<task-plan>');
   });
 });

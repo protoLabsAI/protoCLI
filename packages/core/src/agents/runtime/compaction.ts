@@ -22,7 +22,7 @@ export interface CompactMessagesOptions {
 /**
  * Query the task store and produce a structured XML summary of current task states.
  * Format: [x] completed, [~] in_progress, [ ] pending, [-] cancelled, [!] blocked
- * Groups subtasks under their parent tasks with indentation.
+ * Recursively renders tasks at arbitrary nesting depth.
  * Returns empty string if no tasks exist.
  */
 export async function extractTaskPlanSummary(
@@ -39,36 +39,42 @@ export async function extractTaskPlanSummary(
     blocked: '[!]',
   };
 
-  // Separate root tasks and subtasks
-  const rootTasks = tasks.filter((t) => !t.parentTaskId);
-  const subtaskMap = new Map<string, typeof tasks>();
+  // Build lookup structures
+  const taskMap = new Map<string, (typeof tasks)[0]>();
+  for (const t of tasks) taskMap.set(t.id, t);
+
+  const childrenMap = new Map<string, typeof tasks>();
   for (const t of tasks) {
     if (t.parentTaskId) {
-      if (!subtaskMap.has(t.parentTaskId)) subtaskMap.set(t.parentTaskId, []);
-      subtaskMap.get(t.parentTaskId)!.push(t);
+      if (!childrenMap.has(t.parentTaskId)) childrenMap.set(t.parentTaskId, []);
+      childrenMap.get(t.parentTaskId)!.push(t);
     }
   }
+
+  const rootTasks = tasks.filter((t) => !t.parentTaskId);
 
   const lines: string[] = ['<task-plan>'];
 
-  for (const task of rootTasks) {
+  function renderTask(task: (typeof tasks)[0], indent: string) {
     const marker = STATUS_MARKERS[task.status] ?? '[ ]';
     const priority = task.priority ? ` (${task.priority})` : '';
-    lines.push(`  ${marker} ${task.title}${priority}`);
+    lines.push(`${indent}${marker} ${task.title}${priority}`);
 
-    // Indent subtasks under parent
-    const children = subtaskMap.get(task.id) ?? [];
+    const children = childrenMap.get(task.id) ?? [];
     for (const child of children) {
-      const childMarker = STATUS_MARKERS[child.status] ?? '[ ]';
-      const childPriority = child.priority ? ` (${child.priority})` : '';
-      lines.push(`    ${childMarker} ${child.title}${childPriority}`);
+      renderTask(child, indent + '  ');
     }
   }
 
-  // Handle orphan subtasks (parent not in list)
-  const knownParents = new Set(rootTasks.map((t) => t.id));
+  // Render root tasks and their recursive children
+  for (const task of rootTasks) {
+    renderTask(task, '  ');
+  }
+
+  // Handle orphan subtasks (parent ID references a task not in the store)
+  const allIds = new Set(taskMap.keys());
   for (const task of tasks) {
-    if (task.parentTaskId && !knownParents.has(task.parentTaskId)) {
+    if (task.parentTaskId && !allIds.has(task.parentTaskId)) {
       const marker = STATUS_MARKERS[task.status] ?? '[ ]';
       const priority = task.priority ? ` (${task.priority})` : '';
       lines.push(`  ${marker} ${task.title}${priority} (orphan)`);
@@ -121,7 +127,13 @@ export function compactMessages(
   // If taskStore is provided, we need async — return a Promise
   if (options?.taskStore) {
     return (async () => {
-      const taskPlan = await extractTaskPlanSummary(options.taskStore!);
+      let taskPlan = '';
+      try {
+        taskPlan = await extractTaskPlanSummary(options.taskStore!);
+      } catch {
+        // Task plan extraction failed — proceed with plain summary
+        // to avoid breaking compaction
+      }
       const fullSummary = taskPlan
         ? summary + '\n\nCurrent task plan state:\n' + taskPlan
         : summary;
