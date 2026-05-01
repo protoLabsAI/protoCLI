@@ -582,21 +582,6 @@ export class ContentGenerationPipeline {
     // (e.g. `max_completion_tokens` for GPT-5 / o-series) without a client release.
     // When absent, the historical default behavior applies.
     if (configSamplingParams !== undefined) {
-      const noThink = request.config?.thinkingConfig?.includeThoughts === false;
-      // Per-request no-think hint must still propagate even when the user has
-      // a custom samplingParams block (otherwise recap stays slow on Qwen3
-      // when samplingParams is set globally). Merge `extra_body.enable_thinking`
-      // in without clobbering existing extra_body keys.
-      if (noThink) {
-        const existingExtraBody = (
-          configSamplingParams as Record<string, unknown>
-        )['extra_body'];
-        const mergedExtraBody = {
-          ...((existingExtraBody as Record<string, unknown> | undefined) ?? {}),
-          enable_thinking: false,
-        };
-        return { ...configSamplingParams, extra_body: mergedExtraBody };
-      }
       return { ...configSamplingParams };
     }
 
@@ -644,12 +629,16 @@ export class ContentGenerationPipeline {
     // model-specific semantics intact while honoring request-level opt-out.
 
     if (request.config?.thinkingConfig?.includeThoughts === false) {
-      // The caller wants no thinking. Skip the `reasoning` field (which
-      // disables thinking on gpt-5 / glm via their reasoning APIs) AND inject
-      // `extra_body.enable_thinking: false` so Qwen3 / vLLM-served models
-      // actually skip CoT instead of just hiding it from the response. Other
-      // backends ignore unknown extra_body keys; LiteLLM strips per-model.
-      return { extra_body: { enable_thinking: false } };
+      // Skip the `reasoning` field — disables thinking on gpt-5 / glm via
+      // their reasoning APIs. We deliberately do NOT inject
+      // `extra_body.enable_thinking: false` here: empirically that triggers
+      // some thinking-style models (including the protolabs/fast routing on
+      // our gateway) to dump their internal scaffolding as visible content,
+      // which is the opposite of the intent. For Qwen3 specifically that
+      // can't disable thinking via reasoning APIs, the right fix is to route
+      // to a non-thinking model alias (see recap → protolabs/fast), not to
+      // try to flip a flag on the active model.
+      return {};
     }
 
     const reasoning = this.contentGeneratorConfig.reasoning;
