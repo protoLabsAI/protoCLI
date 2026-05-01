@@ -53,6 +53,22 @@ Usage notes:
 - Users will always be able to select "Other" to provide custom text input
 - Use multiSelect: true to allow multiple answers to be selected for a question
 - If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label
+- IMPORTANT: \`questions\` is a real array. Do NOT JSON-encode it as a string.
+
+Example shape (replace placeholder text with your actual question/options):
+{
+  "questions": [
+    {
+      "question": "<your question, ending in '?'>",
+      "header": "<short label, ≤30 chars>",
+      "options": [
+        { "label": "<choice A>", "description": "<what choice A means>" },
+        { "label": "<choice B>", "description": "<what choice B means>" }
+      ],
+      "multiSelect": false
+    }
+  ]
+}
 
 Plan mode note: In plan mode, use this tool to clarify requirements or choose between approaches BEFORE finalizing your plan. Do NOT use this tool to ask "Is this plan ready?" or "Should I proceed?" - use ExitPlanMode for plan approval.
 `;
@@ -283,6 +299,28 @@ export class AskUserQuestionTool extends BaseDeclarativeTool<
   }
 
   override validateToolParams(params: AskUserQuestionParams): string | null {
+    // Recover from a common model failure: smaller / older models often
+    // JSON-encode the entire `questions` array as a string when the schema
+    // gets too deeply nested for them. Parse it before validating so the
+    // tool succeeds without a useless retry round-trip. We log the recovery
+    // so the signal stays visible — silent coercion would mask a real
+    // regression if upstream behavior shifts.
+    if (typeof (params as { questions?: unknown }).questions === 'string') {
+      const raw = (params as unknown as { questions: string }).questions;
+      try {
+        const parsed = JSON.parse(raw);
+        debugLogger.warn(
+          `[ask_user_question] coerced stringified questions array (len=${raw.length}). Model emitted JSON-encoded string instead of native array.`,
+        );
+        (params as unknown as { questions: unknown }).questions = parsed;
+      } catch {
+        return (
+          'Parameter "questions" was a string that could not be parsed as JSON. ' +
+          'Pass `questions` as a real array literal, not a JSON-encoded string.'
+        );
+      }
+    }
+
     // Validate questions array
     if (!Array.isArray(params.questions)) {
       return 'Parameter "questions" must be an array.';

@@ -98,6 +98,42 @@ describe('AskUserQuestionTool', () => {
       const result = tool.validateToolParams(params);
       expect(result).toContain('between 2 and 4 options');
     });
+
+    it('coerces a stringified questions array (recovers from common model failure)', () => {
+      // Repro of the failure pattern caught in the wild: smaller / older
+      // models JSON-encode the entire array as a string when the schema's
+      // 3-level nesting overflows their working memory.
+      const validInner = [
+        {
+          question: 'Test question?',
+          header: 'Test',
+          options: [
+            { label: 'A', description: 'Choice A' },
+            { label: 'B', description: 'Choice B' },
+          ],
+          multiSelect: false,
+        },
+      ];
+      const params = {
+        questions: JSON.stringify(validInner),
+      } as unknown as Parameters<typeof tool.validateToolParams>[0];
+
+      const result = tool.validateToolParams(params);
+      expect(result).toBeNull();
+      // Coercion should have mutated params in place to the parsed array.
+      expect(Array.isArray(params.questions)).toBe(true);
+      expect(params.questions).toEqual(validInner);
+    });
+
+    it('returns a sharp error when questions is a non-JSON string', () => {
+      const params = {
+        questions: 'this is not JSON at all',
+      } as unknown as Parameters<typeof tool.validateToolParams>[0];
+
+      const result = tool.validateToolParams(params);
+      expect(result).toContain('JSON-encoded string');
+      expect(result).toContain('real array literal');
+    });
   });
 
   describe('getDefaultPermission and getConfirmationDetails', () => {
