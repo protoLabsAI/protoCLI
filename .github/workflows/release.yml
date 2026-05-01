@@ -1,10 +1,13 @@
 name: 'Release'
 
-# Fires when the dev→main promotion PR is merged.
+# Fires when a release-bearing PR is merged into main.
 # Builds the bundle, publishes @protolabsai/proto to npm, tags, and creates a GitHub Release.
 #
-# Flow: feature PRs → dev → prepare-release.yml bumps version on dev
-#       → dev→main promotion PR merges → this workflow tags and releases.
+# Two flows trigger this:
+#   1. Auto-release: auto-release.yml opens an `auto-release/v*` PR with the
+#      version bump, which merges to main and triggers this workflow.
+#   2. Manual dev→main promotion: dev branch PR'd into main (legacy path,
+#      still supported).
 
 on:
   pull_request:
@@ -24,7 +27,10 @@ jobs:
         github.event_name == 'workflow_dispatch' ||
         (
           github.event.pull_request.merged == true &&
-          github.event.pull_request.head.ref == 'dev'
+          (
+            github.event.pull_request.head.ref == 'dev' ||
+            startsWith(github.event.pull_request.head.ref, 'auto-release/')
+          )
         )
       )
     timeout-minutes: 30

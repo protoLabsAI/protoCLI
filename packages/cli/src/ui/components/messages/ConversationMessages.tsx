@@ -227,35 +227,70 @@ export const AssistantMessageContent: React.FC<
   />
 );
 
+// Post-stream summary line ("▸ thinking (N chars)"). Phase 1 of the reasoning
+// rendering work (see #162): full text remains live in Langfuse, ACP
+// `agent_thought_chunk` notifications, and ChatRecord for back-compat. An
+// in-TUI expand affordance is a follow-up. Note: when a long thought was
+// split mid-stream into a gemini_thought + gemini_thought_content pair, this
+// counts only the first chunk — the continuation renders nothing (see below).
+// True total requires post-finalize coalescing in useGeminiStream and is
+// deferred since splits are rare and the count is a hint, not a contract.
+const ThinkSummary: React.FC<{ text: string }> = ({ text }) => {
+  const charCount = text.length;
+  return (
+    <PrefixedTextMessage
+      text={`thinking (${charCount.toLocaleString()} chars)`}
+      prefix="▸"
+      prefixColor={theme.text.secondary}
+      textColor={theme.text.secondary}
+    />
+  );
+};
+
 export const ThinkMessage: React.FC<ThinkMessageProps> = ({
   text,
   isPending,
   availableTerminalHeight,
   contentWidth,
-}) => (
-  <PrefixedMarkdownMessage
-    text={text}
-    prefix="⟡"
-    prefixColor={theme.text.secondary}
-    isPending={isPending}
-    availableTerminalHeight={availableTerminalHeight}
-    contentWidth={contentWidth}
-    textColor={theme.text.secondary}
-  />
-);
+}) => {
+  if (!isPending) {
+    return <ThinkSummary text={text} />;
+  }
+  return (
+    <PrefixedMarkdownMessage
+      text={text}
+      prefix="⟡"
+      prefixColor={theme.text.secondary}
+      isPending={isPending}
+      availableTerminalHeight={availableTerminalHeight}
+      contentWidth={contentWidth}
+      textColor={theme.text.secondary}
+    />
+  );
+};
 
 export const ThinkMessageContent: React.FC<ThinkMessageContentProps> = ({
   text,
   isPending,
   availableTerminalHeight,
   contentWidth,
-}) => (
-  <ContinuationMarkdownMessage
-    text={text}
-    isPending={isPending}
-    availableTerminalHeight={availableTerminalHeight}
-    contentWidth={contentWidth}
-    basePrefix="⟡"
-    textColor={theme.text.secondary}
-  />
-);
+}) => {
+  // When the stream has finalized, suppress the continuation block. The
+  // adjacent ThinkMessage already renders the summary line; rendering this
+  // continuation as another summary would double-count and drop chars across
+  // the split boundary. Streaming-time renders unchanged so live thoughts
+  // still appear.
+  if (!isPending) {
+    return null;
+  }
+  return (
+    <ContinuationMarkdownMessage
+      text={text}
+      isPending={isPending}
+      availableTerminalHeight={availableTerminalHeight}
+      contentWidth={contentWidth}
+      basePrefix="⟡"
+      textColor={theme.text.secondary}
+    />
+  );
+};

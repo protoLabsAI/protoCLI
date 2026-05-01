@@ -652,16 +652,10 @@ export class HookEventHandler {
     return config.name || 'unknown-hook';
   }
 
-  /**
-   * Get hook name from execution result for telemetry
-   */
   private getHookNameFromResult(result: HookExecutionResult): string {
     return this.getHookName(result.hookConfig);
   }
 
-  /**
-   * Get hook type from execution result for telemetry
-   */
   private getHookTypeFromResult(result: HookExecutionResult): 'command' {
     return result.hookConfig.type as 'command';
   }

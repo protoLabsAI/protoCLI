@@ -37,6 +37,7 @@ import {
   EVENT_EXTENSION_DISABLE,
   EVENT_EXTENSION_INSTALL,
   EVENT_EXTENSION_UNINSTALL,
+  EVENT_HOOK_CALL,
 } from './constants.js';
 import {
   logApiRequest,
@@ -57,7 +58,6 @@ import {
   logHookCall,
 } from './loggers.js';
 import * as metrics from './metrics.js';
-import { QwenLogger } from './qwen-logger/qwen-logger.js';
 import * as sdk from './sdk.js';
 import { ToolCallDecision } from './tool-call-decision.js';
 import {
@@ -109,22 +109,6 @@ describe('loggers', () => {
   describe('logChatCompression', () => {
     beforeEach(() => {
       vi.spyOn(metrics, 'recordChatCompressionMetrics');
-      vi.spyOn(QwenLogger.prototype, 'logChatCompressionEvent');
-    });
-
-    it('logs the chat compression event to QwenLogger', () => {
-      const mockConfig = makeFakeConfig({ sessionId: 'test-session-id' });
-
-      const event = makeChatCompressionEvent({
-        tokens_before: 9001,
-        tokens_after: 9000,
-      });
-
-      logChatCompression(mockConfig, event);
-
-      expect(QwenLogger.prototype.logChatCompressionEvent).toHaveBeenCalledWith(
-        event,
-      );
     });
 
     it('records the chat compression event to OTEL', () => {
@@ -437,9 +421,7 @@ describe('loggers', () => {
       getUsageStatisticsEnabled: () => true,
     } as unknown as Config;
 
-    beforeEach(() => {
-      vi.spyOn(QwenLogger.prototype, 'logRipgrepFallbackEvent');
-    });
+    beforeEach(() => {});
 
     it('should log ripgrep fallback event', () => {
       const event = new RipgrepFallbackEvent(
@@ -449,8 +431,6 @@ describe('loggers', () => {
       );
 
       logRipgrepFallback(mockConfig, event);
-
-      expect(QwenLogger.prototype.logRipgrepFallbackEvent).toHaveBeenCalled();
 
       const emittedEvent = mockLogger.emit.mock.calls[0][0];
       expect(emittedEvent.body).toBe('Switching to grep as fallback.');
@@ -467,8 +447,6 @@ describe('loggers', () => {
       const event = new RipgrepFallbackEvent(false, false, 'rg not found');
 
       logRipgrepFallback(mockConfig, event);
-
-      expect(QwenLogger.prototype.logRipgrepFallbackEvent).toHaveBeenCalled();
 
       const emittedEvent = mockLogger.emit.mock.calls[0][0];
       expect(emittedEvent.body).toBe('Switching to grep as fallback.');
@@ -1013,19 +991,13 @@ describe('loggers', () => {
   });
 
   describe('logMalformedJsonResponse', () => {
-    beforeEach(() => {
-      vi.spyOn(QwenLogger.prototype, 'logMalformedJsonResponseEvent');
-    });
+    beforeEach(() => {});
 
     it('logs the event to Clearcut and OTEL', () => {
       const mockConfig = makeFakeConfig({ sessionId: 'test-session-id' });
       const event = new MalformedJsonResponseEvent('test-model');
 
       logMalformedJsonResponse(mockConfig, event);
-
-      expect(
-        QwenLogger.prototype.logMalformedJsonResponseEvent,
-      ).toHaveBeenCalledWith(event);
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Malformed JSON response from test-model.',
@@ -1139,9 +1111,7 @@ describe('loggers', () => {
       getUsageStatisticsEnabled: () => true,
     } as unknown as Config;
 
-    beforeEach(() => {
-      vi.spyOn(QwenLogger.prototype, 'logExtensionInstallEvent');
-    });
+    beforeEach(() => {});
 
     afterEach(() => {
       vi.resetAllMocks();
@@ -1156,10 +1126,6 @@ describe('loggers', () => {
       );
 
       logExtensionInstallEvent(mockConfig, event);
-
-      expect(
-        QwenLogger.prototype.logExtensionInstallEvent,
-      ).toHaveBeenCalledWith(event);
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Installed extension vscode',
@@ -1182,9 +1148,7 @@ describe('loggers', () => {
       getUsageStatisticsEnabled: () => true,
     } as unknown as Config;
 
-    beforeEach(() => {
-      vi.spyOn(QwenLogger.prototype, 'logExtensionUninstallEvent');
-    });
+    beforeEach(() => {});
 
     afterEach(() => {
       vi.resetAllMocks();
@@ -1194,10 +1158,6 @@ describe('loggers', () => {
       const event = new ExtensionUninstallEvent('vscode', 'success');
 
       logExtensionUninstall(mockConfig, event);
-
-      expect(
-        QwenLogger.prototype.logExtensionUninstallEvent,
-      ).toHaveBeenCalledWith(event);
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Uninstalled extension vscode',
@@ -1218,9 +1178,7 @@ describe('loggers', () => {
       getUsageStatisticsEnabled: () => true,
     } as unknown as Config;
 
-    beforeEach(() => {
-      vi.spyOn(QwenLogger.prototype, 'logExtensionEnableEvent');
-    });
+    beforeEach(() => {});
 
     afterEach(() => {
       vi.resetAllMocks();
@@ -1230,10 +1188,6 @@ describe('loggers', () => {
       const event = new ExtensionEnableEvent('vscode', 'user');
 
       logExtensionEnable(mockConfig, event);
-
-      expect(QwenLogger.prototype.logExtensionEnableEvent).toHaveBeenCalledWith(
-        event,
-      );
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Enabled extension vscode',
@@ -1254,9 +1208,7 @@ describe('loggers', () => {
       getUsageStatisticsEnabled: () => true,
     } as unknown as Config;
 
-    beforeEach(() => {
-      vi.spyOn(QwenLogger.prototype, 'logExtensionDisableEvent');
-    });
+    beforeEach(() => {});
 
     afterEach(() => {
       vi.resetAllMocks();
@@ -1266,10 +1218,6 @@ describe('loggers', () => {
       const event = new ExtensionDisableEvent('vscode', 'user');
 
       logExtensionDisable(mockConfig, event);
-
-      expect(
-        QwenLogger.prototype.logExtensionDisableEvent,
-      ).toHaveBeenCalledWith(event);
 
       expect(mockLogger.emit).toHaveBeenCalledWith({
         body: 'Disabled extension vscode',
@@ -1293,18 +1241,7 @@ describe('loggers', () => {
       getTelemetryLogPromptsEnabled: () => true,
     } as unknown as Config;
 
-    const mockQwenLogger = {
-      logHookCallEvent: vi.fn(),
-    };
-
-    beforeEach(() => {
-      vi.spyOn(QwenLogger, 'getInstance').mockReturnValue(
-        mockQwenLogger as unknown as QwenLogger,
-      );
-      mockQwenLogger.logHookCallEvent.mockClear();
-    });
-
-    it('should log a successful hook call to QwenLogger', () => {
+    it('emits an OTel log record with the canonical event name and core attributes', () => {
       const event = new HookCallEvent(
         'UserPromptSubmit',
         'command',
@@ -1321,192 +1258,57 @@ describe('loggers', () => {
 
       logHookCall(mockConfig, event);
 
-      // Should call QwenLogger
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
+      expect(mockLogger.emit).toHaveBeenCalledWith({
+        body: expect.stringContaining('Hook call: check-secrets.sh'),
+        attributes: expect.objectContaining({
+          'session.id': 'test-session-id',
+          'event.name': EVENT_HOOK_CALL,
+          hook_event_name: 'UserPromptSubmit',
+          hook_type: 'command',
+          hook_name: 'check-secrets.sh',
+          duration_ms: 150,
+          success: true,
+          exit_code: 0,
+          stdout: 'stdout message',
+          stderr: 'stderr message',
+        }),
+      });
     });
 
-    it('should log a failed hook call with error', () => {
+    it('includes error.message attribute when the hook failed', () => {
       const event = new HookCallEvent(
         'Stop',
         'command',
         'cleanup.sh',
-        { last_assistant_message: 'final message' },
-        200,
-        false,
-        undefined,
-        1,
-        'stdout message',
-        'stderr message',
-        'Error occurred',
-      );
-
-      logHookCall(mockConfig, event);
-
-      // Should call QwenLogger
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
-    });
-
-    it('should handle when QwenLogger is not available', () => {
-      vi.spyOn(QwenLogger, 'getInstance').mockReturnValue(undefined);
-
-      const event = new HookCallEvent(
-        'UserPromptSubmit',
-        'command',
-        'test-hook.sh',
-        { prompt: 'test' },
-        100,
-        true,
-      );
-
-      // Should not throw when QwenLogger is not available
-      expect(() => logHookCall(mockConfig, event)).not.toThrow();
-    });
-
-    it('should log hook call with all optional fields', () => {
-      const event = new HookCallEvent(
-        'PreToolUse',
-        'command',
-        'validator.sh',
-        { tool_name: 'read_file', path: '/test/file.txt' },
-        250,
-        true,
-        { decision: 'allow', reason: 'validated' },
-        0,
-        'validation passed',
-        '',
-        undefined,
-      );
-
-      logHookCall(mockConfig, event);
-
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
-    });
-
-    it('should log hook call with minimal fields', () => {
-      const event = new HookCallEvent(
-        'SessionStart',
-        'command',
-        'init.sh',
         {},
-        10,
-        true,
-      );
-
-      logHookCall(mockConfig, event);
-
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
-    });
-
-    it('should log hook call with exit code', () => {
-      const event = new HookCallEvent(
-        'PostToolUseFailure',
-        'command',
-        'error-handler.sh',
-        { tool_name: 'shell' },
-        50,
+        200,
         false,
         undefined,
         1,
         '',
         'error output',
-        'Command failed with exit code 1',
+        'Error occurred',
       );
 
       logHookCall(mockConfig, event);
 
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
+      const call = mockLogger.emit.mock.calls.at(-1)?.[0] as
+        | { attributes: Record<string, unknown> }
+        | undefined;
+      expect(call?.attributes['error.message']).toBe('Error occurred');
+      expect(call?.attributes['success']).toBe(false);
     });
 
-    it('should log hook call with zero exit code on success', () => {
-      const event = new HookCallEvent(
-        'PostToolUse',
-        'command',
-        'success-handler.sh',
-        { tool_name: 'write_file' },
-        100,
-        true,
-        { result: 'ok' },
-        0,
-        'done',
-        '',
-        undefined,
+    it('skips emission when telemetry SDK is not initialized', () => {
+      vi.spyOn(sdk, 'isTelemetrySdkInitialized').mockReturnValue(false);
+      const callsBefore = mockLogger.emit.mock.calls.length;
+
+      logHookCall(
+        mockConfig,
+        new HookCallEvent('SessionStart', 'command', 'init.sh', {}, 10, true),
       );
 
-      logHookCall(mockConfig, event);
-
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
-    });
-
-    it('should log hook call with non-zero exit code on failure', () => {
-      const event = new HookCallEvent(
-        'PostToolUseFailure',
-        'command',
-        'failure-handler.sh',
-        { tool_name: 'shell' },
-        75,
-        false,
-        undefined,
-        127,
-        '',
-        'command not found',
-        'Hook command not found',
-      );
-
-      logHookCall(mockConfig, event);
-
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
-    });
-
-    it('should log all hook event types', () => {
-      const eventTypes = [
-        'PreToolUse',
-        'PostToolUse',
-        'PostToolUseFailure',
-        'Notification',
-        'UserPromptSubmit',
-        'SessionStart',
-        'SessionEnd',
-        'Stop',
-        'SubagentStart',
-        'SubagentStop',
-        'PreCompact',
-        'PermissionRequest',
-      ];
-
-      for (const eventType of eventTypes) {
-        mockQwenLogger.logHookCallEvent.mockClear();
-
-        const event = new HookCallEvent(
-          eventType,
-          'command',
-          'test-hook.sh',
-          {},
-          100,
-          true,
-        );
-
-        logHookCall(mockConfig, event);
-
-        expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledWith(event);
-      }
-    });
-
-    it('should pass the exact event object to QwenLogger', () => {
-      const event = new HookCallEvent(
-        'PreToolUse',
-        'command',
-        'test-hook.sh',
-        { tool_name: 'read_file' },
-        100,
-        true,
-      );
-
-      logHookCall(mockConfig, event);
-
-      // Verify the exact event object is passed
-      expect(mockQwenLogger.logHookCallEvent).toHaveBeenCalledTimes(1);
-      const passedEvent = mockQwenLogger.logHookCallEvent.mock.calls[0][0];
-      expect(passedEvent).toBe(event);
+      expect(mockLogger.emit.mock.calls.length).toBe(callsBefore);
     });
   });
 });
