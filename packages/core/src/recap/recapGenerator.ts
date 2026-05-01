@@ -19,11 +19,37 @@ const debugLogger = createDebugLogger('RECAP');
 /** Last-N turns of conversation that get sent to the recap model. */
 const RECENT_MESSAGE_WINDOW = 30;
 
+/**
+ * Preferred fast-model alias for recap generation. When this id is in the
+ * user's configured providers, we route the recap to it instead of whatever
+ * heavyweight model the main session is using. Falls back to the current
+ * model with thinking disabled when not available.
+ */
+const PREFERRED_RECAP_MODEL_ID = 'protolabs/fast';
+
 const RECAP_PROMPT = `That last agent turn was long. Summarize where we are so the user can pick back up cold.
 
 Write exactly 1-3 short sentences. Lead with the high-level goal — what they're building or debugging, not implementation details. Then state the concrete current status or next step. No status reports, no commit recaps, no apologies.
 
 Reply with ONLY the recap text — no headers, no quotes, no preamble.`;
+
+/**
+ * Decide which model to use for the recap. Prefers `protolabs/fast` if the
+ * user has it configured (it's the gateway alias for a fast non-thinking
+ * model). Falls back to the current session model — thinking is then
+ * suppressed via `thinkingConfig.includeThoughts: false` which pipeline.ts
+ * translates into `extra_body.enable_thinking: false` on the wire.
+ */
+function pickRecapModel(config: Config): {
+  model: string;
+  isOverride: boolean;
+} {
+  const available = config.getModelsConfig().getAllConfiguredModels();
+  if (available.some((m) => m.id === PREFERRED_RECAP_MODEL_ID)) {
+    return { model: PREFERRED_RECAP_MODEL_ID, isOverride: true };
+  }
+  return { model: config.getModel(), isOverride: false };
+}
 
 /**
  * Generates a short recap of recent conversation. Returns null on abort,
@@ -43,10 +69,12 @@ export async function generateRecap(
       { role: 'user', parts: [{ text: RECAP_PROMPT }] },
     ];
 
+    const { model, isOverride } = pickRecapModel(config);
+
     const generator = config.getContentGenerator();
     const response = await generator.generateContent(
       {
-        model: config.getModel(),
+        model,
         contents,
         config: {
           abortSignal,
@@ -56,7 +84,11 @@ export async function generateRecap(
           // tool_calls — i.e. most of the agent's actual work — are dropped
           // before the request leaves, starving the recap of context.
           tools: [],
-        },
+          // Opt into the model override path in the OpenAI pipeline. Pipeline
+          // ignores request.model by default for safety; for recap we know the
+          // alias resolves on the gateway, so honor it.
+          ...(isOverride ? { allowModelOverride: true } : {}),
+        } as Record<string, unknown>,
       },
       'recap',
     );

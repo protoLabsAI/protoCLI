@@ -60,9 +60,11 @@ export class ContentGenerationPipeline {
     userPromptId: string,
   ): Promise<GenerateContentResponse> {
     // For OpenAI-compatible providers, the configured model is the single source of truth.
-    // We intentionally ignore request.model because upstream callers may pass a model string
-    // that is not valid/available for the OpenAI-compatible backend.
-    const effectiveModel = this.contentGeneratorConfig.model;
+    // We intentionally ignore request.model by default because upstream callers may pass a
+    // model string that is not valid/available for the OpenAI-compatible backend.
+    // Callers with a known-valid alternate model (e.g. recap → protolabs/fast) opt in via
+    // `request.config.allowModelOverride = true`.
+    const effectiveModel = this.resolveEffectiveModel(request);
     this.converter.setModel(effectiveModel);
     this.converter.setModalities(this.contentGeneratorConfig.modalities ?? {});
     return this.executeWithErrorHandling(
@@ -90,7 +92,7 @@ export class ContentGenerationPipeline {
     request: GenerateContentParameters,
     userPromptId: string,
   ): Promise<AsyncGenerator<GenerateContentResponse>> {
-    const effectiveModel = this.contentGeneratorConfig.model;
+    const effectiveModel = this.resolveEffectiveModel(request);
     this.converter.setModel(effectiveModel);
     this.converter.setModalities(this.contentGeneratorConfig.modalities ?? {});
     return this.executeWithErrorHandling(
@@ -580,6 +582,21 @@ export class ContentGenerationPipeline {
     // (e.g. `max_completion_tokens` for GPT-5 / o-series) without a client release.
     // When absent, the historical default behavior applies.
     if (configSamplingParams !== undefined) {
+      const noThink = request.config?.thinkingConfig?.includeThoughts === false;
+      // Per-request no-think hint must still propagate even when the user has
+      // a custom samplingParams block (otherwise recap stays slow on Qwen3
+      // when samplingParams is set globally). Merge `extra_body.enable_thinking`
+      // in without clobbering existing extra_body keys.
+      if (noThink) {
+        const existingExtraBody = (
+          configSamplingParams as Record<string, unknown>
+        )['extra_body'];
+        const mergedExtraBody = {
+          ...((existingExtraBody as Record<string, unknown> | undefined) ?? {}),
+          enable_thinking: false,
+        };
+        return { ...configSamplingParams, extra_body: mergedExtraBody };
+      }
       return { ...configSamplingParams };
     }
 
@@ -627,7 +644,12 @@ export class ContentGenerationPipeline {
     // model-specific semantics intact while honoring request-level opt-out.
 
     if (request.config?.thinkingConfig?.includeThoughts === false) {
-      return {};
+      // The caller wants no thinking. Skip the `reasoning` field (which
+      // disables thinking on gpt-5 / glm via their reasoning APIs) AND inject
+      // `extra_body.enable_thinking: false` so Qwen3 / vLLM-served models
+      // actually skip CoT instead of just hiding it from the response. Other
+      // backends ignore unknown extra_body keys; LiteLLM strips per-model.
+      return { extra_body: { enable_thinking: false } };
     }
 
     const reasoning = this.contentGeneratorConfig.reasoning;
@@ -803,6 +825,30 @@ export class ContentGenerationPipeline {
   ): Promise<never> {
     context.duration = Date.now() - context.startTime;
     this.config.errorHandler.handle(error, context, request);
+  }
+
+  /**
+   * Resolve which model to actually send to the upstream. Defaults to the
+   * configured model. Callers may opt into using `request.model` instead by
+   * setting `request.config.allowModelOverride = true` — the request.model
+   * string is used verbatim and the caller takes responsibility for it being
+   * valid/available on the backend (e.g. recap → "protolabs/fast" alias).
+   */
+  private resolveEffectiveModel(request: GenerateContentParameters): string {
+    const configured = this.contentGeneratorConfig.model;
+    const allowOverride =
+      (request.config as Record<string, unknown> | undefined)?.[
+        'allowModelOverride'
+      ] === true;
+    const requested = (request as { model?: string }).model;
+    if (
+      allowOverride &&
+      typeof requested === 'string' &&
+      requested.length > 0
+    ) {
+      return requested;
+    }
+    return configured;
   }
 
   /**
