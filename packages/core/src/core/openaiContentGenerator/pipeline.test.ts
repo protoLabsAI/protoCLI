@@ -1340,6 +1340,80 @@ describe('ContentGenerationPipeline', () => {
         expect.objectContaining({ signal: undefined }),
       );
     });
+
+    it('injects extra_body.enable_thinking=false when thinkingConfig.includeThoughts is false', async () => {
+      const request: GenerateContentParameters = {
+        model: 'test-model',
+        contents: [{ parts: [{ text: 'q' }], role: 'user' }],
+        config: { thinkingConfig: { includeThoughts: false } },
+      };
+      (mockConverter.convertGeminiRequestToOpenAI as Mock).mockReturnValue([]);
+      (mockConverter.convertOpenAIResponseToGemini as Mock).mockReturnValue(
+        new GenerateContentResponse(),
+      );
+      (mockClient.chat.completions.create as Mock).mockResolvedValue({
+        id: 't',
+        choices: [],
+      });
+
+      await pipeline.execute(request, 'p');
+
+      expect(mockClient.chat.completions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          extra_body: { enable_thinking: false },
+        }),
+        expect.objectContaining({ signal: undefined }),
+      );
+    });
+
+    it('honors request.model verbatim when allowModelOverride is set', async () => {
+      const request: GenerateContentParameters = {
+        model: 'protolabs/fast',
+        contents: [{ parts: [{ text: 'q' }], role: 'user' }],
+        config: {
+          // allowModelOverride is a proto-specific opt-in field; cast through
+          // unknown for the test harness.
+          ...({ allowModelOverride: true } as Record<string, unknown>),
+        },
+      };
+      (mockConverter.convertGeminiRequestToOpenAI as Mock).mockReturnValue([]);
+      (mockConverter.convertOpenAIResponseToGemini as Mock).mockReturnValue(
+        new GenerateContentResponse(),
+      );
+      (mockClient.chat.completions.create as Mock).mockResolvedValue({
+        id: 't',
+        choices: [],
+      });
+
+      await pipeline.execute(request, 'p');
+
+      expect(mockClient.chat.completions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'protolabs/fast' }),
+        expect.anything(),
+      );
+    });
+
+    it('still ignores request.model when allowModelOverride is absent', async () => {
+      const request: GenerateContentParameters = {
+        model: 'protolabs/fast',
+        contents: [{ parts: [{ text: 'q' }], role: 'user' }],
+      };
+      (mockConverter.convertGeminiRequestToOpenAI as Mock).mockReturnValue([]);
+      (mockConverter.convertOpenAIResponseToGemini as Mock).mockReturnValue(
+        new GenerateContentResponse(),
+      );
+      (mockClient.chat.completions.create as Mock).mockResolvedValue({
+        id: 't',
+        choices: [],
+      });
+
+      await pipeline.execute(request, 'p');
+
+      expect(mockClient.chat.completions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'test-model' }),
+        expect.anything(),
+      );
+    });
   });
 
   describe('createRequestContext', () => {
