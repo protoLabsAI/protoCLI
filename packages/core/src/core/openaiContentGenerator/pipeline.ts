@@ -18,7 +18,7 @@ import type { ErrorHandler, RequestContext } from './errorHandler.js';
 import { createDebugLogger } from '../../utils/debugLogger.js';
 
 const debugLogger = createDebugLogger('OPENAI_PIPELINE');
-const tracer = trace.getTracer('qwen-code.openai-pipeline', '1.0.0');
+const tracer = trace.getTracer('proto.openai-pipeline', '1.0.0');
 
 /**
  * Error thrown when the API returns an error embedded as stream content
@@ -130,6 +130,11 @@ export class ContentGenerationPipeline {
     const collectedGeminiResponses: GenerateContentResponse[] = [];
     // Accumulate streamed response text for telemetry prompt logging
     const completionParts: string[] = [];
+    // Accumulate streamed reasoning/thinking text for the
+    // `gen_ai.response.thinking` span attribute. Sourced from
+    // `delta.reasoning_content` / `delta.reasoning` (OpenAI o-series, DeepSeek,
+    // and the LiteLLM gateway's EMIT_REASONING_CONTENT path for vLLM models).
+    const reasoningParts: string[] = [];
 
     // Stream-local parser state. Previously the tool-call parser lived on
     // the Converter singleton and was reset at stream start — but that
@@ -153,6 +158,17 @@ export class ContentGenerationPipeline {
       for await (const chunk of stream) {
         // Log raw delta for debugging (visible in ~/.proto/debug/latest)
         const delta = chunk.choices?.[0]?.delta;
+        const reasoningDelta = delta
+          ? (((delta as Record<string, unknown>)['reasoning_content'] as
+              | string
+              | null
+              | undefined) ??
+            ((delta as Record<string, unknown>)['reasoning'] as
+              | string
+              | null
+              | undefined) ??
+            null)
+          : null;
         if (delta) {
           debugLogger.debug(
             'chunk delta:',
@@ -170,6 +186,9 @@ export class ContentGenerationPipeline {
         // Collect streamed delta text for telemetry prompt logging
         if (context.logPrompts && delta?.content) {
           completionParts.push(delta.content);
+        }
+        if (context.logPrompts && reasoningDelta) {
+          reasoningParts.push(reasoningDelta);
         }
 
         // Detect API errors returned as stream content.
@@ -286,6 +305,15 @@ export class ContentGenerationPipeline {
             'gen_ai.usage.total_tokens':
               usage.totalTokenCount ?? inputTokens + outputTokens,
           });
+          if (
+            usage.thoughtsTokenCount !== undefined &&
+            usage.thoughtsTokenCount > 0
+          ) {
+            context.span.setAttribute(
+              'gen_ai.usage.thinking_tokens',
+              usage.thoughtsTokenCount,
+            );
+          }
         }
         if (lastResponse?.modelVersion) {
           context.span.setAttribute(
@@ -302,6 +330,18 @@ export class ContentGenerationPipeline {
                 ? responseText.slice(0, 10_000) + '...[truncated]'
                 : responseText,
           });
+        }
+        // Surface accumulated reasoning text for Langfuse coverage. Gated on
+        // logPrompts (matches the completion event policy) since reasoning may
+        // contain user data references.
+        if (context.logPrompts && reasoningParts.length > 0) {
+          const reasoningText = reasoningParts.join('');
+          context.span.setAttribute(
+            'gen_ai.response.thinking',
+            reasoningText.length > 10_000
+              ? reasoningText.slice(0, 10_000) + '...[truncated]'
+              : reasoningText,
+          );
         }
         context.span.end();
       }
@@ -680,19 +720,32 @@ export class ContentGenerationPipeline {
             'gen_ai.usage.total_tokens':
               usage.totalTokenCount ?? inputTokens + outputTokens,
           });
+          if (
+            usage.thoughtsTokenCount !== undefined &&
+            usage.thoughtsTokenCount > 0
+          ) {
+            span.setAttribute(
+              'gen_ai.usage.thinking_tokens',
+              usage.thoughtsTokenCount,
+            );
+          }
         }
         if (result.modelVersion) {
           span.setAttribute('gen_ai.response.model', result.modelVersion);
         }
       }
 
-      // Log completion content as a span event for non-streaming responses
+      // Log completion + reasoning content as span data for non-streaming
+      // responses. Reasoning is surfaced separately because it carries
+      // distinct semantics for downstream tooling (Langfuse, evals).
       if (
         logPrompts &&
         !isStreaming &&
         result instanceof GenerateContentResponse
       ) {
-        const responseText = (result.candidates?.[0]?.content?.parts ?? [])
+        const parts = result.candidates?.[0]?.content?.parts ?? [];
+        const responseText = parts
+          .filter((p) => !((p as { thought?: boolean }).thought ?? false))
           .map((p) => (p as { text?: string }).text ?? '')
           .join('');
         if (responseText) {
@@ -702,6 +755,18 @@ export class ContentGenerationPipeline {
                 ? responseText.slice(0, 10_000) + '...[truncated]'
                 : responseText,
           });
+        }
+        const reasoningText = parts
+          .filter((p) => (p as { thought?: boolean }).thought === true)
+          .map((p) => (p as { text?: string }).text ?? '')
+          .join('');
+        if (reasoningText) {
+          span.setAttribute(
+            'gen_ai.response.thinking',
+            reasoningText.length > 10_000
+              ? reasoningText.slice(0, 10_000) + '...[truncated]'
+              : reasoningText,
+          );
         }
       }
 
