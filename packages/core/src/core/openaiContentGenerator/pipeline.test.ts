@@ -1341,7 +1341,12 @@ describe('ContentGenerationPipeline', () => {
       );
     });
 
-    it('injects extra_body.enable_thinking=false when thinkingConfig.includeThoughts is false', async () => {
+    it('does NOT inject extra_body.enable_thinking when thinkingConfig.includeThoughts is false', async () => {
+      // Empirically: injecting extra_body.enable_thinking=false caused some
+      // thinking-style models (notably the protolabs/fast routing on our
+      // gateway) to dump their internal scaffolding as visible content,
+      // which is the opposite of the intent. The recap path now relies on
+      // model routing (protolabs/fast alias) instead.
       const request: GenerateContentParameters = {
         model: 'test-model',
         contents: [{ parts: [{ text: 'q' }], role: 'user' }],
@@ -1358,12 +1363,9 @@ describe('ContentGenerationPipeline', () => {
 
       await pipeline.execute(request, 'p');
 
-      expect(mockClient.chat.completions.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          extra_body: { enable_thinking: false },
-        }),
-        expect.objectContaining({ signal: undefined }),
-      );
+      const callArgs = (mockClient.chat.completions.create as Mock).mock
+        .calls[0][0] as Record<string, unknown>;
+      expect(callArgs['extra_body']).toBeUndefined();
     });
 
     it('honors request.model verbatim when allowModelOverride is set', async () => {
