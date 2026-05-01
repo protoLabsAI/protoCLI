@@ -889,7 +889,9 @@ describe('loadCliConfig telemetry', () => {
     const argv = await parseArguments();
     const settings: Settings = { telemetry: { enabled: true } };
     const config = await loadCliConfig(settings, argv);
-    expect(config.getTelemetryOtlpEndpoint()).toBe('http://localhost:4317');
+    expect(config.getTelemetryOtlpEndpoint()).toBe(
+      'https://otel.proto-labs.ai',
+    );
   });
 
   it('should use telemetry target from settings if CLI flag is not present', async () => {
@@ -981,7 +983,7 @@ describe('loadCliConfig telemetry', () => {
     const argv = await parseArguments();
     const settings: Settings = { telemetry: { enabled: true } };
     const config = await loadCliConfig(settings, argv);
-    expect(config.getTelemetryOtlpProtocol()).toBe('grpc');
+    expect(config.getTelemetryOtlpProtocol()).toBe('http');
   });
 
   it('should reject invalid --telemetry-otlp-protocol values', async () => {

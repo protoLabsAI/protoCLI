@@ -12,6 +12,7 @@ import { OTLPTraceExporter as OTLPTraceExporterHttp } from '@opentelemetry/expor
 import { OTLPLogExporter as OTLPLogExporterHttp } from '@opentelemetry/exporter-logs-otlp-http';
 import { OTLPMetricExporter as OTLPMetricExporterHttp } from '@opentelemetry/exporter-metrics-otlp-http';
 import { CompressionAlgorithm } from '@opentelemetry/otlp-exporter-base';
+import { Metadata } from '@grpc/grpc-js';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { resourceFromAttributes } from '@opentelemetry/resources';
@@ -110,12 +111,25 @@ function parseOtlpEndpoint(
 }
 
 export function initializeTelemetry(config: Config): void {
-  const langfuse = buildLangfuseExporters();
-  if (telemetryInitialized || (!config.getTelemetryEnabled() && !langfuse)) {
+  const debugLogger = createDebugLogger('OTEL');
+
+  // Opt-in policy: telemetry.enabled === true is required for ANY outbound
+  // telemetry to activate (OTLP, Langfuse, file exporters). Default is false.
+  // Previously Langfuse env vars alone could activate an exporter without an
+  // explicit opt-in — that's been tightened so privacy is the default.
+  if (telemetryInitialized || !config.getTelemetryEnabled()) {
+    if (
+      !telemetryInitialized &&
+      (process.env['LANGFUSE_PUBLIC_KEY'] || process.env['LANGFUSE_SECRET_KEY'])
+    ) {
+      debugLogger.debug(
+        'Langfuse env vars detected but telemetry.enabled is false — skipping. Set telemetry.enabled = true in settings to opt in.',
+      );
+    }
     return;
   }
 
-  const debugLogger = createDebugLogger('OTEL');
+  const langfuse = buildLangfuseExporters();
   const resource = resourceFromAttributes({
     [SemanticResourceAttributes.SERVICE_NAME]: SERVICE_NAME,
     [SemanticResourceAttributes.SERVICE_VERSION]: process.version,
@@ -146,33 +160,61 @@ export function initializeTelemetry(config: Config): void {
   let metricReader: PeriodicExportingMetricReader;
 
   if (useOtlp) {
+    // Bearer token for the homelab OTLP ingress (otel.proto-labs.ai). Read from
+    // env so it composes with Infisical-managed secrets without needing a
+    // settings.json field. Falls back to no auth when unset — the ingress
+    // returns 401 in that case, which surfaces as an export error in the
+    // OTel SDK's debug logs.
+    const otlpAuthToken = process.env['OTEL_INGRESS_TOKEN'];
+    const otlpHeaders = otlpAuthToken
+      ? { Authorization: `Bearer ${otlpAuthToken}` }
+      : undefined;
+    if (!otlpAuthToken && /otel\.proto-labs\.ai/.test(parsedEndpoint ?? '')) {
+      debugLogger.debug(
+        'OTEL_INGRESS_TOKEN not set; OTLP exports to otel.proto-labs.ai will return 401.',
+      );
+    }
     if (otlpProtocol === 'http') {
+      const httpAuth = otlpHeaders ? { headers: otlpHeaders } : {};
       spanExporter = new OTLPTraceExporterHttp({
         url: parsedEndpoint,
+        ...httpAuth,
       });
       logExporter = new OTLPLogExporterHttp({
         url: parsedEndpoint,
+        ...httpAuth,
       });
       metricReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporterHttp({
           url: parsedEndpoint,
+          ...httpAuth,
         }),
         exportIntervalMillis: 10000,
       });
     } else {
-      // grpc
+      // grpc — auth header travels via metadata (different OTel SDK shape).
+      const grpcAuth = otlpAuthToken
+        ? (() => {
+            const m = new Metadata();
+            m.set('authorization', `Bearer ${otlpAuthToken}`);
+            return { metadata: m };
+          })()
+        : {};
       spanExporter = new OTLPTraceExporter({
         url: parsedEndpoint,
         compression: CompressionAlgorithm.GZIP,
+        ...grpcAuth,
       });
       logExporter = new OTLPLogExporter({
         url: parsedEndpoint,
         compression: CompressionAlgorithm.GZIP,
+        ...grpcAuth,
       });
       metricReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
           url: parsedEndpoint,
           compression: CompressionAlgorithm.GZIP,
+          ...grpcAuth,
         }),
         exportIntervalMillis: 10000,
       });

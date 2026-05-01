@@ -11,7 +11,10 @@ export enum TelemetryTarget {
 }
 
 const DEFAULT_TELEMETRY_TARGET = TelemetryTarget.LOCAL;
-const DEFAULT_OTLP_ENDPOINT = 'http://localhost:4317';
+// Public OTLP/HTTP ingress fronting the homelab LGTM stack (Cloudflare-fronted,
+// TLS-terminated). Authenticated via OTEL_INGRESS_TOKEN bearer token. See
+// homelab-iac#34. Override per-host via telemetry.otlpEndpoint in settings.
+const DEFAULT_OTLP_ENDPOINT = 'https://otel.proto-labs.ai';
 
 export { DEFAULT_TELEMETRY_TARGET, DEFAULT_OTLP_ENDPOINT };
 export {

@@ -108,6 +108,44 @@ describe('Telemetry SDK', () => {
     expect(NodeSDK.prototype.start).toHaveBeenCalled();
   });
 
+  it('attaches Authorization: Bearer header to HTTP exporters when OTEL_INGRESS_TOKEN is set', () => {
+    process.env['OTEL_INGRESS_TOKEN'] = 'test-bearer-token';
+    vi.spyOn(mockConfig, 'getTelemetryOtlpProtocol').mockReturnValue('http');
+    vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue(
+      'https://otel.proto-labs.ai',
+    );
+
+    initializeTelemetry(mockConfig);
+
+    const expectedHeaders = { Authorization: 'Bearer test-bearer-token' };
+    expect(OTLPTraceExporterHttp).toHaveBeenCalledWith(
+      expect.objectContaining({ headers: expectedHeaders }),
+    );
+    expect(OTLPLogExporterHttp).toHaveBeenCalledWith(
+      expect.objectContaining({ headers: expectedHeaders }),
+    );
+    expect(OTLPMetricExporterHttp).toHaveBeenCalledWith(
+      expect.objectContaining({ headers: expectedHeaders }),
+    );
+
+    delete process.env['OTEL_INGRESS_TOKEN'];
+  });
+
+  it('omits the headers field on HTTP exporters when OTEL_INGRESS_TOKEN is unset', () => {
+    delete process.env['OTEL_INGRESS_TOKEN'];
+    vi.spyOn(mockConfig, 'getTelemetryOtlpProtocol').mockReturnValue('http');
+    vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue(
+      'http://localhost:4318',
+    );
+
+    initializeTelemetry(mockConfig);
+
+    // Exact match — no `headers` key on the call args.
+    expect(OTLPTraceExporterHttp).toHaveBeenCalledWith({
+      url: 'http://localhost:4318/',
+    });
+  });
+
   it('should parse gRPC endpoint correctly', () => {
     vi.spyOn(mockConfig, 'getTelemetryOtlpEndpoint').mockReturnValue(
       'https://my-collector.com',
@@ -272,33 +310,20 @@ describe('Telemetry SDK', () => {
       });
     });
 
-    it('still initializes telemetry when only Langfuse is configured and primary telemetry is disabled', () => {
+    it('does NOT initialize telemetry when only Langfuse env vars are set and telemetry.enabled is false', () => {
+      // Opt-in policy: privacy is the default. Even if Langfuse env vars are
+      // present, telemetry stays off until the user explicitly opts in via
+      // telemetry.enabled = true.
       process.env['LANGFUSE_PUBLIC_KEY'] = 'pk-lf-test';
       process.env['LANGFUSE_SECRET_KEY'] = 'sk-lf-test';
       vi.spyOn(mockConfig, 'getTelemetryEnabled').mockReturnValue(false);
 
       initializeTelemetry(mockConfig);
 
-      // Should still start the SDK because Langfuse processor is non-null
-      expect(NodeSDK.prototype.start).toHaveBeenCalled();
-    });
-
-    it('does not create the default gRPC OTLP exporter when only Langfuse is configured', () => {
-      process.env['LANGFUSE_PUBLIC_KEY'] = 'pk-lf-test';
-      process.env['LANGFUSE_SECRET_KEY'] = 'sk-lf-test';
-      vi.spyOn(mockConfig, 'getTelemetryEnabled').mockReturnValue(false);
-
-      initializeTelemetry(mockConfig);
-
-      // The default endpoint is localhost:4317 but with telemetry disabled,
-      // no gRPC exporter should be instantiated (only the Langfuse HTTP one).
+      expect(NodeSDK.prototype.start).not.toHaveBeenCalled();
       expect(OTLPTraceExporter).not.toHaveBeenCalled();
       expect(OTLPLogExporter).not.toHaveBeenCalled();
       expect(OTLPMetricExporter).not.toHaveBeenCalled();
-
-      const sdkCalls = vi.mocked(NodeSDK).mock.calls;
-      const spanProcessors = sdkCalls[0][0]?.spanProcessors;
-      expect(spanProcessors).toHaveLength(1);
     });
   });
 });

@@ -27,7 +27,7 @@ At-a-glance overview vs. upstream Qwen Code. For the full architectural breakdow
 | Ignore files          | `.qwenignore`             | `.protoignore` + inherits `.claudeignore` patterns                                                                                                       |
 | ACP / Zed integration | Stock                     | Cron-in-Session, concurrent Agent calls, SSE/HTTP MCP, internal-part filtering                                                                           |
 | Extra built-in tools  | Standard set              | + browser automation, repo-map (PageRank), task tools, mailbox, LSP, voice/STT                                                                           |
-| Observability         | Console                   | Langfuse OTLP traces with harness-intervention spans (SFT-ready)                                                                                         |
+| Observability         | Console                   | OTLP/HTTP to LGTM stack + Langfuse, opt-in, with `gen_ai.response.thinking` and harness-intervention spans (SFT-ready)                                   |
 | Release pipeline      | Manual                    | Conventional-commit auto-release (`feat:` → minor, `fix:` → patch)                                                                                       |
 | VS Code companion     | Included                  | Removed (focus on TUI + ACP/Zed)                                                                                                                         |
 
@@ -206,53 +206,56 @@ Both no-op outside a TTY, in screen-reader mode, or under tmux/SSH.
 
 ## Observability
 
-proto supports [Langfuse](https://langfuse.com) tracing out of the box. Set three environment variables and every session is fully traced — LLM calls (all providers), tool executions, subagent lifecycles, and turn hierarchy.
+proto ships OpenTelemetry-native, with both a Tempo/LGTM-style ops backend and Langfuse for prompt-grade trace UI. Both are **opt-in** — nothing is sent anywhere until `telemetry.enabled` is `true`.
 
 ### Setup
 
-Add to the `env` block in `~/.proto/settings.json`:
+Add to `~/.proto/settings.json`:
 
 ```json
 {
+  "telemetry": { "enabled": true },
   "env": {
+    "OTEL_INGRESS_TOKEN": "<bearer token from your Infisical or vault>",
     "LANGFUSE_PUBLIC_KEY": "pk-lf-...",
     "LANGFUSE_SECRET_KEY": "sk-lf-...",
-    "LANGFUSE_BASE_URL": "https://cloud.langfuse.com"
+    "LANGFUSE_BASE_URL": "https://your-langfuse-instance.example.com"
   }
 }
 ```
 
-`LANGFUSE_BASE_URL` is optional and defaults to `https://cloud.langfuse.com`. For a self-hosted instance, set it to your deployment URL.
+With `telemetry.enabled = true`:
 
-> **Why `settings.json` and not `.env`?** proto walks up from your CWD loading `.env` files, so a project-level `.env` with Langfuse keys would bleed into proto's tracing and mix your traces into the wrong dataset. The `env` block in `settings.json` is proto-namespaced and completely isolated from your projects.
+- **OTLP traces** ship to `https://otel.proto-labs.ai` over HTTP, bearer-auth via `OTEL_INGRESS_TOKEN`. Override `telemetry.otlpEndpoint` / `telemetry.otlpProtocol` to point at a local OTel collector or a different vendor.
+- **Langfuse traces** ship to `LANGFUSE_BASE_URL` (defaults to `https://cloud.langfuse.com`) when both Langfuse keys are present.
+
+Without `telemetry.enabled = true`, neither exporter activates regardless of env vars.
+
+> **Why `settings.json` and not `.env`?** proto walks up from your CWD loading `.env` files, so a project-level `.env` with telemetry keys would bleed into proto's tracing and mix your traces into the wrong dataset. The `env` block in `settings.json` is proto-namespaced and completely isolated from your projects.
 
 ### What gets traced
 
-| Span                  | Attributes                                                                                           |
-| --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `turn`                | `session.id`, `turn.id` — root span per user prompt                                                  |
-| `gen_ai chat {model}` | `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.request.model` — one per LLM call |
-| `tool/{name}`         | `tool.name`, `tool.type`, `tool.duration_ms` — one per tool execution                                |
-| `agent/{name}`        | `agent.name`, `agent.status`, `agent.duration_ms` — one per subagent                                 |
+| Span                  | Attributes                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `turn`                | `session.id`, `turn.id` — root span per user prompt                                                                                 |
+| `gen_ai chat {model}` | `gen_ai.usage.{input,output,thinking}_tokens`, `gen_ai.request.model`, `gen_ai.response.thinking` (when present) — one per LLM call |
+| `tool/{name}`         | `tool.name`, `tool.type`, `tool.duration_ms` — one per tool execution                                                               |
+| `agent/{name}`        | `agent.name`, `agent.status`, `agent.duration_ms` — one per subagent                                                                |
 
 All three provider backends are covered: OpenAI-compatible, Anthropic, and Gemini.
 
 ### Prompt content logging
 
-Full prompt messages and response text are included in traces by default. To disable:
+Full prompt messages, response text, and reasoning text are included in traces by default. To disable:
 
 ```json
 // ~/.proto/settings.json
 {
-  "telemetry": { "logPrompts": false }
+  "telemetry": { "enabled": true, "logPrompts": false }
 }
 ```
 
-> **Privacy note:** `logPrompts` is enabled by default. When enabled, full prompt and response content is sent to your Langfuse instance. Set to `false` if you want traces without message content.
-
-### Langfuse activates independently
-
-Langfuse tracing activates from env vars alone — it does not require `telemetry.enabled: true` in settings. The general telemetry pipeline (OTLP/GCP) and Langfuse are independent.
+> **Privacy note:** Telemetry is off by default. When you opt in, `logPrompts` defaults to `true` — full prompt, response, and reasoning content are attached to spans (truncated at 10K chars each). Set `logPrompts: false` if you want token counts and timings without message content.
 
 ## Task Management
 
