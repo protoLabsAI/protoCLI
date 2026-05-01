@@ -710,20 +710,20 @@ describe('Server Config (config.ts)', () => {
       expect(config.getTelemetryOtlpProtocol()).toBe('http');
     });
 
-    it('should return default OTLP protocol if not provided', () => {
+    it('should return default OTLP protocol of "http" if not provided (matches public ingress at otel.proto-labs.ai)', () => {
       const params: ConfigParameters = {
         ...baseParams,
         telemetry: { enabled: true },
       };
       const config = new Config(params);
-      expect(config.getTelemetryOtlpProtocol()).toBe('grpc');
+      expect(config.getTelemetryOtlpProtocol()).toBe('http');
     });
 
-    it('should return default OTLP protocol if telemetry object is not provided', () => {
+    it('should return default OTLP protocol of "http" if telemetry object is not provided', () => {
       const paramsWithoutTelemetry: ConfigParameters = { ...baseParams };
       delete paramsWithoutTelemetry.telemetry;
       const config = new Config(paramsWithoutTelemetry);
-      expect(config.getTelemetryOtlpProtocol()).toBe('grpc');
+      expect(config.getTelemetryOtlpProtocol()).toBe('http');
     });
   });
 

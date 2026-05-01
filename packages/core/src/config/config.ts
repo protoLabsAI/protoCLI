@@ -1788,7 +1788,10 @@ export class Config {
   }
 
   getTelemetryOtlpProtocol(): 'grpc' | 'http' {
-    return this.telemetrySettings.otlpProtocol ?? 'grpc';
+    // Default 'http' aligns with the public OTLP ingress at
+    // otel.proto-labs.ai (Cloudflare-fronted, HTTPS only). Set
+    // telemetry.otlpProtocol = 'grpc' for a local OTel collector.
+    return this.telemetrySettings.otlpProtocol ?? 'http';
   }
 
   getTelemetryTarget(): TelemetryTarget {
