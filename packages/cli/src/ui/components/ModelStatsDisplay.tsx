@@ -15,7 +15,9 @@ import {
 } from '../utils/computeStats.js';
 import type { ModelMetrics } from '../contexts/SessionContext.js';
 import { useSessionStats } from '../contexts/SessionContext.js';
+import { useSettings } from '../contexts/SettingsContext.js';
 import { t } from '../../i18n/index.js';
+import { calculateCost } from '../../utils/costCalculator.js';
 
 const METRIC_COL_WIDTH = 28;
 const MODEL_COL_WIDTH = 22;
@@ -59,6 +61,8 @@ export const ModelStatsDisplay: React.FC<ModelStatsDisplayProps> = ({
 }) => {
   const { stats } = useSessionStats();
   const { models } = stats.metrics;
+  const settings = useSettings();
+  const modelPricing = settings.merged.modelPricing;
   const activeModels = Object.entries(models).filter(
     ([, metrics]) => metrics.api.totalRequests > 0,
   );
@@ -91,6 +95,14 @@ export const ModelStatsDisplay: React.FC<ModelStatsDisplayProps> = ({
   const hasTool = activeModels.some(([, metrics]) => metrics.tokens.tool > 0);
   const hasCached = activeModels.some(
     ([, metrics]) => metrics.tokens.cached > 0,
+  );
+  const hasPricing = activeModels.some(
+    ([name, metrics]) =>
+      calculateCost({
+        inputTokens: metrics.tokens.prompt,
+        outputTokens: metrics.tokens.candidates + metrics.tokens.thoughts,
+        pricing: modelPricing?.[name],
+      }) != null,
   );
 
   return (
@@ -212,6 +224,24 @@ export const ModelStatsDisplay: React.FC<ModelStatsDisplayProps> = ({
         isSubtle
         values={getModelValues((m) => m.tokens.candidates.toLocaleString())}
       />
+      {hasPricing && (
+        <>
+          <Box height={1} />
+          <StatRow title={t('Cost')} values={[]} isSection />
+          <StatRow
+            title={t('Estimated')}
+            values={activeModels.map(([name, metrics]) => {
+              const cost = calculateCost({
+                inputTokens: metrics.tokens.prompt,
+                outputTokens:
+                  metrics.tokens.candidates + metrics.tokens.thoughts,
+                pricing: modelPricing?.[name],
+              });
+              return cost != null ? `$${cost.toFixed(4)}` : 'N/A';
+            })}
+          />
+        </>
+      )}
     </Box>
   );
 };

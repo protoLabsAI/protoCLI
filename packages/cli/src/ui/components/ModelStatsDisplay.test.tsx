@@ -9,6 +9,8 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { ModelStatsDisplay } from './ModelStatsDisplay.js';
 import * as SessionContext from '../contexts/SessionContext.js';
 import type { SessionMetrics } from '../contexts/SessionContext.js';
+import { SettingsContext } from '../contexts/SettingsContext.js';
+import type { LoadedSettings } from '../../config/settings.js';
 
 // Mock the context to provide controlled data for testing
 vi.mock('../contexts/SessionContext.js', async (importOriginal) => {
@@ -21,7 +23,23 @@ vi.mock('../contexts/SessionContext.js', async (importOriginal) => {
 
 const useSessionStatsMock = vi.mocked(SessionContext.useSessionStats);
 
-const renderWithMockedStats = (metrics: SessionMetrics) => {
+const makeSettingsStub = (
+  modelPricing?: Record<
+    string,
+    { inputPerMillionTokens: number; outputPerMillionTokens: number }
+  >,
+): LoadedSettings =>
+  ({
+    merged: { modelPricing },
+  }) as unknown as LoadedSettings;
+
+const renderWithMockedStats = (
+  metrics: SessionMetrics,
+  modelPricing?: Record<
+    string,
+    { inputPerMillionTokens: number; outputPerMillionTokens: number }
+  >,
+) => {
   useSessionStatsMock.mockReturnValue({
     stats: {
       sessionStartTime: new Date(),
@@ -34,7 +52,11 @@ const renderWithMockedStats = (metrics: SessionMetrics) => {
     startNewPrompt: vi.fn(),
   });
 
-  return render(<ModelStatsDisplay />);
+  return render(
+    <SettingsContext.Provider value={makeSettingsStub(modelPricing)}>
+      <ModelStatsDisplay />
+    </SettingsContext.Provider>,
+  );
 };
 
 describe('<ModelStatsDisplay />', () => {
@@ -248,5 +270,72 @@ describe('<ModelStatsDisplay />', () => {
     expect(output).toContain('gemini-2.5-pro');
     expect(output).not.toContain('gemini-2.5-flash');
     expect(output).toMatchSnapshot();
+  });
+
+  it('should render cost row when modelPricing is configured', () => {
+    const { lastFrame } = renderWithMockedStats(
+      {
+        models: {
+          'gemini-2.5-pro': {
+            api: { totalRequests: 1, totalErrors: 0, totalLatencyMs: 100 },
+            tokens: {
+              prompt: 1_000_000,
+              candidates: 0,
+              total: 1_000_000,
+              cached: 0,
+              thoughts: 0,
+              tool: 0,
+            },
+          },
+        },
+        tools: {
+          totalCalls: 0,
+          totalSuccess: 0,
+          totalFail: 0,
+          totalDurationMs: 0,
+          totalDecisions: { accept: 0, reject: 0, modify: 0, auto_accept: 0 },
+          byName: {},
+        },
+      },
+      {
+        'gemini-2.5-pro': {
+          inputPerMillionTokens: 0.3,
+          outputPerMillionTokens: 1.2,
+        },
+      },
+    );
+
+    const output = lastFrame();
+    expect(output).toContain('Cost');
+    expect(output).toContain('$0.3000');
+  });
+
+  it('should not render cost row when modelPricing is absent', () => {
+    const { lastFrame } = renderWithMockedStats({
+      models: {
+        'gemini-2.5-pro': {
+          api: { totalRequests: 1, totalErrors: 0, totalLatencyMs: 100 },
+          tokens: {
+            prompt: 1_000_000,
+            candidates: 0,
+            total: 1_000_000,
+            cached: 0,
+            thoughts: 0,
+            tool: 0,
+          },
+        },
+      },
+      tools: {
+        totalCalls: 0,
+        totalSuccess: 0,
+        totalFail: 0,
+        totalDurationMs: 0,
+        totalDecisions: { accept: 0, reject: 0, modify: 0, auto_accept: 0 },
+        byName: {},
+      },
+    });
+
+    const output = lastFrame();
+    expect(output).not.toContain('Estimated');
   });
 });
