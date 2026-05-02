@@ -217,6 +217,7 @@ export {
   ExtensionUninstallEvent,
   IdeConnectionEvent,
   IdeConnectionType,
+  LoopType,
   ModelSlashCommandEvent,
   PromptSuggestionEvent,
   SpeculationEvent,

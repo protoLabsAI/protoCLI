@@ -34,6 +34,7 @@ import {
   type ThoughtSummary,
 } from '../utils/thoughtUtils.js';
 import { withChunkTimeout, StreamStallError } from '../utils/streamStall.js';
+import type { LoopType } from '../telemetry/types.js';
 
 /**
  * Max ms to wait between individual stream chunks before declaring a stall.
@@ -204,6 +205,12 @@ export type ServerGeminiFinishedEvent = {
 
 export type ServerGeminiLoopDetectedEvent = {
   type: GeminiEventType.LoopDetected;
+  // The loop type is optional so historical call sites that don't produce one
+  // (tests, fixtures) stay valid. Real emissions in client.ts always populate
+  // it so downstream consumers can surface a concrete reason to the user.
+  value?: {
+    loopType: LoopType;
+  };
 };
 
 export type ServerGeminiCitationEvent = {
