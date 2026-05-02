@@ -139,6 +139,11 @@ jobs:
         env:
           GATEWAY_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          # protolabs/fast leaked its <think> reasoning trace into the
+          # Discord post on v0.34.1 — the gateway doesn't strip thinking
+          # blocks for that alias. protolabs/smart is the non-thinking
+          # alternative.
+          RELEASE_NOTES_MODEL: protolabs/smart
 
       - name: Sync main back to dev
         if: steps.version.outputs.already_tagged != 'true'
