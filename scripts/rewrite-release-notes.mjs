@@ -95,34 +95,39 @@ ${commitBlocks}`,
   };
 }
 
-// ─── Claude API ──────────────────────────────────────────────────────────────
+// ─── LLM call (protoLabs LiteLLM gateway, OpenAI-compatible) ─────────────────
 
-async function callClaude(userPrompt) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
+const LLM_BASE_URL =
+  process.env.OPENAI_BASE_URL || 'https://api.proto-labs.ai/v1';
+const LLM_MODEL = process.env.RELEASE_NOTES_MODEL || 'protolabs/fast';
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callLLM(userPrompt) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
+
+  const res = await fetch(`${LLM_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: LLM_MODEL,
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${err}`);
+    throw new Error(`LLM API error ${res.status}: ${err}`);
   }
 
   const data = await res.json();
-  return data.content[0].text;
+  return data.choices?.[0]?.message?.content ?? '';
 }
 
 // ─── Discord ──────────────────────────────────────────────────────────────────
@@ -225,7 +230,7 @@ if (filteredCount === 0) {
   process.exit(0);
 }
 
-const notes = await callClaude(userPrompt);
+const notes = await callLLM(userPrompt);
 console.log('\n── Release Notes ──\n');
 console.log(notes);
 
