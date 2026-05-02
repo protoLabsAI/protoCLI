@@ -120,16 +120,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute previous tag
+        if: steps.version.outputs.already_tagged != 'true'
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname \
+            | grep -v "^${{ steps.version.outputs.tag }}$" | head -1)
+          echo "tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          echo "Diffing $PREV_TAG → ${{ steps.version.outputs.tag }}"
+
       - name: Rewrite notes and post to Discord
         if: steps.version.outputs.already_tagged != 'true'
         continue-on-error: true
-        run: |
-          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${{ steps.version.outputs.tag }}$" | head -1)
-          echo "Diffing $PREV_TAG → ${{ steps.version.outputs.tag }}"
-          node scripts/rewrite-release-notes.mjs \
-            "${{ steps.version.outputs.tag }}" \
-            "$PREV_TAG" \
-            --post-discord
+        uses: protoLabsAI/release-tools@v0.1.0
+        with:
+          version: ${{ steps.version.outputs.tag }}
+          previous-version: ${{ steps.prev_tag.outputs.tag }}
         env:
           GATEWAY_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}

@@ -481,8 +481,11 @@ than the upstream auth/config dance.
 - `prepare-release.yml` — fires on PR merges to `dev`. Default patch
   bump; manual dispatch can request minor/major or dry-run.
 - `release.yml` — publishes to NPM after the release PR merges.
-- `scripts/determine-bump.js`, `scripts/rewrite-release-notes.mjs` —
-  conventional-commit driven bump + notes rewrite.
+- `scripts/determine-bump.js` — conventional-commit driven bump
+  detection (consumed by `auto-release.yml`).
+- Release notes rewriting + Discord posting is delegated to the
+  shared `protoLabsAI/release-tools` GitHub Action so the same
+  logic powers multiple protoLabs repos without copy-paste drift.
 
 This is why we are at 0.26.x while upstream is 0.15.x. The fork ships
 roughly weekly; upstream ships monthly.
