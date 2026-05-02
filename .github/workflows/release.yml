@@ -132,7 +132,7 @@ jobs:
       - name: Rewrite notes and post to Discord
         if: steps.version.outputs.already_tagged != 'true'
         continue-on-error: true
-        uses: protoLabsAI/release-tools@v0.1.1
+        uses: protoLabsAI/release-tools@v0.1.2
         with:
           version: ${{ steps.version.outputs.tag }}
           previous-version: ${{ steps.prev_tag.outputs.tag }}
