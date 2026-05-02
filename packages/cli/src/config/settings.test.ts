@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable vitest/no-conditional-expect */
-
 /// <reference types="vitest/globals" />
 
 // Mock 'os' first.

@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/* eslint-disable vitest/no-conditional-expect */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleSlashCommand } from './nonInteractiveCliCommands.js';
 import type { Config } from '@qwen-code/qwen-code-core';
