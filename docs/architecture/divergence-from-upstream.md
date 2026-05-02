@@ -346,7 +346,7 @@ a clean prompt that gets it back on task.
 (`packages/core/src/skills/bundled/`):
 adversarial-verification, brainstorming, browser-automation,
 coding-agent-standards, dispatching-parallel-agents, executing-plans,
-finishing-a-development-branch, harness-reference, loop, qc-helper,
+finishing-a-development-branch, harness-reference, loop, proto-helper,
 receiving-code-review, requesting-code-review, review, sprint-contract,
 subagent-driven-development, systematic-debugging, test-driven-development,
 using-git-worktrees, using-superpowers, verification-before-completion,

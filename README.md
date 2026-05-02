@@ -399,7 +399,7 @@ proto ships with 22 bundled skills for agentic workflows:
 - **finishing-a-development-branch** — Pre-merge cleanup
 - **harness-reference** — Sprint contracts, verification gates, and retry logic reference
 - **loop** — Iterative refinement loops
-- **qc-helper** — Quality control checks
+- **proto-helper** — protoCLI usage, features, configuration, and troubleshooting
 - **receiving-code-review** — Process review feedback
 - **requesting-code-review** — Generate review requests
 - **review** — Code review workflow
