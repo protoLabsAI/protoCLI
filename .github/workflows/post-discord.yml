@@ -48,5 +48,5 @@ jobs:
             "${{ inputs.previous_version }}" \
             ${{ inputs.dry_run == true && '--dry-run' || '--post-discord' }}
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GATEWAY_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
