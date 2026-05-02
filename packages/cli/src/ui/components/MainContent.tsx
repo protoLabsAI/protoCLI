@@ -30,6 +30,7 @@ export const MainContent = () => {
     mainAreaWidth,
     staticAreaMaxItemHeight,
     availableTerminalHeight,
+    historyRemountKey,
   } = uiState;
 
   // NOTE: Ink's <Static> tracks rendered items by array INDEX (not React key).
@@ -37,7 +38,8 @@ export const MainContent = () => {
   // render. If the array ever shrinks or stays the same length, the index
   // overshoots and nothing new is printed. The array passed to Static must
   // therefore only ever grow — never shrink or stay constant length.
-  const staticItems = useMemo(() => [
+  const staticItems = useMemo(
+    () => [
       <AppHeader key="app-header" version={version} />,
       <DebugModeNotification key="debug-notification" />,
       <Notifications key="notifications" />,
@@ -53,18 +55,20 @@ export const MainContent = () => {
           commands={uiState.slashCommands}
         />
       )),
-    ], [
-    uiState.history,
-    uiState.slashCommands,
-    version,
-    terminalWidth,
-    mainAreaWidth,
-    staticAreaMaxItemHeight,
-  ]);
+    ],
+    [
+      uiState.history,
+      uiState.slashCommands,
+      version,
+      terminalWidth,
+      mainAreaWidth,
+      staticAreaMaxItemHeight,
+    ],
+  );
 
   return (
     <>
-      <Static key={`${uiState.historyRemountKey}`} items={staticItems}>
+      <Static key={`${historyRemountKey}`} items={staticItems}>
         {(item) => item}
       </Static>
       <OverflowProvider>

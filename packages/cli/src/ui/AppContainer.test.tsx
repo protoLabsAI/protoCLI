@@ -149,6 +149,7 @@ describe('AppContainer State Management', () => {
   const mockedUseTextBuffer = useTextBuffer as Mock;
   const mockedUseLogger = useLogger as Mock;
   const mockedUseLoadingIndicator = useLoadingIndicator as Mock;
+  const mockedUseTerminalSize = useTerminalSize as Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -264,6 +265,7 @@ describe('AppContainer State Management', () => {
       elapsedTime: '0.0s',
       currentLoadingPhrase: '',
     });
+    mockedUseTerminalSize.mockReturnValue({ columns: 80, rows: 24 });
 
     // Mock Config
     mockConfig = makeFakeConfig();
