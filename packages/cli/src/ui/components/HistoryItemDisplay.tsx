@@ -40,6 +40,7 @@ import { SkillsList } from './views/SkillsList.js';
 import { ToolsList } from './views/ToolsList.js';
 import { McpStatus } from './views/McpStatus.js';
 import { ContextUsage } from './views/ContextUsage.js';
+import { DoctorReport } from './views/DoctorReport.js';
 import { ArenaAgentCard, ArenaSessionCard } from './arena/ArenaCards.js';
 import { InsightProgressMessage } from './messages/InsightProgressMessage.js';
 import { BtwMessage } from './messages/BtwMessage.js';
@@ -211,6 +212,13 @@ const HistoryItemDisplayComponent: React.FC<HistoryItemDisplayProps> = ({
           skills={itemForDisplay.skills}
           isEstimated={itemForDisplay.isEstimated}
           showDetails={itemForDisplay.showDetails}
+        />
+      )}
+      {itemForDisplay.type === 'doctor' && (
+        <DoctorReport
+          checks={itemForDisplay.checks}
+          summary={itemForDisplay.summary}
+          width={boxWidth}
         />
       )}
       {itemForDisplay.type === 'arena_agent_complete' && (

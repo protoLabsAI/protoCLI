@@ -337,17 +337,26 @@ export const useSlashCommandProcessor = (
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
-      const loaders = [
-        new McpPromptLoader(config),
-        new BuiltinCommandLoader(config),
-        new BundledSkillLoader(config),
-        new FileCommandLoader(config),
-      ];
-      const commandService = await CommandService.create(
-        loaders,
-        controller.signal,
-      );
-      setCommands(commandService.getCommands());
+      try {
+        const loaders = [
+          new McpPromptLoader(config),
+          new BuiltinCommandLoader(config),
+          new BundledSkillLoader(config),
+          new FileCommandLoader(config),
+        ];
+        const disabled = config?.getDisabledSlashCommands() ?? [];
+        const commandService = await CommandService.create(
+          loaders,
+          controller.signal,
+          disabled.length > 0 ? new Set(disabled) : undefined,
+        );
+        // Avoid overwriting newer results from a subsequent effect run
+        if (!controller.signal.aborted) {
+          setCommands(commandService.getCommands());
+        }
+      } catch (error) {
+        debugLogger.error('Failed to load slash commands:', error);
+      }
     };
 
     load();
