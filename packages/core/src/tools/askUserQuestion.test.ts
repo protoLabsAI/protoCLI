@@ -134,6 +134,43 @@ describe('AskUserQuestionTool', () => {
       expect(result).toContain('JSON-encoded string');
       expect(result).toContain('real array literal');
     });
+
+    it('should accept params with multiSelect omitted', () => {
+      const params = {
+        questions: [
+          {
+            question: 'Pick a framework?',
+            header: 'Framework',
+            options: [
+              { label: 'React', description: 'A JavaScript library' },
+              { label: 'Vue', description: 'Progressive framework' },
+            ],
+          },
+        ],
+      };
+
+      expect(tool.validateToolParams(params)).toBeNull();
+      expect(() => tool.build(params)).not.toThrow();
+    });
+
+    it('should reject params where multiSelect is not a boolean', () => {
+      const params = {
+        questions: [
+          {
+            question: 'Pick a framework?',
+            header: 'Framework',
+            options: [
+              { label: 'React', description: 'A JavaScript library' },
+              { label: 'Vue', description: 'Progressive framework' },
+            ],
+            multiSelect: 'yes' as unknown as boolean,
+          },
+        ],
+      };
+
+      const result = tool.validateToolParams(params);
+      expect(result).toBe('Question 1: "multiSelect" must be a boolean.');
+    });
   });
 
   describe('getDefaultPermission and getConfirmationDetails', () => {
@@ -159,11 +196,11 @@ describe('AskUserQuestionTool', () => {
       const confirmation = await invocation.getConfirmationDetails(
         new AbortController().signal,
       );
-      expect(confirmation.type).toBe('ask_user_question');
-      if (confirmation.type === 'ask_user_question') {
-        expect(confirmation.questions).toEqual(params.questions);
-        expect(confirmation.onConfirm).toBeDefined();
-      }
+      expect(confirmation).toMatchObject({
+        type: 'ask_user_question',
+        questions: params.questions,
+        onConfirm: expect.any(Function),
+      });
     });
 
     it('should return allow permission in non-interactive mode', async () => {
