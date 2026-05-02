@@ -131,7 +131,7 @@ jobs:
             "$PREV_TAG" \
             --post-discord
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GATEWAY_API_KEY: ${{ secrets.GATEWAY_API_KEY }}
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
 
       - name: Sync main back to dev

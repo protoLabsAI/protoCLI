@@ -102,8 +102,8 @@ const LLM_BASE_URL =
 const LLM_MODEL = process.env.RELEASE_NOTES_MODEL || 'protolabs/fast';
 
 async function callLLM(userPrompt) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
+  const apiKey = process.env.GATEWAY_API_KEY;
+  if (!apiKey) throw new Error('GATEWAY_API_KEY is not set');
 
   const res = await fetch(`${LLM_BASE_URL}/chat/completions`, {
     method: 'POST',
