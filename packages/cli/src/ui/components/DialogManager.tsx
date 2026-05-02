@@ -42,6 +42,7 @@ import { HooksManagementDialog } from './hooks/HooksManagementDialog.js';
 import { SessionPicker } from './SessionPicker.js';
 import { RewindPicker } from './RewindPicker.js';
 import { checkpointStore, CompressionStatus } from '@qwen-code/qwen-code-core';
+import { computeApiTruncationIndex } from '../utils/historyMapping.js';
 
 interface DialogManagerProps {
   addItem: UseHistoryManagerReturn['addItem'];
@@ -383,44 +384,52 @@ export const DialogManager = ({
     /** Apply a conversation rewind: slice UI history and LLM history. */
     const applyConversationRewind = (
       promptId: string,
-    ): { slicedUiHistory: typeof uiState.history; originalPrompt: string } => {
+    ): {
+      slicedUiHistory: typeof uiState.history;
+      originalPrompt: string;
+      compressionAbort: boolean;
+    } => {
       const cutIdx = getUiHistoryCutIndex(promptId);
+      // The item AT cutIdx is the user turn we're rewinding to. We need its
+      // id to map to the API history index correctly.
+      const targetUserItem = uiState.history[cutIdx];
       const slicedUiHistory = uiState.history.slice(0, cutIdx);
-      uiState.historyManager.loadHistory(slicedUiHistory);
-      // Clear the terminal and re-render <Static> with the sliced history so
-      // the user sees only the messages that existed at the checkpoint.
-      // Without this, Ink's <Static> has already painted the full history to
-      // the terminal scrollback and the visual rollback never happens.
-      uiActions.refreshStatic();
 
-      // Slice the LLM history to match the number of user turns kept.
+      // Slice the LLM history first so we can abort if compression has
+      // absorbed the target turn — without mutating the UI on a no-op.
+      let compressionAbort = false;
       const geminiClient = config?.getGeminiClient?.();
-      if (geminiClient) {
-        const userTurnCount = slicedUiHistory.filter(
-          (item) => item.type === 'user',
-        ).length;
+      if (geminiClient && targetUserItem) {
         const llmHistory = geminiClient.getHistory();
-        let usersSeen = 0;
-        let llmCutIdx = 0;
-        for (let i = 0; i < llmHistory.length; i++) {
-          if (llmHistory[i].role === 'user') {
-            usersSeen++;
-            if (usersSeen > userTurnCount) {
-              llmCutIdx = i;
-              break;
-            }
-            llmCutIdx = i + 1;
-          }
-        }
-        geminiClient.setHistory(
-          userTurnCount === 0 ? [] : llmHistory.slice(0, llmCutIdx),
+        const apiCutIdx = computeApiTruncationIndex(
+          uiState.history,
+          targetUserItem.id,
+          llmHistory,
         );
+        if (apiCutIdx < 0) {
+          // Target turn was absorbed by compression — keep current state.
+          compressionAbort = true;
+        } else {
+          geminiClient.setHistory(llmHistory.slice(0, apiCutIdx));
+          // Drop stale thinking blocks left over from completed assistant
+          // turns; otherwise they leak into the next request and confuse
+          // models that don't tolerate orphan reasoning.
+          geminiClient.stripThoughtsFromHistory();
+        }
+      }
+
+      if (!compressionAbort) {
+        uiState.historyManager.loadHistory(slicedUiHistory);
+        // Clear the terminal and re-render <Static> so scrollback matches the
+        // sliced history. Ink's <Static> has already painted the full history
+        // and won't redraw on its own — without this, only the API truncates.
+        uiActions.refreshStatic();
       }
 
       // Get the original prompt text from the checkpoint for pre-filling.
       const checkpoint = checkpointStore.getByPromptId(promptId);
       const originalPrompt = checkpoint?.userPrompt ?? '';
-      return { slicedUiHistory, originalPrompt };
+      return { slicedUiHistory, originalPrompt, compressionAbort };
     };
 
     const handleRestoreFilesAndConversation = (promptId: string) => {
@@ -431,9 +440,19 @@ export const DialogManager = ({
         // checkpoint may have no file snapshots — safe to ignore
       }
       // 2. Restore conversation (LLM history + UI history)
-      const { slicedUiHistory, originalPrompt } =
+      const { slicedUiHistory, originalPrompt, compressionAbort } =
         applyConversationRewind(promptId);
       uiActions.closeRewindDialog();
+      if (compressionAbort) {
+        addItem(
+          {
+            type: 'error',
+            text: 'Cannot rewind to a turn that was compressed. Try a more recent turn.',
+          },
+          Date.now(),
+        );
+        return;
+      }
       // 3. Pre-fill original prompt text
       if (originalPrompt) {
         uiState.buffer.setText(originalPrompt);
@@ -454,9 +473,19 @@ export const DialogManager = ({
     };
 
     const handleRestoreConversationOnly = (promptId: string) => {
-      const { slicedUiHistory, originalPrompt } =
+      const { slicedUiHistory, originalPrompt, compressionAbort } =
         applyConversationRewind(promptId);
       uiActions.closeRewindDialog();
+      if (compressionAbort) {
+        addItem(
+          {
+            type: 'error',
+            text: 'Cannot rewind to a turn that was compressed. Try a more recent turn.',
+          },
+          Date.now(),
+        );
+        return;
+      }
       // Pre-fill original prompt text
       if (originalPrompt) {
         uiState.buffer.setText(originalPrompt);
