@@ -5,7 +5,12 @@ import type { TransportOptions } from '../types/types.js';
 import type { Transport } from './Transport.js';
 import { parseJsonLinesStream } from '../utils/jsonLines.js';
 import { prepareSpawnInfo } from '../utils/cliPath.js';
-import { AbortError } from '../types/errors.js';
+import {
+  AbortError,
+  CliInitError,
+  InputClosedError,
+  TransportError,
+} from '../types/errors.js';
 import { SdkLogger } from '../utils/logger.js';
 
 const logger = SdkLogger.createLogger('ProcessTransport');
@@ -17,6 +22,12 @@ export class ProcessTransport implements Transport {
   private options: TransportOptions;
   private ready = false;
   private _exitError: Error | null = null;
+  /**
+   * Latches true the first time the transport becomes ready. Used to
+   * distinguish "process died during init" (CliInitError) from "process
+   * died mid-session" (TransportError) in the close handler.
+   */
+  private hasBeenReady = false;
   private closed = false;
   private inputClosed = false;
   private abortController: AbortController;
@@ -173,6 +184,7 @@ export class ProcessTransport implements Transport {
       this.setupEventHandlers();
 
       this.ready = true;
+      this.hasBeenReady = true;
       logger.info('CLI process started successfully');
     } catch (error) {
       this.ready = false;
@@ -189,7 +201,10 @@ export class ProcessTransport implements Transport {
       if (this.abortController.signal.aborted) {
         this._exitError = new AbortError('CLI process aborted by user');
       } else {
-        this._exitError = new Error(`CLI process error: ${error.message}`);
+        const reason = `CLI process error: ${error.message}`;
+        this._exitError = this.hasBeenReady
+          ? new TransportError(reason)
+          : new CliInitError(reason);
         logger.error(this._exitError.message);
       }
     });
@@ -212,12 +227,16 @@ export class ProcessTransport implements Transport {
     code: number | null,
     signal: NodeJS.Signals | null,
   ): Error | undefined {
-    if (code !== 0 && code !== null) {
-      return new Error(`CLI process exited with code ${code}`);
-    } else if (signal) {
-      return new Error(`CLI process terminated by signal ${signal}`);
+    if (code === 0 || (code === null && !signal)) {
+      return undefined;
     }
-    return undefined;
+    const reason =
+      code !== null && code !== 0
+        ? `CLI process exited with code ${code}`
+        : `CLI process terminated by signal ${signal}`;
+    return this.hasBeenReady
+      ? new TransportError(reason, { exitCode: code })
+      : new CliInitError(reason, { exitCode: code });
   }
   private buildCliArguments(): string[] {
     const args: string[] = [
@@ -403,15 +422,15 @@ export class ProcessTransport implements Transport {
     }
 
     if (!this.ready || !this.childStdin) {
-      throw new Error('Transport not ready for writing');
+      throw new TransportError('Transport not ready for writing');
     }
 
     if (this.closed) {
-      throw new Error('Cannot write to closed transport');
+      throw new TransportError('Cannot write to closed transport');
     }
 
     if (this.inputClosed) {
-      throw new Error('Input stream closed');
+      throw new InputClosedError();
     }
 
     if (this.childStdin.writableEnded || this.childStdin.destroyed) {
@@ -419,15 +438,17 @@ export class ProcessTransport implements Transport {
       logger.warn(
         `Cannot write to ${this.childStdin.writableEnded ? 'ended' : 'destroyed'} stdin stream`,
       );
-      throw new Error('Input stream closed');
+      throw new InputClosedError();
     }
 
     if (this.childProcess?.killed || this.childProcess?.exitCode !== null) {
-      throw new Error('Cannot write to terminated process');
+      throw new TransportError('Cannot write to terminated process', {
+        exitCode: this.childProcess?.exitCode ?? null,
+      });
     }
 
     if (this._exitError) {
-      throw new Error(
+      throw new TransportError(
         `Cannot write to process that exited with error: ${this._exitError.message}`,
       );
     }
@@ -456,20 +477,20 @@ export class ProcessTransport implements Transport {
       if (isStreamClosedError) {
         this.inputClosed = true;
         logger.warn(`Stream closed, cannot write: ${errorMsg}`);
-        throw new Error('Input stream closed');
+        throw new InputClosedError();
       }
 
       // For other errors, maintain original behavior
       this.ready = false;
       const fullErrorMsg = `Failed to write to stdin: ${errorMsg}`;
       logger.error(fullErrorMsg);
-      throw new Error(fullErrorMsg);
+      throw new TransportError(fullErrorMsg);
     }
   }
 
   async *readMessages(): AsyncGenerator<unknown, void, unknown> {
     if (!this.childStdout) {
-      throw new Error('Cannot read messages: process not started');
+      throw new CliInitError('Cannot read messages: process not started');
     }
 
     const rl = readline.createInterface({
