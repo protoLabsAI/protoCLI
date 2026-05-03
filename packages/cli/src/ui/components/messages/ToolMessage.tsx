@@ -10,7 +10,7 @@ import type { IndividualToolCallDisplay } from '../../types.js';
 import { ToolCallStatus } from '../../types.js';
 import { DiffRenderer } from './DiffRenderer.js';
 import { MarkdownDisplay } from '../../utils/MarkdownDisplay.js';
-import { AnsiOutputText } from '../AnsiOutput.js';
+import { AnsiOutputText, ShellStatsBar } from '../AnsiOutput.js';
 import { GeminiRespondingSpinner } from '../GeminiRespondingSpinner.js';
 import { MaxSizedBox, MINIMUM_MAX_HEIGHT } from '../shared/MaxSizedBox.js';
 import { getCachedStringWidth, toCodePoints } from '../../utils/textUtils.js';
@@ -41,6 +41,7 @@ const STATIC_HEIGHT = 1;
 const RESERVED_LINE_COUNT = 5; // for tool name, status, padding etc.
 const STATUS_INDICATOR_WIDTH = 3;
 const MIN_LINES_SHOWN = 2; // show at least this many lines
+const DEFAULT_SHELL_OUTPUT_MAX_LINES = 5;
 
 // Large threshold to ensure we don't cause performance issues for very large
 // outputs that will get truncated further MaxSizedBox anyway.
@@ -410,6 +411,33 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
         MIN_LINES_SHOWN + 1, // enforce minimum lines shown
       )
     : undefined;
+
+  // Cap inline shell output. Applies to both the streaming ANSI display and
+  // the completed string display (shell.ts emits the final result as a plain
+  // string via `returnDisplayMessage = result.output`). ShellStatsBar surfaces
+  // hidden lines via `+N lines` for ANSI; MaxSizedBox handles overflow for
+  // string. The focused embedded shell bypasses the cap so the user sees the
+  // full live transcript while interacting with it.
+  const isShellTool = name === SHELL_COMMAND_NAME || name === SHELL_NAME;
+  const rawShellCap =
+    settings.merged.ui?.shellOutputMaxLines ?? DEFAULT_SHELL_OUTPUT_MAX_LINES;
+  // Defensive: clamp non-negative integers; treat negatives / NaN / fractions
+  // as the user's clear intent (0 = disable, otherwise floor to whole rows).
+  const shellOutputMaxLines = Math.max(0, Math.floor(rawShellCap || 0));
+  const isCappingShell =
+    isShellTool && shellOutputMaxLines > 0 && !isThisShellFocused;
+  const shellCapHeight = isCappingShell
+    ? Math.min(availableHeight ?? shellOutputMaxLines, shellOutputMaxLines)
+    : availableHeight;
+  // String path: MaxSizedBox reserves one row for its overflow banner when
+  // content overflows, so passing the bare cap shows N-1 content rows. ANSI
+  // pre-slices to N (no MaxSizedBox overflow) and renders N rows + the
+  // ShellStatsBar line. +1 keeps the two paths visually symmetric at N
+  // visible content rows.
+  const shellStringCapHeight =
+    isCappingShell && shellCapHeight !== undefined
+      ? shellCapHeight + 1
+      : availableHeight;
   const innerWidth = contentWidth - STATUS_INDICATOR_WIDTH;
 
   // Long tool call response in MarkdownDisplay doesn't respect availableTerminalHeight properly,
@@ -474,16 +502,24 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
               />
             )}
             {displayRenderer.type === 'ansi' && (
-              <AnsiOutputText
-                data={displayRenderer.data}
-                availableTerminalHeight={availableHeight}
-              />
+              <>
+                <AnsiOutputText
+                  data={displayRenderer.data}
+                  availableTerminalHeight={shellCapHeight}
+                />
+                {isCappingShell && (
+                  <ShellStatsBar
+                    totalLines={displayRenderer.data.length}
+                    displayHeight={shellCapHeight}
+                  />
+                )}
+              </>
             )}
             {displayRenderer.type === 'string' && (
               <StringResultRenderer
                 data={displayRenderer.data}
                 renderAsMarkdown={renderOutputAsMarkdown}
-                availableHeight={availableHeight}
+                availableHeight={shellStringCapHeight}
                 childWidth={innerWidth}
               />
             )}

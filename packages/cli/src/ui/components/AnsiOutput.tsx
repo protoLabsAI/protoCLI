@@ -5,12 +5,13 @@
  */
 
 import type React from 'react';
-import { Text } from 'ink';
+import { Box, Text } from 'ink';
 import type {
   AnsiLine,
   AnsiOutput,
   AnsiToken,
 } from '@qwen-code/qwen-code-core';
+import { theme } from '../semantic-colors.js';
 
 const DEFAULT_HEIGHT = 24;
 
@@ -47,4 +48,34 @@ export const AnsiOutputText: React.FC<AnsiOutputProps> = ({
         : null}
     </Text>
   ));
+};
+
+export interface ShellStatsBarProps {
+  /** Total ANSI lines produced by the command, before any display cap. */
+  totalLines?: number;
+  /** Visible row count after capping. Used to compute `+N lines` overflow. */
+  displayHeight?: number;
+}
+
+/**
+ * One-line indicator rendered under capped shell ANSI output. Surfaces the
+ * count of hidden rows (`+N lines`) so the user knows there's more output
+ * than what's visible. Renders nothing when nothing is hidden.
+ *
+ * Adapted from upstream QwenLM/qwen-code's `AnsiOutput.tsx` ShellStatsBar
+ * (introduced in #3155). Slimmed to just the line-count piece — upstream's
+ * `totalBytes` (UTF-8 byte size) display is part of the broader
+ * #3155 tool-execution-progress feature we haven't ported here.
+ */
+export const ShellStatsBar: React.FC<ShellStatsBarProps> = ({
+  totalLines,
+  displayHeight = DEFAULT_HEIGHT,
+}) => {
+  if (!totalLines || totalLines <= displayHeight) return null;
+  const hidden = totalLines - displayHeight;
+  return (
+    <Box flexDirection="row">
+      <Text color={theme.text.secondary}>{`+${hidden} lines`}</Text>
+    </Box>
+  );
 };

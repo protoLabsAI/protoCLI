@@ -482,6 +482,16 @@ const SETTINGS_SCHEMA = {
         description: 'Show citations for generated text in the chat.',
         showInDialog: false,
       },
+      shellOutputMaxLines: {
+        type: 'number',
+        label: 'Shell Output Max Lines',
+        category: 'UI',
+        requiresRestart: false,
+        default: 5,
+        description:
+          'Max number of shell output lines shown inline. Set to 0 to disable the cap and show full output. The hidden line count is still surfaced via the `+N lines` indicator.',
+        showInDialog: true,
+      },
       customWittyPhrases: {
         type: 'array',
         label: 'Custom Witty Phrases',
