@@ -33,7 +33,7 @@ jobs:
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Post release notes to Discord
-        uses: protoLabsAI/release-tools@v0.1.2
+        uses: protoLabsAI/release-tools@v0.1.3
         with:
           version: ${{ inputs.version }}
           previous-version: ${{ inputs.previous_version }}
