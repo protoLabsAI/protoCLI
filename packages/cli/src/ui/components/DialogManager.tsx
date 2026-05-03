@@ -43,6 +43,7 @@ import { SessionPicker } from './SessionPicker.js';
 import { RewindPicker } from './RewindPicker.js';
 import { checkpointStore, CompressionStatus } from '@qwen-code/qwen-code-core';
 import { computeApiTruncationIndex } from '../utils/historyMapping.js';
+import { t } from '../../i18n/index.js';
 
 interface DialogManagerProps {
   addItem: UseHistoryManagerReturn['addItem'];
@@ -350,6 +351,7 @@ export const DialogManager = ({
         onSelect={uiActions.handleResume}
         onCancel={uiActions.closeResumeDialog}
         enablePreview
+        initialSessions={uiState.resumeMatchedSessions}
       />
     );
   }
@@ -585,6 +587,18 @@ export const DialogManager = ({
         onRestoreFilesOnly={handleRestoreFilesOnly}
         onSummarizeFromHere={handleSummarizeFromHere}
         onCancel={uiActions.closeRewindDialog}
+      />
+    );
+  }
+
+  if (uiState.isDeleteDialogOpen) {
+    return (
+      <SessionPicker
+        sessionService={config.getSessionService()}
+        currentBranch={uiState.branchName}
+        onSelect={uiActions.handleDelete}
+        onCancel={uiActions.closeDeleteDialog}
+        title={t('Delete Session')}
       />
     );
   }

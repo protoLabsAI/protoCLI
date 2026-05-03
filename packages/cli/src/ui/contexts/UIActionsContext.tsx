@@ -102,6 +102,10 @@ export interface UIActions {
   // Rewind dialog
   openRewindDialog: () => void;
   closeRewindDialog: () => void;
+  // Delete session dialog
+  openDeleteDialog: () => void;
+  closeDeleteDialog: () => void;
+  handleDelete: (sessionId: string) => void;
   // Feedback dialog
   openFeedbackDialog: () => void;
   closeFeedbackDialog: () => void;

@@ -36,6 +36,7 @@ export function useInitializationEffects(
     loadHistory: (items: ReturnType<typeof buildResumedHistoryItems>) => void;
   },
   setConfigInitialized: (v: boolean) => void,
+  setSessionName?: (name: string | null) => void,
 ): void {
   useEffect(() => {
     (async () => {
@@ -78,6 +79,16 @@ export function useInitializationEffects(
           config,
         );
         historyManager.loadHistory(historyItems);
+
+        // Restore session name tag from custom title set via /rename.
+        if (setSessionName) {
+          const title = config
+            .getSessionService()
+            .getSessionTitle(config.getSessionId());
+          if (title) {
+            setSessionName(title);
+          }
+        }
       }
 
       // Fire SessionStart event after config is initialized
