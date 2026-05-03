@@ -26,6 +26,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import { GeminiClient } from '../core/client.js';
 import { createMockWorkspaceContext } from '../test-utils/mockWorkspaceContext.js';
+import { FileReadCache } from '../services/fileReadCache.js';
 import { StandardFileSystemService } from '../services/fileSystemService.js';
 import type { DiffUpdateResult } from '../ide/ide-client.js';
 import { IdeClient } from '../ide/ide-client.js';
@@ -52,6 +53,7 @@ vi.mocked(IdeClient.getInstance).mockResolvedValue(
 
 // Mock Config
 const fsService = new StandardFileSystemService();
+const fileReadCache = new FileReadCache();
 const mockConfigInternal = {
   getTargetDir: () => rootDir,
   getApprovalMode: vi.fn(() => ApprovalMode.DEFAULT),
@@ -84,6 +86,7 @@ const mockConfigInternal = {
   getDefaultFileEncoding: () => 'utf-8',
   hasFileBeenRead: vi.fn(() => true),
   trackFileRead: vi.fn(),
+  getFileReadCache: () => fileReadCache,
 };
 const mockConfig = mockConfigInternal as unknown as Config;
 
@@ -871,6 +874,31 @@ describe('WriteFileTool', () => {
         originalGetDefaultFileEncoding;
 
       // Cleanup
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
+
+    it('records a write into the FileReadCache', async () => {
+      // Symmetric with EditTool's "records a write" test: ensures
+      // ReadFile's post-write guard observes lastWriteAt and skips
+      // the file_unchanged placeholder for files this PR's tools just
+      // mutated.
+      fileReadCache.clear();
+      const filePath = path.join(rootDir, 'cache-marker.txt');
+      const params = { file_path: filePath, content: 'fresh bytes' };
+
+      const invocation = tool.build(params);
+      const result = await invocation.execute(abortSignal);
+      expect(result.error).toBeUndefined();
+
+      const stats = fs.statSync(filePath);
+      const status = fileReadCache.check(stats);
+      expect(status.state).toBe('fresh');
+      if (status.state === 'fresh') {
+        expect(status.entry.lastWriteAt).toBeDefined();
+      }
+
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
