@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { setMaxListeners } from 'node:events';
 import type OpenAI from 'openai';
 import {
   type GenerateContentParameters,
@@ -19,6 +20,23 @@ import { createDebugLogger } from '../../utils/debugLogger.js';
 
 const debugLogger = createDebugLogger('OPENAI_PIPELINE');
 const tracer = trace.getTracer('proto.openai-pipeline', '1.0.0');
+
+/**
+ * The OpenAI SDK adds an abort listener for every `chat.completions.create`
+ * call, and several layers (retryWithBackoff, LoggingContentGenerator, the
+ * SDK's internal stream/fetch wrappers) each register their own listeners
+ * on the same per-request AbortSignal. With 5 retries the count comfortably
+ * exceeds Node's default 10-listener leak warning — and on top of that,
+ * concurrent code paths (e.g., recap + followup speculation) can share or
+ * compose signals, pushing it past any small cap.
+ *
+ * These signals are per-request and short-lived (GC'd when the request
+ * settles), so accumulation here is structural, not a memory leak. Disable
+ * the warning entirely for them. Idempotent.
+ */
+function raiseAbortListenerCap(signal: AbortSignal | undefined): void {
+  if (signal) setMaxListeners(0, signal);
+}
 
 /**
  * Error thrown when the API returns an error embedded as stream content
@@ -67,6 +85,7 @@ export class ContentGenerationPipeline {
     const effectiveModel = this.resolveEffectiveModel(request);
     this.converter.setModel(effectiveModel);
     this.converter.setModalities(this.contentGeneratorConfig.modalities ?? {});
+    raiseAbortListenerCap(request.config?.abortSignal);
     return this.executeWithErrorHandling(
       request,
       userPromptId,
@@ -95,6 +114,7 @@ export class ContentGenerationPipeline {
     const effectiveModel = this.resolveEffectiveModel(request);
     this.converter.setModel(effectiveModel);
     this.converter.setModalities(this.contentGeneratorConfig.modalities ?? {});
+    raiseAbortListenerCap(request.config?.abortSignal);
     return this.executeWithErrorHandling(
       request,
       userPromptId,
