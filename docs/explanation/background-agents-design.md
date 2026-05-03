@@ -9,6 +9,14 @@ infrastructure already exists. It is to give us a single pass at the
 **shape** of the work so we can sequence the next set of ports without
 re-reading the upstream diff every time.
 
+> **2026-05-03 update.** The roadmap below was written before we
+> committed to integrating proto into protoLabs Studio (workstacean) as
+> the primary delivery vehicle. Sections 4–6 have been reframed: Phase B
+> (TUI surface) is mostly out, Phase C (cross-session resume) is dropped,
+> and a new active track (SDK surface work driven by workstacean#516)
+> takes priority over Phase A. See [§4 Reframed roadmap](#4-reframed-roadmap)
+> for the current plan.
+
 ---
 
 ## 1. What "background agent" means here
@@ -104,61 +112,81 @@ The upstream PRs we have not yet ported, ordered by approximate dependency:
 
 ---
 
-## 4. Proposed phasing
+## 4. Reframed roadmap
 
-The dependency chain suggests three phases. Each phase is a single PR
-unless noted; each is sized to stay under the "path of least resistance"
-bar we have been holding for the rest of this fork's port work.
+The original three-phase plan assumed proto was the primary product
+delivered to a user in a terminal. With workstacean now the orchestrator
+of record, that assumption no longer holds. Each phase below is reframed
+through the new lens.
 
-### Phase A — model can talk to its running agents
+### Track 1 (active): SDK surface for workstacean
 
-Land the upstream agent-control surface so the model has a real grammar
-for managing background work.
+Tracked at protoCLI#223; driven by workstacean#516. As workstacean lands
+proto as a fleet agent, concrete asks land here as small PRs. Likely
+surface area:
 
-- **Port #3471** (model-facing agent control): `send_message` + per-agent
-  transcript. Reconcile with our existing `task-stop.ts`.
-- **Port #3687** (unify shells into task_stop): collapse `bg_stop` into
-  `task_stop` if it doesn't break our tool registry expectations. If it
-  does, keep both and document the split.
-- **Port #3684** (event monitor tool with throttled streaming): adds the
-  primary mechanism the parent uses to actually consume subagent output.
+- Progress event shape — workstacean's `ProtoSdkExecutor.onProgress`
+  callback wants distinct events for tool-call lifecycle (started,
+  output, completed) so the dashboard can render activity per agent.
+- Token usage rollup — the new `ui.modelPricing` setting (#219) needs
+  per-call totals exposed so workstacean can compute cost per dispatch.
+- Cancellation cleanliness — `AbortError` exists, but verify mid-run
+  cancel actually drains in-flight model requests, background shells,
+  and partial file writes.
+- Working directory — `query()` should accept and respect a `cwd` so
+  workstacean can dispatch into a protoMaker-owned worktree without
+  `process.chdir()` side effects.
+- Per-call model override — confirm `RunConfig.model` is honored when
+  set per-skill.
+- Error surface — typed error variants so workstacean can route timeout
+  vs. tool-error vs. auth-failure to the right `skill.result` channel.
 
-Risk: our `BackgroundShellRegistry` and upstream's task-pool shape may
-have diverged. Expect a non-trivial reconciliation in the registry's
-public methods.
+This is **active work**. Phase A and beyond are deferred behind it.
 
-Effort estimate: **medium-large**. Two cherry-picks plus a glue PR.
+### Track 2 (deferred): Phase A — model-facing agent control
 
-### Phase B — user can see what's happening
+Still valuable: `send_message`, `event_monitor`, and an integrated
+`task_stop` are tools the **model** uses to manage subagents it spawned.
+That value holds whether proto is invoked from terminal or via SDK.
 
-Once the model has a control surface, expose it.
+Two PRs, in order:
 
-- **Port #3488** (UI: pill, combined dialog, detail view). This will
-  conflict heavily with our existing StatusBar + AppContainer because we
-  have our own pill there for `lastFinished`. Resolve by keeping our hook
-  shape and only adopting upstream's components where they don't depend
-  on un-ported state.
-- **Port #3642** (`/tasks` command). Decision: replace `/bg list` with
-  `/tasks`, or keep both and have `/bg` alias to `/tasks`?
+- **PR-1: housekeeping** (zero new behavior, pure reorganization)
+  - Reconcile `task-stop.ts`. Our version (`config.getTaskStore()`,
+    cascading task cancellation tied to Arena/Team) and upstream's
+    (`config.getBackgroundTaskRegistry()`, single-task stop) collide on
+    filename only. Since Arena/Team are unused in our workflow, drop
+    ours and adopt upstream's.
+  - Adopt upstream's `tools/agent/` nested directory layout. Our flat
+    layout will keep stepping on every cherry-pick from this area.
+- **PR-2: agent control tools**
+  - Port #3471 (`send_message` + per-agent transcript).
+  - Port #3684 (`event_monitor` with throttled streaming).
+  - Skip #3687 — covered by PR-1.
 
-Risk: TUI churn. Snapshot tests will break. Voice / recap state has to
-keep working in the same component tree.
+Effort estimate: **medium**. With the housekeeping done first, the
+content port should drop to ~10–14 hours rather than the 17–26 the
+all-at-once probe suggested.
 
-Effort estimate: **medium**. One UI PR plus the slash-command PR.
+### Track 3 (dropped): Phase B TUI surface
 
-### Phase C — agents survive session boundaries
+Skip the bulk of upstream's TUI work (#3488 — pill, combined dialog,
+detail view). It conflicts heavily with our crowded `StatusBar` /
+`AppContainer` / `DialogManager`, and the audience for that polish
+shrinks as workstacean owns the dashboard.
 
-The headline upstream feature.
+Keep open the option of porting **just `/tasks`** from #3642 as a
+one-day spike if a terminal user explicitly asks. Otherwise, leave it.
 
-- **Port #3739** (resume / continuation): persist enough agent state on
-  disk so a freshly-started session can re-attach to running agents. Our
-  `background-store.ts` already persists _that_ an agent ran; this PR
-  extends it to the agent's transcript and pending tool calls.
+### Track 4 (dropped): Phase C cross-session resume
 
-Risk: this touches `chatRecordingService` and `sessionService`. Both
-have local divergence. Expect a careful merge.
+Drop #3739 entirely. The premise — "user closes terminal mid-run" —
+doesn't apply when workstacean is the orchestrator. SDK invocations
+are short-lived per skill request. Workstacean replays from its own
+bus event log if it restarts; proto's `background-store.json` doesn't
+need to grow into a transcript checkpoint.
 
-Effort estimate: **large**. Likely the biggest single port left.
+Reopen only if a real terminal user requests this.
 
 ---
 
@@ -166,51 +194,47 @@ Effort estimate: **large**. Likely the biggest single port left.
 
 ### Settings
 
-Upstream's bg-agent settings have grown into their own block. We already
-have an `agents.*` section (Arena/Team/Swarm) plus a flat `backgroundModel`.
-Before Phase A lands, decide whether to nest under `agents.background.*`
-or keep flat. **Recommendation:** nest, and migrate `backgroundModel` to
-`agents.background.model` with a back-compat read.
+Upstream's bg-agent settings have grown into their own block. We have an
+`agents.*` section (Arena/Team/Swarm — unused in current workflow) plus
+a flat `backgroundModel`. Before Track 2 PR-2 lands, decide whether to
+nest under `agents.background.*` or keep flat. **Recommendation:** nest
+with a back-compat read of `backgroundModel`.
 
-### Naming
+### Stop-tool naming
 
-We have **two** stop tools: `bg_stop` (shell) and `task_stop` (agent).
-Upstream is collapsing these. Pick a direction now so Phase A doesn't
-have to revisit it. **Recommendation:** keep the split until Phase A's
-`#3687` port forces the unification — premature consolidation rarely
-pays off in this codebase.
+Track 2 PR-1 resolves the `task-stop.ts` collision by dropping ours and
+adopting upstream's. After that, `bg_stop` (shell-level) and `task_stop`
+(task-level) coexist with distinct purposes — no further consolidation
+needed unless upstream forces it.
 
 ### Persistence layout
 
-`~/.proto/agents/background.json` is shared by anything that wants to
-remember an agent existed. If Phase C extends it to full transcripts, we
-should move from a single JSON to a directory-of-files layout to avoid
-rewriting hundreds of KB on every checkpoint. **Recommendation:** keep
-the simple JSON until Phase C makes it actually painful.
+`~/.proto/agents/background.json` stays as-is. Track 4 (cross-session
+resume) is dropped, so the single-JSON shape is fine indefinitely.
 
 ### LiteLLM / gateway
 
-All agent control surfaces assume the standard generate-content path.
-Our gateway layer has its own quirks (thinking-tag stripping, max_tokens
-ceilings). Validate Phase A against `protolabs/fast` and `protolabs/smart`
-before merging. **Recommendation:** add a smoke test that runs a
-background subagent with the gateway in CI.
+Track 1 SDK surface work all flows through the gateway. Each PR that
+touches the streaming path needs to be validated against `protolabs/fast`
+and `protolabs/smart` before merging. **Recommendation:** add a gateway
+smoke test once the Track 1 progress-event shape stabilizes.
 
 ---
 
 ## 6. Open questions for the team
 
-1. **Do we need `/tasks` as a name, or is `/bg` good enough?** Aliasing
-   is cheap; choosing the wrong primary name and renaming later is not.
-2. **Should the per-agent detail view be a dialog or a separate route?**
-   Upstream picks dialog. Our DialogManager already has 8+ dialogs and
-   is starting to feel crowded.
-3. **Cross-session resume scope:** do we attempt to resume _any_
-   interrupted agent, or only those flagged as resumable? The latter is
-   safer; the former is what the headline feature looks like.
-4. **SDK surface:** upstream's task-event SDK exposes a public API for
-   third-party tools to subscribe. We have no SDK consumers today. Worth
-   the maintenance cost to port the surface, or strip it on the way in?
+1. **Do terminal users matter enough to keep `/tasks` (#3642) on the
+   board?** The rest of upstream's TUI work is dropped; this slash
+   command is a one-day spike if it does.
+2. **At what point does Track 1 stabilize enough to start Track 2?**
+   Heuristic: after 3+ workstacean-driven SDK PRs land without breaking
+   the in-process executor, the surface is stable enough to layer
+   agent-control tools on top.
+3. **Track 2 PR-1 risk:** dropping our `task-stop.ts` removes the
+   cascading-cancellation behavior used by Arena/Team. We have confirmed
+   nobody is using those constructs today, but if that changes, the
+   upstream version is a regression. Worth a one-line audit of any
+   `getTaskStore()` callers before the rename PR ships.
 
 ---
 
@@ -254,4 +278,4 @@ packages/cli/src/ui/
 └── AppContainer.tsx               # lastFinished hit-limit warnings
 ```
 
-Last reviewed: 2026-05-02 (before Phase A planning).
+Last reviewed: 2026-05-03 (post-reframe; Track 1 active, Track 2 deferred, Tracks 3 + 4 dropped).
