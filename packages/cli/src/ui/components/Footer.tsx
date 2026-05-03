@@ -11,6 +11,7 @@ import { ContextUsageDisplay } from './ContextUsageDisplay.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { AutoAcceptIndicator } from './AutoAcceptIndicator.js';
 import { ShellModeIndicator } from './ShellModeIndicator.js';
+import { MCPHealthPill } from './mcp/MCPHealthPill.js';
 import { isNarrowWidth } from '../utils/isNarrowWidth.js';
 
 import { useUIState } from '../contexts/UIStateContext.js';
@@ -124,6 +125,7 @@ export const Footer: React.FC = () => {
         alignItems={isNarrow ? 'flex-start' : 'center'}
       >
         {leftContent}
+        <MCPHealthPill />
       </Box>
 
       {/* Right Section: Sandbox Info, Debug Mode, Context Usage, and Console Summary */}
