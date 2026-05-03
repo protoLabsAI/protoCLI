@@ -275,6 +275,26 @@ const SETTINGS_SCHEMA = {
           'Enable automatic update checks and installations on startup.',
         showInDialog: true,
       },
+      showSessionRecap: {
+        type: 'boolean',
+        label: 'Auto-recap on return',
+        category: 'General',
+        requiresRestart: false,
+        default: false,
+        description:
+          'Automatically generate a one-line session recap when the terminal regains focus after a sustained idle period.',
+        showInDialog: true,
+      },
+      sessionRecapAwayThresholdMinutes: {
+        type: 'number',
+        label: 'Auto-recap idle threshold (minutes)',
+        category: 'General',
+        requiresRestart: false,
+        default: 5,
+        description:
+          'How many minutes the terminal must be blurred before an auto-recap fires on the next focus-in. Falsy or non-positive values fall back to the 5-minute default.',
+        showInDialog: true,
+      },
       gitCoAuthor: {
         type: 'boolean',
         label: 'Attribution: commit',

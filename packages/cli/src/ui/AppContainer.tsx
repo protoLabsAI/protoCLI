@@ -75,6 +75,7 @@ import { isBtwCommand } from './utils/commandUtils.js';
 import { type LoadedSettings, SettingScope } from '../config/settings.js';
 import { type InitializationResult } from '../core/initializer.js';
 import { useFocus } from './hooks/useFocus.js';
+import { useAwaySummary } from './hooks/useAwaySummary.js';
 import { useBracketedPaste } from './hooks/useBracketedPaste.js';
 import { useKeyboardHandling } from './hooks/useKeyboardHandling.js';
 import { useLoadingIndicator } from './hooks/useLoadingIndicator.js';
@@ -1040,6 +1041,20 @@ export const AppContainer = (props: AppContainerProps) => {
 
   const isFocused = useFocus();
   useBracketedPaste();
+
+  // Auto-fire `/recap`-style summary when the terminal regains focus after
+  // a sustained blur. Off by default; users opt in via
+  // `general.showSessionRecap`.
+  useAwaySummary({
+    enabled: settings.merged.general?.showSessionRecap ?? false,
+    config,
+    isFocused,
+    isIdle: streamingState === StreamingState.Idle,
+    addItem: historyManager.addItem,
+    history: historyManager.history,
+    awayThresholdMinutes:
+      settings.merged.general?.sessionRecapAwayThresholdMinutes,
+  });
 
   // Context file names computation
   const contextFileNames = useMemo(() => {

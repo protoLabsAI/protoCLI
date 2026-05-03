@@ -120,6 +120,7 @@ export { runEvolvePass } from './services/evolveService.js';
 export * from './services/fileDiscoveryService.js';
 export * from './services/fileReadCache.js';
 export * from './services/fileSystemService.js';
+export * from './services/sessionRecap.js';
 export * from './services/gitService.js';
 export * from './services/gitWorktreeService.js';
 export * from './services/memory-consolidation.js';
