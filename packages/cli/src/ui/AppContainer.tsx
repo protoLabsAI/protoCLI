@@ -59,6 +59,7 @@ import { useModelCommand } from './hooks/useModelCommand.js';
 import { useArenaCommand } from './hooks/useArenaCommand.js';
 import { useApprovalModeCommand } from './hooks/useApprovalModeCommand.js';
 import { useResumeCommand } from './hooks/useResumeCommand.js';
+import { useDeleteCommand } from './hooks/useDeleteCommand.js';
 import { useSlashCommandProcessor } from './hooks/slashCommandProcessor.js';
 import { useVimMode } from './contexts/VimModeContext.js';
 import { useTerminalSize } from './hooks/useTerminalSize.js';
@@ -283,8 +284,16 @@ export const AppContainer = (props: AppContainerProps) => {
   const mainControlsRef = useRef<DOMElement>(null);
   const staticExtraHeight = 3;
 
+  // Session name state (set via /rename, restored on /resume)
+  const [sessionName, setSessionName] = useState<string | null>(null);
+
   // Initialize config (runs once on mount)
-  useInitializationEffects(config, historyManager, setConfigInitialized);
+  useInitializationEffects(
+    config,
+    historyManager,
+    setConfigInitialized,
+    setSessionName,
+  );
 
   useEffect(
     () => setUpdateHandler(historyManager.addItem, setUpdateInfo),
@@ -502,6 +511,7 @@ export const AppContainer = (props: AppContainerProps) => {
 
   const {
     isResumeDialogOpen,
+    resumeMatchedSessions,
     openResumeDialog,
     closeResumeDialog,
     handleResume,
@@ -509,7 +519,18 @@ export const AppContainer = (props: AppContainerProps) => {
     config,
     historyManager,
     startNewSession,
+    setSessionName,
     remount: refreshStatic,
+  });
+
+  const {
+    isDeleteDialogOpen,
+    openDeleteDialog,
+    closeDeleteDialog,
+    handleDelete,
+  } = useDeleteCommand({
+    config,
+    addItem: historyManager.addItem,
   });
 
   const { toggleVimEnabled } = useVimMode();
@@ -565,6 +586,8 @@ export const AppContainer = (props: AppContainerProps) => {
       openHooksDialog,
       openResumeDialog,
       openRewindDialog,
+      handleResume,
+      openDeleteDialog,
     }),
     [
       openAuthDialog,
@@ -586,6 +609,8 @@ export const AppContainer = (props: AppContainerProps) => {
       openHooksDialog,
       openResumeDialog,
       openRewindDialog,
+      handleResume,
+      openDeleteDialog,
     ],
   );
 
@@ -615,6 +640,7 @@ export const AppContainer = (props: AppContainerProps) => {
     extensionsUpdateStateInternal,
     isConfigInitialized,
     logger,
+    setSessionName,
   );
 
   // onDebugMessage should log to debug logfile, not update footer debugMessage
@@ -1379,6 +1405,7 @@ export const AppContainer = (props: AppContainerProps) => {
     isApprovalModeDialogOpen ||
     isResumeDialogOpen ||
     isRewindDialogOpen ||
+    isDeleteDialogOpen ||
     isExtensionsManagerDialogOpen;
   dialogsVisibleRef.current = dialogsVisible;
 
@@ -1425,6 +1452,8 @@ export const AppContainer = (props: AppContainerProps) => {
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
       isRewindDialogOpen,
+      resumeMatchedSessions,
+      isDeleteDialogOpen,
       slashCommands,
       pendingSlashCommandHistoryItems,
       commandContext,
@@ -1510,6 +1539,9 @@ export const AppContainer = (props: AppContainerProps) => {
       voiceBackendAvailable: voice.backendAvailable,
       voiceState: voice.voiceState,
       voiceError: voice.error,
+      // Session name
+      sessionName,
+      setSessionName,
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
@@ -1535,6 +1567,8 @@ export const AppContainer = (props: AppContainerProps) => {
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
       isRewindDialogOpen,
+      resumeMatchedSessions,
+      isDeleteDialogOpen,
       slashCommands,
       pendingSlashCommandHistoryItems,
       commandContext,
@@ -1621,6 +1655,9 @@ export const AppContainer = (props: AppContainerProps) => {
       voice.backendAvailable,
       voice.voiceState,
       voice.error,
+      // Session name
+      sessionName,
+      setSessionName,
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
@@ -1692,6 +1729,10 @@ export const AppContainer = (props: AppContainerProps) => {
       // Rewind dialog
       openRewindDialog,
       closeRewindDialog,
+      // Delete session dialog
+      openDeleteDialog,
+      closeDeleteDialog,
+      handleDelete,
       // Feedback dialog
       openFeedbackDialog,
       closeFeedbackDialog,
@@ -1757,6 +1798,10 @@ export const AppContainer = (props: AppContainerProps) => {
       // Rewind dialog
       openRewindDialog,
       closeRewindDialog,
+      // Delete session dialog
+      openDeleteDialog,
+      closeDeleteDialog,
+      handleDelete,
       // Feedback dialog
       openFeedbackDialog,
       closeFeedbackDialog,

@@ -27,6 +27,11 @@ export interface SessionPickerProps {
   currentBranch?: string;
 
   /**
+   * Custom title for the picker header. Defaults to "Resume Session".
+   */
+  title?: string;
+
+  /**
    * Scroll mode. When true, keep selection centered (fullscreen-style).
    * Defaults to true so dialog + standalone behave identically.
    */
@@ -39,6 +44,11 @@ export interface SessionPickerProps {
    * for non-destructive selection flows.
    */
   enablePreview?: boolean;
+  /**
+   * Pre-filtered sessions to display instead of loading all sessions.
+   * When provided, skips initial load and disables pagination.
+   */
+  initialSessions?: SessionData[];
 }
 
 const PREFIX_CHARS = {
@@ -90,7 +100,7 @@ function SessionListItemView({
         ? prefixChars.scrollDown
         : prefixChars.normal;
 
-  const promptText = session.prompt || '(empty prompt)';
+  const promptText = session.customTitle || session.prompt || '(empty prompt)';
   const truncatedPrompt = truncateText(promptText, maxPromptWidth);
 
   return (
@@ -131,8 +141,10 @@ export function SessionPicker(props: SessionPickerProps) {
     onSelect,
     onCancel,
     currentBranch,
+    title,
     centerSelection = true,
     enablePreview = false,
+    initialSessions,
   } = props;
 
   const { columns: width, rows: height } = useTerminalSize();
@@ -156,6 +168,7 @@ export function SessionPicker(props: SessionPickerProps) {
     onCancel,
     maxVisibleItems,
     centerSelection,
+    initialSessions,
     isActive: true,
     enablePreview,
   });
@@ -201,7 +214,7 @@ export function SessionPicker(props: SessionPickerProps) {
         {/* Header row */}
         <Box paddingX={1}>
           <Text bold color={theme.text.primary}>
-            {t('Resume Session')}
+            {title ?? t('Resume Session')}
           </Text>
           {picker.filterByBranch && currentBranch && (
             <Text color={theme.text.secondary}>

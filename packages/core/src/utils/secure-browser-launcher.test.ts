@@ -209,8 +209,14 @@ describe('secure-browser-launcher', () => {
       setPlatform('darwin');
       mockExecFile.mockRejectedValueOnce(new Error('Command not found'));
 
-      await expect(openBrowserSecurely('https://example.com')).rejects.toThrow(
-        'Failed to open browser',
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await expect(
+        openBrowserSecurely('https://example.com'),
+      ).resolves.toBeUndefined();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to open browser automatically'),
       );
     });
 

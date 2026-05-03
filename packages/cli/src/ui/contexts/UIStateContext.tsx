@@ -24,6 +24,7 @@ import type {
   IdeContext,
   ApprovalMode,
   IdeInfo,
+  SessionListItem,
 } from '@qwen-code/qwen-code-core';
 import type { DOMElement } from 'ink';
 import type { SessionStatsState } from '../contexts/SessionContext.js';
@@ -58,6 +59,8 @@ export interface UIState {
   isApprovalModeDialogOpen: boolean;
   isResumeDialogOpen: boolean;
   isRewindDialogOpen: boolean;
+  resumeMatchedSessions: SessionListItem[] | undefined;
+  isDeleteDialogOpen: boolean;
   slashCommands: readonly SlashCommand[];
   pendingSlashCommandHistoryItems: HistoryItemWithoutId[];
   commandContext: CommandContext;
@@ -146,6 +149,9 @@ export interface UIState {
   voiceBackendAvailable: boolean;
   voiceState: 'idle' | 'recording' | 'transcribing' | 'error';
   voiceError: string | null;
+  // Session custom name (set via /rename)
+  sessionName: string | null;
+  setSessionName: (name: string | null) => void;
   // Prompt suggestion
   promptSuggestion: string | null;
   /** Dismiss prompt suggestion (clears state, aborts speculation) */

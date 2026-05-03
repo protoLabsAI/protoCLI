@@ -10,6 +10,7 @@ import {
   getGitBranch,
   SessionService,
   type Config,
+  type SessionListItem,
 } from '@qwen-code/qwen-code-core';
 import { KeypressProvider } from '../contexts/KeypressContext.js';
 import { ConfigContext } from '../contexts/ConfigContext.js';
@@ -48,6 +49,7 @@ interface StandalonePickerScreenProps {
   onSelect: (sessionId: string) => void;
   onCancel: () => void;
   currentBranch?: string;
+  initialSessions?: SessionListItem[];
 }
 
 function StandalonePickerScreen({
@@ -55,6 +57,7 @@ function StandalonePickerScreen({
   onSelect,
   onCancel,
   currentBranch,
+  initialSessions,
 }: StandalonePickerScreenProps): React.JSX.Element {
   const { exit } = useApp();
   const [isExiting, setIsExiting] = useState(false);
@@ -84,6 +87,7 @@ function StandalonePickerScreen({
           currentBranch={currentBranch}
           centerSelection={true}
           enablePreview
+          initialSessions={initialSessions}
         />
       </SettingsContext.Provider>
     </ConfigContext.Provider>
@@ -106,6 +110,7 @@ function clearScreen(): void {
  */
 export async function showResumeSessionPicker(
   cwd: string = process.cwd(),
+  initialSessions?: SessionListItem[],
 ): Promise<string | undefined> {
   const sessionService = new SessionService(cwd);
   const hasSession = await sessionService.loadLastSession();
@@ -143,6 +148,7 @@ export async function showResumeSessionPicker(
             selectedId = undefined;
           }}
           currentBranch={getGitBranch(cwd)}
+          initialSessions={initialSessions}
         />
       </KeypressProvider>,
       {
