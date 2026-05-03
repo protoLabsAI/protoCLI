@@ -41,6 +41,9 @@ vi.mock('../AnsiOutput.js', () => ({
       .join('\n');
     return <Text>MockAnsiOutput:{serialized}</Text>;
   },
+  ShellStatsBar: function MockShellStatsBar() {
+    return null;
+  },
 }));
 
 // Mock child components or utilities if they are complex or have side effects
