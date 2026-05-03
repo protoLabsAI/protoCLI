@@ -1,5 +1,16 @@
 export { query } from './query/createQuery.js';
-export { AbortError, isAbortError } from './types/errors.js';
+export {
+  AbortError,
+  CliInitError,
+  CliNotFoundError,
+  InputClosedError,
+  TransportError,
+  isAbortError,
+  isCliInitError,
+  isCliNotFoundError,
+  isInputClosedError,
+  isTransportError,
+} from './types/errors.js';
 export { Query } from './query/Query.js';
 export { SdkLogger } from './utils/logger.js';
 
