@@ -541,12 +541,25 @@ export const useGeminiStream = (
       markToolsAsSubmittedRef.current(currentCallIds);
     }
 
-    // Schedule a grace-window force-clear for any tool that ignored the
-    // abort signal. Without this, a runaway subagent (or any tool that
-    // doesn't honor signal.aborted) leaves the toolCall in a non-terminal
-    // state, which keeps streamingState=Responding and silently drops
-    // every subsequent user submission via submitQuery's guard at line
-    // 1305. Three seconds is generous — well-behaved tools clean up in ms.
+    // Immediately force-cancel any tools still in non-terminal states
+    // (executing, scheduled, validating). Without this, markToolsAsSubmitted
+    // only flips responseSubmittedToGemini but leaves status unchanged — and
+    // streamingState derivation checks for executing/scheduled/validating
+    // BEFORE checking responseSubmittedToGemini. This means the UI stays
+    // stuck in Responding until the grace-window timeout below fires.
+    const immediatelyCleared = forceCancelStaleToolCallsRef.current();
+    if (immediatelyCleared > 0) {
+      // Silent — expected during normal cancellation. Only log if tools
+      // were still stuck after the grace window (below).
+    }
+
+    // Schedule a grace-window re-check for any tool that came back to life
+    // after the immediate force-cancel (e.g. a tool that re-schedules itself).
+    // Without this, a runaway subagent (or any tool that doesn't honor
+    // signal.aborted) can re-enter a non-terminal state, which keeps
+    // streamingState=Responding and silently drops every subsequent user
+    // submission via submitQuery's guard. Three seconds is generous —
+    // well-behaved tools clean up in ms.
     setTimeout(() => {
       const cleared = forceCancelStaleToolCallsRef.current();
       if (cleared > 0) {
