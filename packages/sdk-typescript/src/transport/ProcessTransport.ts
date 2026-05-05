@@ -467,11 +467,16 @@ export class ProcessTransport implements Transport {
         logger.debug(`Write successful (${message.length} bytes)`);
       }
     } catch (error) {
-      // Check if this is a stream-closed error (EPIPE, ERR_STREAM_WRITE_AFTER_END, etc.)
+      // Check for stream-closed errors via error.code (reliable) with
+      // message-text fallback for edge cases where code is missing.
       const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorCode =
+        error instanceof Error && 'code' in error
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
       const isStreamClosedError =
-        errorMsg.includes('EPIPE') ||
-        errorMsg.includes('ERR_STREAM_WRITE_AFTER_END') ||
+        errorCode === 'EPIPE' ||
+        errorCode === 'ERR_STREAM_WRITE_AFTER_END' ||
         errorMsg.includes('write after end');
 
       if (isStreamClosedError) {
