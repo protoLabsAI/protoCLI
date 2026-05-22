@@ -85,12 +85,12 @@ jobs:
         # No NODE_AUTH_TOKEN — npm reads the GitHub OIDC token directly
         # via the workflow's id-token: write permission and exchanges it
         # for a one-shot publish token against the registry.
-        run: npm publish --access public
+        run: npm publish --access public --provenance
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        run: npm publish --access public --dry-run
+        run: npm publish --access public --provenance --dry-run
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
