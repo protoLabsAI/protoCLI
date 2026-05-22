@@ -12,6 +12,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./anthropic-compat": {
+      "types": "./dist/anthropic-compat.d.ts",
+      "import": "./dist/anthropic-compat.mjs",
+      "require": "./dist/anthropic-compat.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [
