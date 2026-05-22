@@ -26,7 +26,15 @@ jobs:
     if: github.repository == 'protoLabsAI/protoCLI'
     timeout-minutes: 15
     permissions:
+      # contents: write — creating the GitHub release at the end of the job.
       contents: write
+      # id-token: write — npm OIDC trusted publishing. The npm CLI (≥11.5.1)
+      # mints a short-lived registry token from the GitHub Actions OIDC
+      # provider via the `id-token` permission, replacing the long-lived
+      # NPM_PUBLISH_TOKEN secret. Configured under
+      # https://www.npmjs.com/package/@protolabsai/sdk/access "Trusted
+      # Publisher" pointing at this workflow file + repo.
+      id-token: write
 
     steps:
       - name: Checkout
@@ -57,12 +65,20 @@ jobs:
         working-directory: packages/sdk-typescript
         run: npm run build && npm run bundle:cli
 
-      - name: Publish to npm
+      # npm CLI ≥ 11.5.1 is required for OIDC trusted publishing. The
+      # bundled npm shipping with Node.js 22 is older, so install a fresh
+      # one for this step.
+      - name: Pin npm to OIDC-capable version
+        if: ${{ !inputs.dry_run }}
+        run: npm install -g npm@latest
+
+      - name: Publish to npm (via OIDC trusted publisher)
         if: ${{ !inputs.dry_run }}
         working-directory: packages/sdk-typescript
+        # No NODE_AUTH_TOKEN — npm reads the GitHub OIDC token directly
+        # via the workflow's id-token: write permission and exchanges it
+        # for a one-shot publish token against the registry.
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
