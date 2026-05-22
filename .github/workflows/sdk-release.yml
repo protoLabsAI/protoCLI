@@ -28,13 +28,6 @@ jobs:
     permissions:
       # contents: write — creating the GitHub release at the end of the job.
       contents: write
-      # id-token: write — npm OIDC trusted publishing. The npm CLI (≥11.5.1)
-      # mints a short-lived registry token from the GitHub Actions OIDC
-      # provider via the `id-token` permission, replacing the long-lived
-      # NPM_PUBLISH_TOKEN secret. Configured under
-      # https://www.npmjs.com/package/@protolabsai/sdk/access "Trusted
-      # Publisher" pointing at this workflow file + repo.
-      id-token: write
 
     steps:
       - name: Checkout
@@ -48,14 +41,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: npm
-          # No `registry-url:` on purpose. Setting it makes setup-node
-          # write `.npmrc` and export `NODE_AUTH_TOKEN=XXXXX-...` as a
-          # literal placeholder env var (it expects a per-step env block
-          # to substitute the real token). With OIDC trusted publishing
-          # there is no token, so leaving registry-url set causes npm to
-          # auth with the placeholder string and get a 404 from the
-          # registry before OIDC can take over. npm defaults to
-          # https://registry.npmjs.org without this anyway.
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: npm ci
@@ -72,35 +58,27 @@ jobs:
         working-directory: packages/sdk-typescript
         run: npm run build && npm run bundle:cli
 
-      # Publish via npm CLI ≥ 11.5.1 for OIDC Trusted Publishing. The bundled
-      # npm shipping with the project's pinned Node.js is older, and
-      # `npm install -g npm@latest` in a separate step doesn't always end up
-      # on the PATH for subsequent steps. Combine install + publish in one
-      # shell so the version we install is the version that publishes, and
-      # print npm/node versions for trace.
-      - name: Publish to npm (OIDC trusted publisher)
+      # Static-token publish. The package's "publishing access" is configured
+      # to allow granular access tokens with bypass-2fa; the org-level
+      # `NPM_PUBLISH_TOKEN` is a granular access token scoped to
+      # `@protolabsai/sdk` read+write.
+      #
+      # Previous attempts at OIDC trusted publishing (#245, #247, #249, #251)
+      # failed silently — npm CLI 11.15.0 did not engage OIDC despite
+      # `id-token: write`, `--provenance`, and a trusted publisher configured
+      # on the npm side. Reverting to the token path until OIDC can be
+      # debugged separately.
+      - name: Publish to npm
         if: ${{ !inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        run: |
-          set -euxo pipefail
-          npm install -g npm@latest
-          hash -r
-          echo "node: $(node --version)"
-          echo "npm:  $(npm --version)"
-          # No NODE_AUTH_TOKEN — `--provenance` + the workflow's
-          # `id-token: write` permission together drive the OIDC trusted
-          # publisher flow. npm mints a short-lived registry token from
-          # GitHub's OIDC provider, no static secret required.
-          npm publish --access public --provenance
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        run: |
-          set -euxo pipefail
-          npm install -g npm@latest
-          hash -r
-          npm publish --access public --provenance --dry-run
+        run: npm publish --access public --dry-run
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
