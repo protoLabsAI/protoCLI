@@ -48,7 +48,14 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: npm
-          registry-url: https://registry.npmjs.org
+          # No `registry-url:` on purpose. Setting it makes setup-node
+          # write `.npmrc` and export `NODE_AUTH_TOKEN=XXXXX-...` as a
+          # literal placeholder env var (it expects a per-step env block
+          # to substitute the real token). With OIDC trusted publishing
+          # there is no token, so leaving registry-url set causes npm to
+          # auth with the placeholder string and get a 404 from the
+          # registry before OIDC can take over. npm defaults to
+          # https://registry.npmjs.org without this anyway.
 
       - name: Install dependencies
         run: npm ci
