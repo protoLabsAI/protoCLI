@@ -72,25 +72,35 @@ jobs:
         working-directory: packages/sdk-typescript
         run: npm run build && npm run bundle:cli
 
-      # npm CLI ≥ 11.5.1 is required for OIDC trusted publishing. The
-      # bundled npm shipping with Node.js 22 is older, so install a fresh
-      # one for this step.
-      - name: Pin npm to OIDC-capable version
-        if: ${{ !inputs.dry_run }}
-        run: npm install -g npm@latest
-
-      - name: Publish to npm (via OIDC trusted publisher)
+      # Publish via npm CLI ≥ 11.5.1 for OIDC Trusted Publishing. The bundled
+      # npm shipping with the project's pinned Node.js is older, and
+      # `npm install -g npm@latest` in a separate step doesn't always end up
+      # on the PATH for subsequent steps. Combine install + publish in one
+      # shell so the version we install is the version that publishes, and
+      # print npm/node versions for trace.
+      - name: Publish to npm (OIDC trusted publisher)
         if: ${{ !inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        # No NODE_AUTH_TOKEN — npm reads the GitHub OIDC token directly
-        # via the workflow's id-token: write permission and exchanges it
-        # for a one-shot publish token against the registry.
-        run: npm publish --access public --provenance
+        run: |
+          set -euxo pipefail
+          npm install -g npm@latest
+          hash -r
+          echo "node: $(node --version)"
+          echo "npm:  $(npm --version)"
+          # No NODE_AUTH_TOKEN — `--provenance` + the workflow's
+          # `id-token: write` permission together drive the OIDC trusted
+          # publisher flow. npm mints a short-lived registry token from
+          # GitHub's OIDC provider, no static secret required.
+          npm publish --access public --provenance
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        run: npm publish --access public --provenance --dry-run
+        run: |
+          set -euxo pipefail
+          npm install -g npm@latest
+          hash -r
+          npm publish --access public --provenance --dry-run
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
