@@ -15,7 +15,7 @@ At-a-glance overview vs. upstream Qwen Code. For the full architectural breakdow
 | --------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Default model         | Qwen3-Coder               | Any (LiteLLM / OpenAI-compat / Anthropic / Gemini)                                                                                                       |
 | Agent harness         | —                         | Sprint contracts + scope lock, behavior-verify gate, multi-sample selector, doom-loop reminders, session memory + evolve, checkpoint/rewind, speculation |
-| Bundled skills        | 0 (use external)          | 22 (sprint-contract, verification-before-completion, systematic-debugging, …)                                                                            |
+| Bundled skills        | 0 (use external)          | 4 utility skills (browser-automation, review, qc-helper, harness-reference); workflow skills are user-pluggable, not baked in                            |
 | Subagent execution    | Sequential                | Concurrent batched — Agent calls run in parallel; tool ordering preserved                                                                                |
 | Tool-call streaming   | Per-converter parser      | Per-stream parser context (no cross-stream corruption); malformed JSON → UI-hidden recovery note                                                         |
 | Reasoning models      | Basic `reasoning_content` | Inline `<think>`-tag extraction (Minimax/QwQ); reasoning-only `content: ""` fix; preserved on session resume                                             |
@@ -324,24 +324,14 @@ proto includes a harness system that enforces quality gates, limits scope, and r
 
 ### Sprint Contract (Scope Lock)
 
-Prevents agents from modifying files outside an agreed scope. Before coding begins, negotiate a contract that defines exactly which files will be created or modified. The scope lock is armed — any write outside scope is rejected with a recovery message.
-
-**Workflow:**
-
-```bash
-proto
-/sprint-contract
-> Task: Refactor auth module
-> Files: src/auth.ts, src/utils.ts
-> Confirm
-```
+Prevents agents from modifying files outside an agreed scope. The agent (or a user-supplied skill) constructs a contract that defines exactly which files will be created or modified, and the scope lock arms automatically — any write outside scope is rejected with a recovery message.
 
 **Behavior:**
 
-- Write to `src/auth.ts` → ALLOWED
-- Write to `tests/foo.test.ts` → BLOCKED with scope violation message
+- Write to `src/auth.ts` (in scope) → ALLOWED
+- Write to `tests/foo.test.ts` (out of scope) → BLOCKED with scope violation message
 
-Contracts persist at `.proto/sprint-contract.json` and auto-restore on session resume.
+Contracts persist at `.proto/sprint-contract.json` and auto-restore on session resume. The opinionated `sprint-contract` _skill_ that used to walk agents through negotiating one has been removed; the underlying scope-lock primitive remains and can be driven by your own skill or directly via `SprintContractService`.
 
 ### Behavior Verification Gate
 
@@ -385,32 +375,14 @@ Results are cached at `.proto/repo-map-cache.json` and auto-invalidate on file c
 
 ## Skills
 
-proto ships with 22 bundled skills for agentic workflows:
+proto ships with a small set of bundled utility skills. Workflow skills (TDD, plan authoring, sprint contracts, code-review choreography, etc.) are intentionally **not** baked in — drop them into `~/.proto/skills/` or a project's `.proto/skills/` when you want them, so build-outs aren't forced into one opinionated process.
 
-- **adversarial-verification** — Adversarial review and stress-testing of agent output
-- **brainstorming** — Structured ideation
-- **browser-automation** — Web browser automation
-- **coding-agent-standards** — Enforced coding conventions for agent-written code
-- **dispatching-parallel-agents** — Fan-out/fan-in subagent patterns
-- **executing-plans** — Step-by-step plan execution
-- **finishing-a-development-branch** — Pre-merge cleanup
-- **harness-reference** — Sprint contracts, verification gates, and retry logic reference
-- **loop** — Iterative refinement loops
-- **qc-helper** — Quality control checks
-- **receiving-code-review** — Process review feedback
-- **requesting-code-review** — Generate review requests
-- **review** — Code review workflow
-- **sprint-contract** — Scope lock and contract negotiation
-- **subagent-driven-development** — Delegate to specialized subagents
-- **systematic-debugging** — Structured debug methodology
-- **test-driven-development** — TDD workflow
-- **using-git-worktrees** — Isolated branch work
-- **using-superpowers** — Advanced agent capabilities
-- **verification-before-completion** — Pre-commit verification
-- **writing-plans** — Plan authoring
-- **writing-skills** — Skill authoring
+- **browser-automation** — Web browser automation (navigate, click, fill forms, screenshot, extract content)
+- **review** — Generic code-review workflow
+- **qc-helper** — Q&A and config-edit help for proto itself
+- **harness-reference** — Reference for proto's agent-harness internals (sprint contracts, verification gates, retry logic, etc.)
 
-Use `/skills` to list available skills in a session.
+Use `/skills` to list every skill available in a session (bundled + user + project).
 
 ### Browser Automation
 

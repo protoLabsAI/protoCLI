@@ -66,7 +66,7 @@ Core library containing:
 - **Memory**: File-per-memory system with YAML frontmatter, 4-type taxonomy (user/feedback/project/reference), auto-extraction agent, MEMORY.md index
 - **Subagents**: Task delegation with `disallowedTools`, `permissionMode`, background execution
 - **Agent Teams**: Coordinator agent, TeamMailbox, shared task claiming, team config + lifecycle
-- **Skills**: 18 bundled skills for agentic workflows (incl. adversarial-verification, coding-agent-standards)
+- **Skills**: 4 bundled utility skills (browser-automation, review, qc-helper, harness-reference); workflow skills are user-pluggable, not baked in
 - **Hooks**: Command, HTTP, prompt hook types; async execution; `if` field for arg filtering; team lifecycle events
 - **Models**: Model configuration and registry for any OpenAI-compatible API
 - **Services**: Git integration, file discovery, session management
