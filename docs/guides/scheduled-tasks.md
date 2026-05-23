@@ -37,8 +37,10 @@ Each time the job fires, proto runs `/review-pr 1234` as if you had typed it.
 ### Manage loops
 
 ```
-/loop list     # list all scheduled jobs
-/loop clear    # cancel all jobs
+/loop                # list active jobs (same as /loop list)
+/loop list           # explicit list
+/loop <id>           # cancel a single job by its 8-character id
+/loop stop           # cancel every active job (aliases: clear, off, cancel)
 ```
 
 ## Set a one-time reminder
