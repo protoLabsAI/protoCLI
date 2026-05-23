@@ -12,8 +12,10 @@ import { sessionScopeLock } from './scopeLock.js';
  * A sprint contract: the explicit pre-implementation agreement on what will
  * change, why, and how success is measured.
  *
- * Produced by the `sprint-contract` skill. Activating a contract arms the
- * scope lock — any write outside the permitted file set is rejected.
+ * Activating a contract arms the scope lock — any write outside the permitted
+ * file set is rejected. Agents can construct contracts programmatically; the
+ * prior `sprint-contract` opinionated workflow skill has been removed in
+ * favour of letting callers decide when to use this gate.
  */
 export interface SprintContract {
   task: string;
