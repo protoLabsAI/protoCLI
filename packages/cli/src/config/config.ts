@@ -352,6 +352,12 @@ export async function parseArguments(): Promise<CliArgs> {
           description: 'Deprecated: use --lsp instead. This flag is ignored.',
           hidden: true,
         })
+        .option('experimental-hooks', {
+          type: 'boolean',
+          description:
+            'Accept SDK hook registrations on the control plane. Set automatically by @protolabsai/sdk when hookCallbacks is provided.',
+          hidden: true,
+        })
         .option('lsp', {
           type: 'boolean',
           description:

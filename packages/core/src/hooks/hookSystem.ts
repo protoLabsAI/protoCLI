@@ -75,6 +75,14 @@ export class HookSystem {
   }
 
   /**
+   * Get the hook runner. Exposed so the SDK control plane can wire its
+   * callback invoker via `getRunner().setSdkCallbackInvoker(...)`.
+   */
+  getRunner(): HookRunner {
+    return this.hookRunner;
+  }
+
+  /**
    * Enable or disable a hook
    */
   setHookEnabled(hookName: string, enabled: boolean): void {

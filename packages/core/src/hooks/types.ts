@@ -12,6 +12,8 @@ export enum HooksConfigSource {
   User = 'user',
   System = 'system',
   Extensions = 'extensions',
+  /** Registered programmatically at runtime (e.g. SDK callbacks via control plane). */
+  Runtime = 'runtime',
 }
 
 /**
@@ -102,7 +104,26 @@ export interface PromptHookConfig extends BaseHookConfig {
   model?: string;
 }
 
-export type HookConfig = CommandHookConfig | HttpHookConfig | PromptHookConfig;
+/**
+ * Hook configuration entry — SDK callback type. Used when the SDK (running in
+ * a separate process) registers a hook via the control plane; firing this hook
+ * sends a `hook_callback` control request back to the SDK and uses the SDK's
+ * response as the hook output.
+ *
+ * These are never loaded from settings files -- they are registered at
+ * runtime by `HookRegistry.addRuntimeHook` during SDK INITIALIZE.
+ */
+export interface SdkCallbackHookConfig extends BaseHookConfig {
+  type: HookType.SdkCallback;
+  /** Opaque ID the SDK uses to look up the user-supplied JS callback. */
+  callbackId: string;
+}
+
+export type HookConfig =
+  | CommandHookConfig
+  | HttpHookConfig
+  | PromptHookConfig
+  | SdkCallbackHookConfig;
 
 /**
  * Hook definition with matcher
@@ -120,6 +141,8 @@ export enum HookType {
   Command = 'command',
   Http = 'http',
   Prompt = 'prompt',
+  /** Round-trip back to the SDK process via the control plane. */
+  SdkCallback = 'sdkCallback',
 }
 
 /**
@@ -134,6 +157,8 @@ export function getHookKey(hook: HookConfig): string {
     identifier = hook.url;
   } else if (hook.type === HookType.Prompt) {
     identifier = hook.prompt.slice(0, 50);
+  } else if (hook.type === HookType.SdkCallback) {
+    identifier = hook.callbackId;
   } else {
     identifier = String((hook as { type: string }).type);
   }

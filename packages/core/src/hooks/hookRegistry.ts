@@ -99,6 +99,72 @@ export class HookRegistry {
   }
 
   /**
+   * Register a hook at runtime, bypassing the config-file load path. Used by
+   * the SDK control plane (`systemController.handleInitialize`) when a host
+   * process registers callback hooks via `hooks: HookRegistration[]`.
+   *
+   * Returns a disposer that removes the registration. Idempotent: registering
+   * the same callbackId twice for the same event replaces the prior entry.
+   */
+  addRuntimeHook(
+    eventName: HookEventName,
+    config: HookConfig,
+    options?: { matcher?: string; sequential?: boolean },
+  ): () => void {
+    const hookName = this.getHookName({ config });
+    // Replace any existing runtime entry with the same name+event so re-init
+    // doesn't leak stale registrations.
+    this.entries = this.entries.filter(
+      (e) =>
+        !(
+          e.source === HooksConfigSource.Runtime &&
+          e.eventName === eventName &&
+          this.getHookName(e) === hookName
+        ),
+    );
+
+    config.source = HooksConfigSource.Runtime;
+    this.entries.push({
+      config,
+      source: HooksConfigSource.Runtime,
+      eventName,
+      matcher: options?.matcher,
+      sequential: options?.sequential,
+      enabled: true,
+    });
+    debugLogger.debug(`Registered runtime hook "${hookName}" for ${eventName}`);
+
+    return () => this.removeRuntimeHook(eventName, hookName);
+  }
+
+  /**
+   * Remove a runtime-registered hook by event + name. No-op if not present.
+   * Returns true if an entry was removed.
+   */
+  removeRuntimeHook(eventName: HookEventName, hookName: string): boolean {
+    const before = this.entries.length;
+    this.entries = this.entries.filter(
+      (e) =>
+        !(
+          e.source === HooksConfigSource.Runtime &&
+          e.eventName === eventName &&
+          this.getHookName(e) === hookName
+        ),
+    );
+    return this.entries.length < before;
+  }
+
+  /**
+   * Remove every runtime-registered hook. Used when the SDK session ends so
+   * a re-init starts clean.
+   */
+  clearRuntimeHooks(): void {
+    this.entries = this.entries.filter(
+      (e) => e.source !== HooksConfigSource.Runtime,
+    );
+  }
+
+  /**
    * Enable or disable a specific hook
    */
   setHookEnabled(hookName: string, enabled: boolean): void {
@@ -308,7 +374,7 @@ please review the project settings (.proto/settings.json) and remove them.`;
     eventName: HookEventName,
     source: HooksConfigSource,
   ): boolean {
-    const validTypes = ['command', 'http', 'prompt', 'plugin'];
+    const validTypes = ['command', 'http', 'prompt', 'plugin', 'sdkCallback'];
     if (!config.type || !validTypes.includes(config.type)) {
       debugLogger.warn(
         `Invalid hook ${eventName} from ${source} type: ${config.type}`,
@@ -333,6 +399,16 @@ please review the project settings (.proto/settings.json) and remove them.`;
     if (config.type === 'prompt' && !('prompt' in config && config.prompt)) {
       debugLogger.warn(
         `Prompt hook ${eventName} from ${source} missing prompt field`,
+      );
+      return false;
+    }
+
+    if (
+      config.type === 'sdkCallback' &&
+      !('callbackId' in config && config.callbackId)
+    ) {
+      debugLogger.warn(
+        `SdkCallback hook ${eventName} from ${source} missing callbackId`,
       );
       return false;
     }
