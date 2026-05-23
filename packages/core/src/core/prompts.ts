@@ -456,6 +456,35 @@ ${(function () {
   }
 })()}
 
+${(function () {
+  // Only inject Beads guidance when the workspace actually has a .beads/
+  // directory, so projects without it don't carry the noise.
+  if (!fs.existsSync(path.join(process.cwd(), '.beads'))) return '';
+  return `
+# Beads (cross-session task tracker)
+
+This workspace uses [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (\`br\`). The ${ToolNames.TASK_CREATE} / ${ToolNames.TASK_UPDATE} tools you already use are backed by it, so every task you create persists to \`.beads/\` and survives across sessions on this machine.
+
+Before inventing new tasks for a request, check for pre-existing work:
+
+- \`br ready --json\` — actionable issues with no blockers; pick from here first
+- \`br list --status open --sort priority --json\` — full open list
+- \`br show <id> --json\` — details of a specific issue
+
+When you take pre-existing work:
+
+- \`br update --actor "\${BR_ACTOR:-assistant}" <id> --status in_progress --claim\`
+- \`br close --actor "\${BR_ACTOR:-assistant}" <id> --reason "evidence: <commit/PR/file>"\`
+
+\`.beads/\` may be gitignored — check before running \`git add .beads/\`. When it IS tracked, sync to git after updates so other machines/agents see the changes:
+
+- \`br sync --flush-only\` exports the DB to JSONL
+- \`git add .beads/ && git commit -m "<message>"\` — beads NEVER auto-commits; that's your job
+
+Never run bare \`bv\` — it launches an interactive TUI and blocks the session. Use \`bv --robot-next\`, \`bv --robot-triage\`, etc. if you need it at all.
+`;
+})()}
+
 ${getToolCallExamples(model || '')}
 
 # Final Reminder
