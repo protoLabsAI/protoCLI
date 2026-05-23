@@ -7,8 +7,13 @@
 import type {
   Config,
   ConfigInitializeOptions,
+  HookOutput,
 } from '@qwen-code/qwen-code-core';
-import { createDebugLogger } from '@qwen-code/qwen-code-core';
+import {
+  createDebugLogger,
+  HookEventName,
+  HookType,
+} from '@qwen-code/qwen-code-core';
 import { StreamJsonInputReader } from './io/StreamJsonInputReader.js';
 import { StreamJsonOutputAdapter } from './io/StreamJsonOutputAdapter.js';
 import { ControlContext } from './control/ControlContext.js';
@@ -113,6 +118,70 @@ class Session {
     } catch (error) {
       debugLogger.error('[Session] Failed to initialize config:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Wire any hook registrations the SDK sent in INITIALIZE into the now-built
+   * HookSystem, and set the round-trip invoker so SdkCallback hooks call back
+   * to the SDK process via the control plane. No-op when not in SDK mode or
+   * when the host sent no registrations.
+   */
+  private finalizeHookRegistrations(): void {
+    if (!this.controlContext || !this.dispatcher) return;
+    // Treat a missing field defensively so test mocks of IControlContext
+    // (which historically returned `{}`) don't crash initialization.
+    const pending = this.controlContext.pendingHookRegistrations ?? [];
+
+    const hookSystem = this.config.getHookSystem?.();
+    if (!hookSystem) {
+      if (pending.length > 0) {
+        debugLogger.warn(
+          '[Session] SDK sent hook registrations but the HookSystem is disabled (disableAllHooks?); hooks will not fire.',
+        );
+      }
+      return;
+    }
+
+    const dispatcher = this.dispatcher;
+    hookSystem
+      .getRunner()
+      .setSdkCallbackInvoker(async (callbackId, input, toolUseId) => {
+        const response = await dispatcher.sendControlRequest({
+          subtype: 'hook_callback',
+          callback_id: callbackId,
+          input,
+          tool_use_id: toolUseId,
+        });
+        // The SDK's handleHookCallback returns the user's callback result as
+        // the response data. Pass it through verbatim as the HookOutput.
+        if (response.subtype !== 'success') return undefined;
+        return response.response as HookOutput | undefined;
+      });
+
+    const registry = hookSystem.getRegistry();
+    // Clear any prior runtime hooks so re-init starts clean (matches the
+    // controller's idempotent replace of pendingHookRegistrations).
+    registry.clearRuntimeHooks();
+
+    for (const reg of pending) {
+      if (!Object.values(HookEventName).includes(reg.event as HookEventName)) {
+        debugLogger.warn(
+          `[Session] Ignoring SDK hook registration for unknown event "${reg.event}"`,
+        );
+        continue;
+      }
+      registry.addRuntimeHook(reg.event as HookEventName, {
+        type: HookType.SdkCallback,
+        callbackId: reg.callback_id,
+        name: reg.callback_id,
+      });
+    }
+
+    if (pending.length > 0) {
+      debugLogger.debug(
+        `[Session] Wired ${pending.length} SDK hook registration(s)`,
+      );
     }
   }
 
@@ -240,6 +309,11 @@ class Session {
 
       // Initialize config with SDK MCP message support
       await this.ensureConfigInitialized({ sendSdkMcpMessage });
+
+      // Now that the hook system exists, wire any hook registrations the
+      // SDK sent in the INITIALIZE payload, and set the round-trip invoker
+      // so firing those hooks calls back to the SDK process.
+      this.finalizeHookRegistrations();
 
       // Initialization complete!
       this.completeInitialization();

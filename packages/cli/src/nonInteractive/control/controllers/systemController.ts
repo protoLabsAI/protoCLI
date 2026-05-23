@@ -169,6 +169,19 @@ export class SystemController extends BaseController {
       }
     }
 
+    // Stash hook registrations. We can't wire them into the HookRegistry
+    // here because the HookSystem is built later inside Config.initialize();
+    // the session finalizes registration after that step. Idempotent: a
+    // re-initialize replaces the prior list rather than appending.
+    if (payload.hooks && Array.isArray(payload.hooks)) {
+      this.context.pendingHookRegistrations = payload.hooks;
+      debugLogger.debug(
+        `[SystemController] Stashed ${payload.hooks.length} hook registration(s) for finalization`,
+      );
+    } else {
+      this.context.pendingHookRegistrations = [];
+    }
+
     if (payload.agents && Array.isArray(payload.agents)) {
       try {
         this.context.config.setSessionSubagents(payload.agents);
@@ -208,7 +221,7 @@ export class SystemController extends BaseController {
   buildControlCapabilities(): Record<string, unknown> {
     const capabilities: Record<string, unknown> = {
       can_handle_can_use_tool: true,
-      can_handle_hook_callback: false,
+      can_handle_hook_callback: true,
       can_set_permission_mode:
         typeof this.context.config.setApprovalMode === 'function',
       can_set_model: typeof this.context.config.setModel === 'function',

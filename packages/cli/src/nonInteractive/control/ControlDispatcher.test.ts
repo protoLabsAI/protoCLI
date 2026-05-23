@@ -41,6 +41,7 @@ function createMockContext(debugMode: boolean = false): IControlContext {
     debugMode,
     permissionMode: 'default',
     sdkMcpServers: new Set<string>(),
+    pendingHookRegistrations: [],
     mcpClients: new Map(),
     inputClosed: false,
   };
