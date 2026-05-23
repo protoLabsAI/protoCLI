@@ -1,11 +1,24 @@
-# Database
+# SQLite databases (per-developer; rebuild from issues.jsonl via `br sync --import-only`)
 *.db
-*.db-shm
+*.db?*
+*.db-journal
 *.db-wal
+*.db-shm
 
-# Lock files
-*.lock
-
-# Temporary
+# Daemon runtime files
+daemon.lock
+daemon.log
+daemon.pid
+bd.sock
+sync-state.json
 last-touched
+
+# Local version tracking (prevents upgrade notification spam after git ops)
+.local_version
+
+# Legacy database files
+db.sqlite
+
+# Lock + temp files
+*.lock
 *.tmp

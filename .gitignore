@@ -165,8 +165,12 @@ packages/*/src/**/__snapshots__/*.js.snap
 .automaker/
 .automaker-lock
 
-# beads_rust task management (local state, not source)
-.beads/
+# beads_rust task management
+# Per maintainer recommendation: track .beads/ in git and let
+# .beads/.gitignore (shipped by `br init`) filter out the per-developer
+# SQLite DB, daemon runtime files, and caches. issues.jsonl + config.yaml +
+# metadata.json + .br_history/ get committed so other machines/agents see
+# the same queue.
 
 # proto agent memory (local state, not source)
 .proto/
