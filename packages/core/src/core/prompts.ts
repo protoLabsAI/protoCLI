@@ -177,6 +177,12 @@ export function getCoreSystemPrompt(
   userMemory?: string,
   model?: string,
   appendInstruction?: string,
+  /**
+   * Interactive REPL sessions opt into beads_rust steering. SDK / headless /
+   * CI sessions default to false so the agent isn't told to query/claim
+   * cross-session work it shouldn't be touching.
+   */
+  interactive: boolean = false,
 ): StructuredSystemPrompt {
   // if QWEN_SYSTEM_MD is set (and not 0|false), override system prompt from file
   // default path is .qwen/system.md but can be modified via custom path in QWEN_SYSTEM_MD
@@ -457,8 +463,11 @@ ${(function () {
 })()}
 
 ${(function () {
-  // Only inject Beads guidance when the workspace actually has a .beads/
-  // directory, so projects without it don't carry the noise.
+  // Only inject Beads guidance in interactive REPL sessions with a `.beads/`
+  // directory. SDK / headless / CI sessions opt out so an agent embedded in
+  // another tool doesn't reach into the host's shared beads queue and pick
+  // up unrelated work.
+  if (!interactive) return '';
   if (!fs.existsSync(path.join(process.cwd(), '.beads'))) return '';
   return `
 # Beads (cross-session task tracker)
