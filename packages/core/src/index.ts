@@ -65,6 +65,11 @@ export * from './core/prompts.js';
 export * from './core/tokenLimits.js';
 export * from './core/turn.js';
 
+// Goal & loop (long-horizon task primitives)
+export * from './goal/index.js';
+export * from './loop/index.js';
+export { humanReadableCron } from './utils/cronDisplay.js';
+
 // ============================================================================
 // Tools
 // ============================================================================
