@@ -1,6 +1,6 @@
 {
   "name": "@protolabs/proto",
-  "version": "0.26.39",
+  "version": "0.26.40",
   "description": "proto",
   "repository": {
     "type": "git",
@@ -37,7 +37,7 @@
     "dist"
   ],
   "config": {
-    "sandboxImageUri": "ghcr.io/qwenlm/qwen-code:0.26.40"
+    "sandboxImageUri": "ghcr.io/qwenlm/qwen-code:0.26.41"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.14.1",
