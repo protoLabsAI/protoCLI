@@ -332,6 +332,9 @@ export class GeminiClient {
       userMemory,
       this.config.getModel(),
       appendSystemPrompt,
+      // Optional-chain so test mocks that don't stub isInteractive() still
+      // pass; production Config always implements it.
+      this.config.isInteractive?.() ?? false,
     );
 
     return assemblePromptSections([

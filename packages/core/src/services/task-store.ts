@@ -109,10 +109,21 @@ export class TaskStore {
   private fallbackTasks: Map<string, Task> | null = null;
   private fallbackPath: string;
 
-  constructor(runtimeDir: string, _sessionId: string, cwd?: string) {
+  /**
+   * @param interactive Only when true does this store shell out to `br` and
+   *   persist tasks into the shared `.beads/` queue. SDK / headless / CI
+   *   sessions stay on the per-session in-memory fallback so they don't
+   *   pollute the team-shared queue with ephemeral work.
+   */
+  constructor(
+    runtimeDir: string,
+    _sessionId: string,
+    cwd?: string,
+    interactive: boolean = false,
+  ) {
     this.cwd = cwd ?? process.cwd();
     this.fallbackPath = path.join(runtimeDir, 'tasks', `${_sessionId}.json`);
-    this.brAvailable = this.detectBr();
+    this.brAvailable = interactive && this.detectBr();
 
     if (this.brAvailable) {
       this.ensureInit();
