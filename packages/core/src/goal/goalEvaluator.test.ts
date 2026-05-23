@@ -62,6 +62,41 @@ describe('parseEvaluatorJson', () => {
     const r = parseEvaluatorJson('{"met": "yes", "reason": "fuzzy"}');
     expect(r.met).toBe(false);
   });
+
+  it('handles braces inside JSON string values', () => {
+    const r = parseEvaluatorJson(
+      '{"met": true, "reason": "see {artifact} for proof"}',
+    );
+    expect(r.met).toBe(true);
+    expect(r.reason).toBe('see {artifact} for proof');
+  });
+
+  it('handles escaped quotes inside JSON string values', () => {
+    const r = parseEvaluatorJson(
+      '{"met": false, "reason": "expected \\"PASS\\" but got \\"FAIL\\""}',
+    );
+    expect(r.met).toBe(false);
+    expect(r.reason).toBe('expected "PASS" but got "FAIL"');
+  });
+
+  it('handles fenced blocks with a language tag and trailing prose', () => {
+    const r = parseEvaluatorJson(
+      'Here is my answer:\n```json\n{"met": true, "reason": "done"}\n```\nThat is all.',
+    );
+    expect(r.met).toBe(true);
+    expect(r.reason).toBe('done');
+  });
+
+  it('does not hang on pathological whitespace input', () => {
+    // Regression test for the ReDoS finding -- a pathological string that
+    // used to make the old regex backtrack should now return quickly.
+    const pathological = '```' + ' '.repeat(10_000);
+    const start = Date.now();
+    const r = parseEvaluatorJson(pathological);
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(100);
+    expect(r.met).toBe(false);
+  });
 });
 
 describe('evaluateGoal', () => {

@@ -1,6 +1,9 @@
 # Keep proto working toward a goal
 
-Set a completion condition with `/goal` and proto keeps working across turns until the condition is met. After every turn a small fast model checks the transcript against your condition; if it isn't satisfied yet, proto starts another turn instead of returning control. The goal clears automatically once the condition is met.
+Set a completion condition with `/goal` and proto keeps working across turns until the condition is met. After every turn the configured model (`Config.getModel()`) checks the transcript against your condition; if it isn't satisfied yet, proto starts another turn instead of returning control. The goal clears automatically once the condition is met.
+
+> [!note]
+> Today the evaluator uses the same model your main turns use. When protoCLI exposes a small/fast-model accessor, this will switch over so evaluations are cheaper. Token cost shows up under "eval tokens" in `/goal` status.
 
 Use a goal for substantial work with a verifiable end state:
 
@@ -13,7 +16,7 @@ Use a goal for substantial work with a verifiable end state:
 
 Run `/goal` followed by the condition you want satisfied.
 
-```
+```text
 /goal all tests in test/auth pass and the lint step is clean
 ```
 
@@ -40,7 +43,7 @@ A good condition usually has:
 
 Run `/goal` with no arguments to inspect the current state.
 
-```
+```text
 /goal
 ```
 
@@ -50,7 +53,7 @@ If a goal is active, the status shows the condition, how long it has been runnin
 
 Run `/goal clear` to remove an active goal before its condition is met. Any of `stop`, `off`, `reset`, `none`, and `cancel` are accepted as aliases for `clear`. Starting a new conversation with `/clear` also removes any active goal.
 
-```
+```text
 /goal clear
 ```
 

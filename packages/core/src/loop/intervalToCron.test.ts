@@ -59,6 +59,20 @@ describe('intervalToCron — days', () => {
   it('7d → 0 0 */7 * *', () => {
     expect(intervalToCron('7d').cron).toBe('0 0 */7 * *');
   });
+
+  it('reports rounded=true for near-24h inputs that crossed the day boundary', () => {
+    // 1439 minutes ≈ 23h59m, which gets rounded to "1 day at midnight".
+    // The old check (`days !== hours / 24`) missed this; this regression
+    // test confirms the corrected comparison reports the rounding.
+    const r = intervalToCron('1439m');
+    expect(r.cron).toBe('0 0 */1 * *');
+    expect(r.rounded).toBe(true);
+  });
+
+  it('does not falsely mark exact day multiples as rounded', () => {
+    expect(intervalToCron('1d').rounded).toBe(false);
+    expect(intervalToCron('2d').rounded).toBe(false);
+  });
 });
 
 describe('intervalMsToCron', () => {

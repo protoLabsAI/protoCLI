@@ -152,4 +152,27 @@ describe('GoalManager', () => {
       expect(manager.getActiveGoal()?.turnCount).toBe(0);
     });
   });
+
+  describe('return values are defensive copies', () => {
+    it('setGoal return value does not alias internal state', () => {
+      const returned = manager.setGoal('x');
+      returned.turnCount = 999;
+      expect(manager.getActiveGoal()?.turnCount).toBe(0);
+    });
+
+    it('clearGoal return value does not alias internal state', () => {
+      manager.setGoal('y');
+      manager.recordTurn();
+      const cleared = manager.clearGoal();
+      // Mutating the returned copy should not surface anywhere -- the
+      // manager has cleared its own state. This is a regression guard
+      // against the previous shape that returned the live reference.
+      if (cleared) cleared.condition = 'mutated';
+      expect(manager.hasActiveGoal()).toBe(false);
+      // Re-setting + reading should give us the fresh condition, not the
+      // mutated one (proves the reference didn't leak elsewhere).
+      manager.setGoal('z');
+      expect(manager.getActiveGoal()?.condition).toBe('z');
+    });
+  });
 });

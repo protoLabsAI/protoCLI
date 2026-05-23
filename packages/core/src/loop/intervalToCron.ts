@@ -71,7 +71,9 @@ export function intervalMsToCron(ms: number): IntervalToCronResult {
   return {
     cron: `0 0 */${days} * *`,
     description: `every ${days} day${days === 1 ? '' : 's'} at midnight`,
-    rounded: days !== hours / 24,
+    // Compare back in minutes -- `hours !== days * 24` would miss the case
+    // where `minutes` got rounded into `hours` upstream. This catches both.
+    rounded: days * 24 * 60 !== minutes,
   };
 }
 

@@ -114,6 +114,12 @@ export enum SendMessageType {
   Hook = 'hook',
   /** Cron-fired prompt. Behaves like UserQuery but skips UserPromptSubmit hook. */
   Cron = 'cron',
+  /**
+   * Continuation injected by the /goal evaluator when a condition isn't met
+   * yet. Distinguished from Hook so the goal evaluator re-runs after each
+   * goal-driven turn (Hook continuations are excluded from re-evaluation).
+   */
+  GoalContinuation = 'goalContinuation',
 }
 
 export interface SendMessageOptions {
@@ -949,7 +955,8 @@ export class GeminiClient {
       !turn.pendingToolCalls.length &&
       signal &&
       !signal.aborted &&
-      messageType !== SendMessageType.Hook
+      messageType !== SendMessageType.Hook &&
+      messageType !== SendMessageType.GoalContinuation
     ) {
       const completionHistory = this.getHistory();
       const toolCallHistory = this.extractToolCallHistory(completionHistory);
@@ -989,16 +996,25 @@ export class GeminiClient {
     // Evaluate any active /goal against the just-finished turn. If the
     // condition is not met, inject the evaluator's reason as guidance and
     // run another turn -- the same continuation pattern used above by the
-    // Stop hook and CompletionChecker paths. If met, mark achieved and let
-    // control return to the user. The optional-chaining call covers test
-    // mocks that don't stub getGoalManager.
+    // Stop hook and CompletionChecker paths.
+    //
+    // Unlike CompletionChecker, this block intentionally has no
+    // `messageType !== Hook` gate: the goal evaluator must run after every
+    // turn (including Stop-hook / CompletionChecker continuations) per the
+    // /goal spec. To distinguish goal-driven continuations from generic Hook
+    // ones (and prevent CompletionChecker from re-firing on top of them),
+    // continuations from this block carry SendMessageType.GoalContinuation.
+    //
+    // The optional-chaining call on getGoalManager covers test mocks that
+    // don't stub the method. Evaluator failures must NOT abort a completed
+    // turn; we wrap the model call in try/catch and skip recording on
+    // failure so the user's successful turn output still surfaces.
     const goalManager = this.config.getGoalManager?.();
     if (
       goalManager?.hasActiveGoal() &&
       !turn.pendingToolCalls.length &&
       signal &&
-      !signal.aborted &&
-      messageType !== SendMessageType.Hook
+      !signal.aborted
     ) {
       const goalHistory = this.getHistory();
       const goalToolCalls = this.extractToolCallHistory(goalHistory);
@@ -1025,32 +1041,45 @@ export class GeminiClient {
             return `- ${t.name} [${status}]${cmd}`;
           })
           .join('\n');
-        const evalResult = await evaluateGoal(
-          this.getContentGeneratorOrFail(),
-          this.config.getModel(),
-          {
-            condition: active.condition,
-            toolCallSummary,
-            lastAssistantMessage: lastGoalAssistantMessage,
-          },
-          signal,
-        );
-        goalManager.recordEvaluation(evalResult);
 
-        if (evalResult.met) {
-          goalManager.markAchieved();
-        } else {
-          const continueReason = `Goal not yet met. Evaluator: ${evalResult.reason}\n\nKeep working toward: ${active.condition}`;
-          const continueRequest = [{ text: continueReason }];
-          const goalResult = yield* this.sendMessageStream(
-            continueRequest,
+        let evalResult: Awaited<ReturnType<typeof evaluateGoal>> | undefined;
+        try {
+          evalResult = await evaluateGoal(
+            this.getContentGeneratorOrFail(),
+            this.config.getModel(),
+            {
+              condition: active.condition,
+              toolCallSummary,
+              lastAssistantMessage: lastGoalAssistantMessage,
+            },
             signal,
-            prompt_id,
-            { type: SendMessageType.Hook },
-            boundedTurns - 1,
           );
-          if (ownsTurnSpan) endTurnSpan('ok');
-          return goalResult;
+        } catch (err) {
+          this.config
+            .getDebugLogger()
+            .warn(
+              `[goal] evaluator threw for condition "${active.condition.slice(0, 60)}": ${err instanceof Error ? err.message : String(err)}`,
+            );
+        }
+
+        if (evalResult) {
+          goalManager.recordEvaluation(evalResult);
+
+          if (evalResult.met) {
+            goalManager.markAchieved();
+          } else {
+            const continueReason = `Goal not yet met. Evaluator: ${evalResult.reason}\n\nKeep working toward: ${active.condition}`;
+            const continueRequest = [{ text: continueReason }];
+            const goalResult = yield* this.sendMessageStream(
+              continueRequest,
+              signal,
+              prompt_id,
+              { type: SendMessageType.GoalContinuation },
+              boundedTurns - 1,
+            );
+            if (ownsTurnSpan) endTurnSpan('ok');
+            return goalResult;
+          }
         }
       }
     }

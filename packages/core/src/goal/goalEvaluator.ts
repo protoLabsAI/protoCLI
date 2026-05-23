@@ -139,18 +139,50 @@ export function parseEvaluatorJson(
   }
 }
 
+/**
+ * Strip a surrounding ```...``` fence using simple string scans. Avoids a
+ * lazy-quantifier regex that CodeQL flags as polynomial on input full of
+ * whitespace or partial fences.
+ */
 function stripCodeFence(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  return fenced ? fenced[1].trim() : text.trim();
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('```')) return trimmed;
+  // Skip the opening fence and an optional language tag on the same line.
+  const firstNewline = trimmed.indexOf('\n');
+  if (firstNewline === -1) return trimmed;
+  const closing = trimmed.lastIndexOf('```');
+  if (closing <= firstNewline) return trimmed;
+  return trimmed.slice(firstNewline + 1, closing).trim();
 }
 
+/**
+ * Find the first balanced JSON object in `text`. Tracks string state so braces
+ * inside JSON strings (e.g. `{"reason": "see {artifact}"}`) don't desync the
+ * brace counter, and honours standard JSON string escapes.
+ */
 function extractFirstJsonObject(text: string): string | null {
   const start = text.indexOf('{');
   if (start === -1) return null;
   let depth = 0;
+  let inString = false;
+  let escapeNext = false;
   for (let i = start; i < text.length; i++) {
-    if (text[i] === '{') depth++;
-    else if (text[i] === '}') {
+    const ch = text[i];
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === '\\') escapeNext = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
       depth--;
       if (depth === 0) return text.slice(start, i + 1);
     }

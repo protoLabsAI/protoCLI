@@ -49,7 +49,8 @@ export class GoalManager {
       turnCount: 0,
       tokensSpent: 0,
     };
-    return this.active;
+    // Return a copy so callers can't mutate internal state.
+    return { ...this.active };
   }
 
   /**
@@ -58,7 +59,7 @@ export class GoalManager {
    */
   clearGoal(): GoalState | undefined {
     if (!this.active) return undefined;
-    const cleared = this.active;
+    const cleared = { ...this.active };
     this.active = undefined;
     debugLogger.info(
       `Cleared goal "${truncate(cleared.condition, 60)}" after ${cleared.turnCount} turns.`,
