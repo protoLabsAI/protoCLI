@@ -19,6 +19,8 @@ import { useVimMode } from '../contexts/VimModeContext.js';
 import { ApprovalMode } from '@qwen-code/qwen-code-core';
 import { t } from '../../i18n/index.js';
 import { VoiceMicButton } from './VoiceMicButton.js';
+import { GoalPill } from './GoalPill.js';
+import { useGoalStatus } from '../hooks/useGoalStatus.js';
 
 export const Footer: React.FC = () => {
   const uiState = useUIState();
@@ -48,6 +50,8 @@ export const Footer: React.FC = () => {
 
   const contextWindowSize =
     config.getContentGeneratorConfig()?.contextWindowSize;
+
+  const goalStatus = useGoalStatus(config);
 
   // Left section should show exactly ONE thing at any time, in priority order.
   const leftContent =
@@ -107,6 +111,14 @@ export const Footer: React.FC = () => {
           />
         </Text>
       ),
+    });
+  }
+  if (goalStatus) {
+    // Active /goal indicator -- pushed last so it lands rightmost (most
+    // visible) in the footer. Mirrors Codex CLI's status-line goal slot.
+    rightItems.push({
+      key: 'goal',
+      node: <GoalPill snapshot={goalStatus} />,
     });
   }
   return (
