@@ -2672,6 +2672,7 @@ Other open files:
         '',
         'test-model',
         'Be extra concise.',
+        false, // interactive=false: test config mock has no isInteractive()
       );
     });
 
