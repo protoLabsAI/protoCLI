@@ -11,6 +11,7 @@ import {
   HookEventName,
   HookType,
   HooksConfigSource,
+  type HookConfig,
   type HookInput,
   type HookOutput,
 } from './types.js';
@@ -129,7 +130,7 @@ describe('HookRegistry.addRuntimeHook', () => {
               type: HookType.SdkCallback,
               name: 'broken',
               // missing callbackId
-            } as unknown as { type: 'sdkCallback' },
+            } as unknown as HookConfig,
           ],
         },
       ],
