@@ -4,16 +4,16 @@ The agent harness is a set of safety and reliability services that wrap every su
 
 ## Features at a glance
 
-| Feature                      | Trigger                 | Configuration                  |
-| ---------------------------- | ----------------------- | ------------------------------ |
-| Doom loop detection          | Automatic               | None                           |
-| Scope lock (sprint contract) | Opt-in                  | Run `/sprint-contract` skill   |
-| Git checkpoints              | Automatic               | None                           |
-| Observation masking          | Automatic               | None                           |
-| Harness reminders            | Automatic               | None                           |
-| Repo map                     | On-demand tool          | None                           |
-| Behavior verification gate   | Automatic after success | `.proto/verify-scenarios.json` |
-| Multi-sample retry           | Opt-in per call         | `multi_sample: true`           |
+| Feature                      | Trigger                 | Configuration                                          |
+| ---------------------------- | ----------------------- | ------------------------------------------------------ |
+| Doom loop detection          | Automatic               | None                                                   |
+| Scope lock (sprint contract) | Opt-in                  | Constructed by agent/skill via `SprintContractService` |
+| Git checkpoints              | Automatic               | None                                                   |
+| Observation masking          | Automatic               | None                                                   |
+| Harness reminders            | Automatic               | None                                                   |
+| Repo map                     | On-demand tool          | None                                                   |
+| Behavior verification gate   | Automatic after success | `.proto/verify-scenarios.json`                         |
+| Multi-sample retry           | Opt-in per call         | `multi_sample: true`                                   |
 
 ---
 
@@ -27,15 +27,11 @@ No configuration required.
 
 ## Scope lock (sprint contract)
 
-Before starting a bounded implementation task, the `sprint-contract` skill negotiates an explicit contract — the set of files that may be written. Any write outside that set is blocked with a structured error naming the violating path and the permitted set.
+Before starting a bounded implementation task, an agent (or a user-supplied skill) constructs a sprint contract — the set of files that may be written. Activating a contract arms a glob-based scope lock; any write outside the permitted set is blocked with a structured error naming the violating path and the permitted set.
 
 The contract is persisted to `.proto/sprint-contract.json` and automatically restored on session restart.
 
-### Activate
-
-```
-/sprint-contract
-```
+> **Note:** The fork previously bundled a prescriptive `sprint-contract` skill that walked the agent through negotiating one. It was removed alongside the rest of the "superpowers" workflow skills so consumers can choose their own choreography. The underlying primitive (`packages/core/src/services/sprintContractService.ts`) is unchanged — drop in your own skill or call `SprintContractService` directly when you want this gate.
 
 ### File format
 
