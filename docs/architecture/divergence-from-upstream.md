@@ -342,18 +342,31 @@ a clean prompt that gets it back on task.
 
 `packages/core/src/skills/`
 
-22 bundled skills shipping in the binary
+4 bundled skills shipping in the binary
 (`packages/core/src/skills/bundled/`):
-adversarial-verification, brainstorming, browser-automation,
-coding-agent-standards, dispatching-parallel-agents, executing-plans,
-finishing-a-development-branch, harness-reference, loop, qc-helper,
-receiving-code-review, requesting-code-review, review, sprint-contract,
-subagent-driven-development, systematic-debugging, test-driven-development,
-using-git-worktrees, using-superpowers, verification-before-completion,
-writing-plans, writing-skills.
+**browser-automation** (real browser-driving capability),
+**review** (generic code-review walkthrough),
+**qc-helper** (Q&A about proto config),
+**harness-reference** (internal reference for the harness primitives below).
 
 `SkillManager` loads bundled + user skills (from `~/.proto/skills/`) and
 the model can invoke them by name via the `skill` tool.
+
+**History note:** the fork previously shipped 22 bundled skills, including a
+"superpowers" framework of opinionated workflow gates
+(`using-superpowers`, `brainstorming`, `writing-plans`, `executing-plans`,
+`subagent-driven-development`, `dispatching-parallel-agents`,
+`using-git-worktrees`, `systematic-debugging`, `test-driven-development`,
+`verification-before-completion`, `adversarial-verification`,
+`requesting-code-review`, `receiving-code-review`,
+`finishing-a-development-branch`, `coding-agent-standards`,
+`sprint-contract`, `writing-skills`). They were injected into every system
+prompt via a `<EXTREMELY_IMPORTANT>` wrapper in `prompts.ts`. Removed in
+favour of letting consumers choose whether and how to layer in workflow
+choreography — drop equivalents into `~/.proto/skills/` or `.proto/skills/`
+per project. The underlying primitives those skills used to drive
+(sprint contract / scope lock / verification gate / etc.) remain in
+`services/` and can be wired up directly.
 
 Upstream has **no skills system**. This is entirely ours.
 
