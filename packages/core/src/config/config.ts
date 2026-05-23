@@ -42,6 +42,7 @@ import {
 } from '../services/fileSystemService.js';
 import { GitService } from '../services/gitService.js';
 import { CronScheduler } from '../services/cronScheduler.js';
+import { GoalManager } from '../goal/index.js';
 import { PermissionBlockerService } from '../services/permissionBlockerService.js';
 import { SprintContractService } from '../services/sprintContractService.js';
 
@@ -683,6 +684,7 @@ export class Config {
   private readonly hooks?: Record<string, unknown>;
   private hookSystem?: HookSystem;
   private messageBus?: MessageBus;
+  private readonly goalManager: GoalManager = new GoalManager();
 
   constructor(params: ConfigParameters) {
     this.sessionId = params.sessionId ?? randomUUID();
@@ -1261,6 +1263,9 @@ export class Config {
     this.chatRecordingService = this.chatRecordingEnabled
       ? new ChatRecordingService(this)
       : undefined;
+    // Goal state is session-scoped; reset on new session. /loop state lives
+    // on the CronScheduler, which has its own lifecycle.
+    this.goalManager.reset();
     if (this.initialized) {
       logStartSession(this, new StartSessionEvent(this));
     }
@@ -1927,6 +1932,13 @@ export class Config {
    */
   getHookSystem(): HookSystem | undefined {
     return this.hookSystem;
+  }
+
+  /**
+   * Get the session-scoped goal manager. Backs the `/goal` slash command.
+   */
+  getGoalManager(): GoalManager {
+    return this.goalManager;
   }
 
   /**

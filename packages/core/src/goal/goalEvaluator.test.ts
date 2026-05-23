@@ -1,0 +1,128 @@
+/**
+ * @license
+ * Copyright 2026 protoCLI contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { describe, it, expect, vi } from 'vitest';
+import { evaluateGoal, parseEvaluatorJson } from './goalEvaluator.js';
+import type { ContentGenerator } from '../core/contentGenerator.js';
+
+function mockGenerator(
+  textResponse: string,
+  tokens: number = 42,
+): ContentGenerator {
+  return {
+    generateContent: vi.fn().mockResolvedValue({
+      candidates: [{ content: { parts: [{ text: textResponse }] } }],
+      usageMetadata: { totalTokenCount: tokens },
+    }),
+    generateContentStream: vi.fn(),
+    countTokens: vi.fn(),
+    embedContent: vi.fn(),
+    useSummarizedThinking: () => false,
+  } as unknown as ContentGenerator;
+}
+
+describe('parseEvaluatorJson', () => {
+  it('parses a clean JSON object', () => {
+    const r = parseEvaluatorJson('{"met": true, "reason": "all tests pass"}');
+    expect(r.met).toBe(true);
+    expect(r.reason).toBe('all tests pass');
+  });
+
+  it('strips surrounding code fences', () => {
+    const r = parseEvaluatorJson(
+      '```json\n{"met": false, "reason": "tests still failing"}\n```',
+    );
+    expect(r.met).toBe(false);
+    expect(r.reason).toBe('tests still failing');
+  });
+
+  it('extracts JSON when prose surrounds the object', () => {
+    const r = parseEvaluatorJson(
+      'Sure -- {"met": true, "reason": "done"} -- end',
+    );
+    expect(r.met).toBe(true);
+  });
+
+  it('returns met=false on non-JSON responses', () => {
+    const r = parseEvaluatorJson('I have no idea, sorry.');
+    expect(r.met).toBe(false);
+    expect(r.reason).toMatch(/not valid JSON/);
+  });
+
+  it('handles missing reason by supplying a default', () => {
+    const r = parseEvaluatorJson('{"met": true}');
+    expect(r.met).toBe(true);
+    expect(r.reason).toBe('Condition met.');
+  });
+
+  it('treats truthy non-true values as not met', () => {
+    const r = parseEvaluatorJson('{"met": "yes", "reason": "fuzzy"}');
+    expect(r.met).toBe(false);
+  });
+});
+
+describe('evaluateGoal', () => {
+  const ctx = {
+    condition: 'all tests pass',
+    toolCallSummary: 'npm test -> exit 0',
+    lastAssistantMessage: 'Tests are passing.',
+  };
+
+  it('returns met=true when the model says so', async () => {
+    const gen = mockGenerator('{"met": true, "reason": "tests passed"}', 100);
+    const r = await evaluateGoal(gen, 'haiku', ctx);
+    expect(r.met).toBe(true);
+    expect(r.reason).toBe('tests passed');
+    expect(r.tokensUsed).toBe(100);
+  });
+
+  it('returns met=false when the model says so', async () => {
+    const gen = mockGenerator(
+      '{"met": false, "reason": "tests still red"}',
+      55,
+    );
+    const r = await evaluateGoal(gen, 'haiku', ctx);
+    expect(r.met).toBe(false);
+    expect(r.reason).toBe('tests still red');
+  });
+
+  it('returns met=false on empty response', async () => {
+    const gen = mockGenerator('', 0);
+    const r = await evaluateGoal(gen, 'haiku', ctx);
+    expect(r.met).toBe(false);
+    expect(r.reason).toMatch(/empty/);
+  });
+
+  it('returns met=false when the generator throws', async () => {
+    const gen = {
+      generateContent: vi.fn().mockRejectedValue(new Error('network down')),
+      generateContentStream: vi.fn(),
+      countTokens: vi.fn(),
+      embedContent: vi.fn(),
+      useSummarizedThinking: () => false,
+    } as unknown as ContentGenerator;
+    const r = await evaluateGoal(gen, 'haiku', ctx);
+    expect(r.met).toBe(false);
+    expect(r.reason).toMatch(/failed/);
+  });
+
+  it('honours an aborted signal as a cancellation', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const gen = {
+      generateContent: vi
+        .fn()
+        .mockRejectedValue(new DOMException('aborted', 'AbortError')),
+      generateContentStream: vi.fn(),
+      countTokens: vi.fn(),
+      embedContent: vi.fn(),
+      useSummarizedThinking: () => false,
+    } as unknown as ContentGenerator;
+    const r = await evaluateGoal(gen, 'haiku', ctx, controller.signal);
+    expect(r.met).toBe(false);
+    expect(r.reason).toMatch(/cancel/i);
+  });
+});

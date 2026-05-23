@@ -14,6 +14,7 @@ export default {
   'use-sandbox': 'Sandboxing',
   'run-headless': 'Run Headless (Non-Interactive)',
   'scheduled-tasks': 'Schedule Prompts',
+  goal: 'Work Toward a Goal',
   // --- Workflow ---
   'approval-mode': 'Approval Mode',
   'manage-memory': 'Manage Memory',
