@@ -1219,6 +1219,9 @@ export class Config {
         Storage.getRuntimeBaseDir(),
         this.getSessionId(),
         this.targetDir,
+        // Only interactive REPL sessions write to the shared `.beads/` queue;
+        // SDK / headless / CI sessions stay on the per-session in-memory store.
+        this.isInteractive?.() ?? false,
       );
     }
     return this.taskStore;

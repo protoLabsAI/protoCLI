@@ -1052,6 +1052,8 @@ export class ArenaManager {
             systemPrompt: getCoreSystemPrompt(
               this.config.getUserMemory(),
               model.modelId,
+              undefined,
+              this.config.isInteractive?.() ?? false,
             ).full,
           },
           modelConfig: { model: model.modelId },

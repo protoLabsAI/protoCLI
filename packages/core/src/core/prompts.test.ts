@@ -123,6 +123,47 @@ describe('Core System Prompt (prompts.ts)', () => {
     expect(prompt).toContain('task_stop');
   });
 
+  describe('beads section (TTY-only)', () => {
+    it('omits the beads section by default (non-interactive callers)', () => {
+      vi.stubEnv('SANDBOX', undefined);
+      const prompt = getCoreSystemPrompt(undefined, undefined, undefined).full;
+      // Headless / SDK / CI callers don't pass interactive=true, so they
+      // should never see the beads steering even if .beads/ exists locally.
+      expect(prompt).not.toMatch(/Beads \(cross-session task tracker\)/);
+      expect(prompt).not.toMatch(/\bbr ready\b/);
+    });
+
+    it('includes the beads section when interactive=true and .beads/ exists', () => {
+      vi.stubEnv('SANDBOX', undefined);
+      // node:fs is mocked at the top of the file -- stub existsSync so the
+      // function's `.beads/` probe returns true regardless of test cwd.
+      vi.mocked(fs.existsSync).mockImplementation((p) =>
+        String(p).endsWith('.beads'),
+      );
+      const prompt = getCoreSystemPrompt(
+        undefined,
+        undefined,
+        undefined,
+        true,
+      ).full;
+      expect(prompt).toContain('Beads (cross-session task tracker)');
+      expect(prompt).toContain('br ready');
+      expect(prompt).toContain('br sync --flush-only');
+    });
+
+    it('omits the beads section when interactive=true but .beads/ does not exist', () => {
+      vi.stubEnv('SANDBOX', undefined);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const prompt = getCoreSystemPrompt(
+        undefined,
+        undefined,
+        undefined,
+        true,
+      ).full;
+      expect(prompt).not.toMatch(/Beads \(cross-session task tracker\)/);
+    });
+  });
+
   it('should include list_directory guidance in Tool Usage section', () => {
     vi.stubEnv('SANDBOX', undefined);
     const prompt = getCoreSystemPrompt().full;
