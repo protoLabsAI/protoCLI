@@ -22,7 +22,7 @@ permissions: read-all
 
 jobs:
   sdk-release:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     if: github.repository == 'protoLabsAI/protoCLI'
     timeout-minutes: 15
     permissions:

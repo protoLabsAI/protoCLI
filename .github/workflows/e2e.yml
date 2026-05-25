@@ -10,7 +10,7 @@ on:
 jobs:
   e2e-test-linux:
     name: 'E2E Test (Linux) - ${{ matrix.sandbox }}'
-    runs-on: 'ubuntu-latest'
+    runs-on: namespace-profile-protolabs-linux
     strategy:
       matrix:
         sandbox:
@@ -75,6 +75,7 @@ jobs:
 
   e2e-test-macos:
     name: 'E2E Test - macOS'
+    # workspace-config: allow-hosted-runner cross-platform macos build/test requires hosted runner
     runs-on: 'macos-latest'
     steps:
       - name: 'Checkout'
