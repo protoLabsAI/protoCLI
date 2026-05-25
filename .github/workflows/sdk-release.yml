@@ -27,10 +27,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
-      # Required for `npm publish --provenance`. setup-node + OIDC sign
-      # the package against this workflow run; provenance lands on
-      # npmjs.com/package/.../access as a tamper-evident attestation.
-      id-token: write
 
     steps:
       - name: Checkout
@@ -61,17 +57,23 @@ jobs:
         working-directory: packages/sdk-typescript
         run: npm run build && npm run bundle:cli
 
+      # Token auth via NPM_TOKEN — same approach as release.yml (CLI).
+      # OIDC trusted publishing was attempted (#283) but never engaged
+      # (ENEEDAUTH, no negotiation), same as the CLI; see #255. Requires the
+      # package's "Publishing access" to allow "2FA or a granular access
+      # token with bypass 2fa enabled" and NPM_TOKEN to be a granular token
+      # with @protolabsai org + package write.
       - name: Publish to npm
         if: ${{ !inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        run: npm publish --access public --provenance
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
         working-directory: packages/sdk-typescript
-        run: npm publish --access public --provenance --dry-run
+        run: npm publish --access public --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
