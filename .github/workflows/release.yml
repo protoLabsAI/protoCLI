@@ -36,6 +36,10 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+      # OIDC trusted publishing to npm — lets `npm publish` mint a
+      # short-lived identity token instead of using a long-lived NPM_TOKEN.
+      # Works even with the package's "require 2FA / disallow tokens" setting.
+      id-token: write
 
     steps:
       - name: Checkout
@@ -77,12 +81,19 @@ jobs:
         if: steps.version.outputs.already_tagged != 'true'
         run: npm run prepare:package
 
-      - name: Publish to npm
+      - name: Publish to npm (OIDC trusted publisher)
         if: steps.version.outputs.already_tagged != 'true'
         working-directory: dist
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # OIDC trusted publishing requires npm >= 11.5.1; the Node pinned in
+        # .nvmrc ships an older npm, so upgrade in-step before publishing.
+        # No NODE_AUTH_TOKEN — the id-token:write permission above lets npm
+        # exchange the GitHub OIDC token for a registry credential, and a
+        # stale/empty token env would shadow that exchange. --provenance
+        # emits a signed provenance attestation (also OIDC-backed).
+        run: |
+          npm install -g npm@latest
+          npm --version
+          npm publish --access public --provenance
 
       - name: Configure git
         if: steps.version.outputs.already_tagged != 'true'
