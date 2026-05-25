@@ -33,11 +33,20 @@ Disable all hooks temporarily without deleting config:
 
 ## Hook types
 
-| Type      | Purpose                                                       |
-| --------- | ------------------------------------------------------------- |
-| `command` | Run a shell script. Event JSON on stdin, decisions on stdout. |
-| `http`    | POST event JSON to a webhook URL.                             |
-| `prompt`  | Ask an LLM to make a judgment call.                           |
+There are three hook types in the system, but only **`command`** is configurable via `settings.json`. The `http` and `prompt` types are available through the SDK only.
+
+### Settings-configurable
+
+| Type      | Purpose                                                      |
+| --------- | ------------------------------------------------------------ |
+| `command` | Run a shell script. Event JSON on stdin, decisions on stdout |
+
+### SDK-only
+
+| Type     | Purpose                                                            |
+| -------- | ------------------------------------------------------------------ |
+| `http`   | POST event JSON to a webhook URL. Available via `hookCallbacks`.   |
+| `prompt` | Ask an LLM to make a judgment call. Available via `hookCallbacks`. |
 
 ### Command hook
 
@@ -47,27 +56,6 @@ Disable all hooks temporarily without deleting config:
   "command": "/path/to/script.sh",
   "timeout": 30000,
   "env": { "CUSTOM_VAR": "value" }
-}
-```
-
-### HTTP hook
-
-```json
-{
-  "type": "http",
-  "url": "https://hooks.example.com/proto",
-  "headers": { "Authorization": "Bearer $API_TOKEN" },
-  "allowedEnvVars": ["API_TOKEN"]
-}
-```
-
-### Prompt hook
-
-```json
-{
-  "type": "prompt",
-  "prompt": "Is this safe? Event: $ARGUMENTS. Respond with JSON: {\"decision\": \"allow\"} or {\"decision\": \"deny\", \"reason\": \"why\"}",
-  "model": "haiku"
 }
 ```
 
@@ -97,12 +85,13 @@ Syntax: `ToolName(glob)`. Glob matches `command` for Bash, `file_path` for Edit/
 
 ### Tool events
 
-| Event                | When                    | Can block? |
-| -------------------- | ----------------------- | ---------- |
-| `PreToolUse`         | Before tool executes    | Yes        |
-| `PostToolUse`        | After tool succeeds     | Limited    |
-| `PostToolUseFailure` | After tool fails        | Limited    |
-| `PermissionRequest`  | Permission dialog shown | Yes        |
+| Event                | When                           | Can block? |
+| -------------------- | ------------------------------ | ---------- |
+| `PreToolUse`         | Before tool executes           | Yes        |
+| `PostToolUse`        | After tool succeeds            | Limited    |
+| `PostToolUseFailure` | After tool fails               | Limited    |
+| `PermissionRequest`  | Permission dialog shown        | Yes        |
+| `Notification`       | Before a notification is shown | No         |
 
 ### Agent & team events
 
@@ -148,7 +137,7 @@ Syntax: `ToolName(glob)`. Glob matches `command` for Bash, `file_path` for Edit/
 
 ### Key event-specific fields
 
-**PreToolUse** — input: `tool_name`, `tool_input`. Output: `hookSpecificOutput.permissionDecision` (`allow`|`deny`|`ask`).
+**PreToolUse** — input: `tool_name`, `tool_input`. Output: `hookSpecificOutput.permissionDecision` (`allow`|`deny`|`ask`) and optional `permissionDecisionReason`.
 
 **PostToolUse** — input: `tool_name`, `tool_input`, `tool_response`. Output: `decision` (`allow`|`block`).
 
@@ -156,15 +145,23 @@ Syntax: `ToolName(glob)`. Glob matches `command` for Bash, `file_path` for Edit/
 
 **SessionStart** — input: `source` (`startup`|`resume`|`clear`|`compact`). Output: `hookSpecificOutput.additionalContext` injected into session context.
 
+**SessionEnd** — input: `reason`. Enum values: `clear`, `logout`, `prompt_input_exit`, `bypass_permissions_disabled`, `other`.
+
+**PreCompact** — input: `trigger` (`manual`|`auto`), `custom_instructions`. Trigger is `manual` when fired by `/compress`, `auto` when fired by the compaction threshold.
+
+**Notification** — input: `message`, `title` (optional), `notification_type`. Enum values: `permission_prompt`, `idle_prompt`, `auth_success`, `elicitation_dialog`.
+
 **TeammateIdle** — input: `agent_id`, `agent_name`, `result_summary`, `success`. Exit 2 to send feedback back to the agent.
 
 ## Matcher patterns
 
 Matchers are regex patterns on tool names (`^bash$`, `read.*`) or agent types (`^Explore$`). Empty string matches all.
 
+For `PreCompact`, matchers filter on `trigger` (`manual`|`auto`). For `Notification`, matchers filter on `notification_type`.
+
 ## Execution model
 
-- Hooks run **in parallel** by default.
+- Hooks run **in parallel** by default. Set `sequential: true` on a hook definition object to force in-order execution.
 - When multiple hooks conflict, the **most restrictive wins**: `deny` > `ask` > `allow`.
 - Default timeout: 60 seconds. Max output: 1 MB.
 - Project hooks require trusted folder status.

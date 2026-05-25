@@ -6,27 +6,38 @@ Commands in proto fall into three categories based on their prefix.
 
 ### Session management
 
-| Command     | Description                                               |
-| ----------- | --------------------------------------------------------- |
-| `/init`     | Analyse current directory and create initial context file |
-| `/summary`  | Generate project summary from conversation history        |
-| `/compress` | Replace chat history with summary to save tokens          |
-| `/resume`   | Resume a previous conversation session                    |
-| `/restore`  | Restore files to state before tool execution              |
-| `/export`   | Export session to file (`html`, `md`, `json`, `jsonl`)    |
+| Command              | Description                                               |
+| -------------------- | --------------------------------------------------------- |
+| `/init`              | Analyse current directory and create initial context file |
+| `/summary`           | Generate project summary from conversation history        |
+| `/compress`          | Replace chat history with summary to save tokens          |
+| `/resume`            | Resume a previous conversation session                    |
+| `/restore`           | Restore files to state before tool execution              |
+| `/export`            | Export session to file (`html`, `md`, `json`, `jsonl`)    |
+| `/recap`             | Print a "where we left off" card summarizing recent chat  |
+| `/rewind` or `/undo` | Open rewind dialog to jump back to a previous turn        |
+| `/rename` or `/tag`  | Rename the current conversation (auto-generates if empty) |
+| `/delete`            | Delete a previous session                                 |
 
 ### Interface
 
-| Command         | Description                                                         |
-| --------------- | ------------------------------------------------------------------- |
-| `/clear`        | Clear terminal screen (`Ctrl+L`)                                    |
-| `/context`      | Show context window usage breakdown                                 |
-| `/theme`        | Change visual theme                                                 |
-| `/vim`          | Toggle Vim editing mode                                             |
-| `/directory`    | Manage multi-directory workspace                                    |
-| `/editor`       | Select preferred editor                                             |
-| `/voice`        | Toggle push-to-talk voice input on or off (persisted to settings)   |
-| `/voice status` | Show voice input status: enabled state, STT endpoint, audio backend |
+| Command                              | Description                                                         |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `/clear`                             | Clear terminal screen (`Ctrl+L`)                                    |
+| `/context`                           | Show context window usage breakdown                                 |
+| `/theme`                             | Change visual theme                                                 |
+| `/vim`                               | Toggle Vim editing mode                                             |
+| `/directory`                         | Manage multi-directory workspace                                    |
+| `/editor`                            | Select preferred editor                                             |
+| `/voice`                             | Toggle push-to-talk voice input on or off (persisted to settings)   |
+| `/voice status`                      | Show voice input status: enabled state, STT endpoint, audio backend |
+| `/bg list`                           | List long-running background shell tasks                            |
+| `/btw`                               | Ask a quick side question without affecting the main conversation   |
+| `/ide status` / `enable` / `disable` | Manage IDE companion integration                                    |
+| `/docs`                              | Open full proto documentation in your browser                       |
+| `/doctor`                            | Run installation and environment diagnostics                        |
+| `/terminal-setup`                    | Configure terminal keybindings for multiline input                  |
+| `/trust`                             | Manage folder trust settings                                        |
 
 ### Language
 
@@ -38,36 +49,47 @@ Commands in proto fall into three categories based on their prefix.
 
 ### Tools & models
 
-| Command                 | Description                                                   |
-| ----------------------- | ------------------------------------------------------------- |
-| `/mcp`                  | List configured MCP servers and tools                         |
-| `/tools`                | List available tools                                          |
-| `/skills [name]`        | List or invoke skills                                         |
-| `/approval-mode <mode>` | Change approval mode (`plan`, `default`, `auto-edit`, `yolo`) |
-| `/model`                | Switch model                                                  |
-| `/model --fast <model>` | Set fast model for background tasks                           |
-| `/extensions`           | List active extensions                                        |
-| `/memory`               | Manage memory                                                 |
-| `/agents create`        | Guided sub-agent creation wizard                              |
-| `/agents manage`        | View, edit, delete sub-agents                                 |
-| `/team`                 | Manage agent teams                                            |
-| `/arena`                | Start an Agent Arena session                                  |
-| `/lsp status`           | Show LSP server status                                        |
+| Command                                                | Description                                                       |
+| ------------------------------------------------------ | ----------------------------------------------------------------- |
+| `/mcp`                                                 | Open MCP management dialog (list servers, tools, prompts)         |
+| `/tools`                                               | List available tools                                              |
+| `/skills [name]`                                       | List or invoke skills                                             |
+| `/approval-mode <mode>`                                | Change approval mode (`plan`, `default`, `auto-edit`, `yolo`)     |
+| `/model`                                               | Switch model                                                      |
+| `/model --fast <model>`                                | Set fast model for background tasks                               |
+| `/model info` / `list`                                 | Show current model info or list available providers               |
+| `/extensions manage` / `install` / `explore`           | Explore and manage extensions                                     |
+| `/memory show` / `add` / `list` / `forget` / `refresh` | Manage memory (see also: `/memory proposals`)                     |
+| `/memory proposals` / `accept` / `reject`              | Review and act on pending memory proposals                        |
+| `/agents create`                                       | Guided sub-agent creation wizard                                  |
+| `/agents manage`                                       | View, edit, delete sub-agents                                     |
+| `/team`                                                | Manage agent teams                                                |
+| `/arena start [task] --models`                         | Start an Agent Arena session (provide `--models` for multi-model) |
+| `/arena stop` / `status`                               | Stop or check arena session status                                |
+| `/arena select --discard`                              | Select from worktrees, discarding current if `--discard`          |
+| `/lsp status`                                          | Show LSP server status                                            |
+| `/loop [interval] <prompt>`                            | Schedule a recurring prompt (e.g. `/loop 5m check deploy`)        |
+| `/loop list` / `clear`                                 | List or cancel active loops                                       |
+| `/goal <condition>`                                    | Set a completion condition; keep working until it holds           |
+| `/goal clear` / `stop` / `off`                         | Cancel active goal                                                |
+| `/setup-github`                                        | Set up GitHub Actions integration                                 |
 
 ### Information & settings
 
-| Command              | Description                                                      |
-| -------------------- | ---------------------------------------------------------------- |
-| `/help` or `/?`      | Display help                                                     |
-| `/about`             | Display version information                                      |
-| `/stats`             | Show session statistics (tokens, costs, cached tokens)           |
-| `/settings`          | Open settings editor                                             |
-| `/setup`             | Reminder to run `proto setup` (wizard requires a fresh terminal) |
-| `/auth`              | Change authentication method                                     |
-| `/permissions`       | Manage folder trust                                              |
-| `/bug <description>` | Submit a bug report                                              |
-| `/copy`              | Copy last output to clipboard                                    |
-| `/quit` or `/exit`   | Exit proto                                                       |
+| Command                                  | Description                                                      |
+| ---------------------------------------- | ---------------------------------------------------------------- |
+| `/help` or `/?`                          | Display help                                                     |
+| `/about` or `/status`                    | Display version information                                      |
+| `/stats`                                 | Show session statistics (tokens, costs, cached tokens)           |
+| `/notes` / `notes --view`                | View or refresh session notes (`.proto/session-notes.md`)        |
+| `/insight status` / `enable` / `disable` | Show or toggle programming insights generation                   |
+| `/settings`                              | Open settings editor                                             |
+| `/setup`                                 | Reminder to run `proto setup` (wizard requires a fresh terminal) |
+| `/auth`                                  | Change authentication method                                     |
+| `/permissions`                           | Manage folder trust                                              |
+| `/bug <description>`                     | Submit a bug report                                              |
+| `/copy`                                  | Copy last output to clipboard                                    |
+| `/quit` or `/exit`                       | Exit proto                                                       |
 
 ### Auth CLI subcommands (terminal, outside session)
 

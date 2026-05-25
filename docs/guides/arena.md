@@ -17,7 +17,7 @@ Arena uses significantly more tokens than a single session (each agent has its o
 ## Start a session
 
 ```
-/arena --models gpt-4o,claude-sonnet-4,gemini-2.5-pro "Refactor the authentication module to use JWT tokens"
+/arena start --models gpt-4o,claude-sonnet-4,gemini-2.5-pro "Refactor the authentication module to use JWT tokens"
 ```
 
 Omit `--models` to get an interactive model selection dialog.
@@ -52,11 +52,19 @@ When all agents complete, choose one to apply its changes to your main workspace
 {
   "arena": {
     "worktreeBaseDir": "~/.proto/arena",
+    "preserveArtifacts": false,
     "maxRoundsPerAgent": 50,
     "timeoutSeconds": 600
   }
 }
 ```
+
+| Setting             | Default | Description                                          |
+| ------------------- | ------- | ---------------------------------------------------- |
+| `worktreeBaseDir`   | —       | Custom base directory for Arena worktrees            |
+| `preserveArtifacts` | `false` | Keep worktrees and session state after session ends  |
+| `maxRoundsPerAgent` | —       | Max turns per agent (no limit if unset)              |
+| `timeoutSeconds`    | —       | Total session timeout in seconds (no limit if unset) |
 
 ## Best practices
 
@@ -74,11 +82,20 @@ When all agents complete, choose one to apply its changes to your main workspace
 | Agent timeout           | Increase `arena.timeoutSeconds` in settings                                   |
 | Winner apply fails      | Check for conflicting uncommitted changes in your main working directory      |
 
+## Subcommands
+
+| Command                   | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| `/arena start [task]`     | Start an Arena session; passes `[task]` as the prompt      |
+| `/arena stop`             | Stop the current Arena session (opens confirmation dialog) |
+| `/arena status`           | Show current session status                                |
+| `/arena select [model]`   | Choose a result to apply; `[model]` picks by name directly |
+| `/arena select --discard` | Discard all results and clean up worktrees                 |
+
 ## Limitations
 
 - **In-process mode only** — split-pane display (tmux/iTerm2) is not yet available
 - **No diff preview** before selecting a winner
-- **No worktree retention** after selection
 - **No session resumption** — if you close the terminal mid-session, clean up manually with `git worktree prune`
 - **Maximum 5 agents**
 - **Git repository required**
