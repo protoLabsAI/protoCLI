@@ -162,7 +162,6 @@ vitest.config.js.map
 packages/*/src/**/__snapshots__/*.js.snap
 
 # protoLabs Studio workspace (local agent state, not source)
-.automaker/
 .automaker-lock
 
 # beads_rust task management
@@ -179,3 +178,9 @@ packages/*/src/**/__snapshots__/*.js.snap
 .worktrees/
 .lsp.json
 *.tgz
+
+# protoLabs workspace-config standard
+.beads/beads.db
+.automaker/features/
+.automaker/checkpoints/
+.automaker/trajectory/
