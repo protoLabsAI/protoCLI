@@ -87,18 +87,6 @@ jobs:
         if: steps.version.outputs.already_tagged != 'true'
         run: npm run prepare:package
 
-      - name: Debug OIDC environment
-        if: steps.version.outputs.already_tagged != 'true'
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL set? ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}${ACTIONS_ID_TOKEN_REQUEST_URL:-NO}"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN set? ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+yes}${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-NO}"
-          echo "NODE_AUTH_TOKEN set? ${NODE_AUTH_TOKEN:+yes}${NODE_AUTH_TOKEN:-NO}"
-          npm install -g npm@latest >/dev/null 2>&1
-          echo "npm version: $(npm --version)"
-          echo "npm config registry: $(npm config get registry)"
-          echo "--- effective npmrc (auth lines redacted) ---"
-          npm config ls -l 2>/dev/null | grep -iE "registry|auth|provenance|//" | sed 's/_authToken=.*/_authToken=<redacted>/' || true
-
       - name: Publish to npm (OIDC trusted publisher)
         if: steps.version.outputs.already_tagged != 'true'
         working-directory: dist
