@@ -36,10 +36,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      # OIDC trusted publishing to npm — lets `npm publish` mint a
-      # short-lived identity token instead of using a long-lived NPM_TOKEN.
-      # Works even with the package's "require 2FA / disallow tokens" setting.
-      id-token: write
 
     steps:
       - name: Checkout
@@ -53,13 +49,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: npm
-          # NOTE: deliberately no `registry-url`. setup-node's registry-url
-          # writes a temp .npmrc with `_authToken=${NODE_AUTH_TOKEN}` +
-          # always-auth=true and injects a placeholder NODE_AUTH_TOKEN, which
-          # shadows OIDC trusted publishing (npm sees a token and skips the
-          # OIDC exchange → ENEEDAUTH/404). The committed root .npmrc already
-          # sets `registry=https://registry.npmjs.org`, so the registry is
-          # configured without the auth placeholder. See #245/#247.
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: npm ci
@@ -87,19 +77,17 @@ jobs:
         if: steps.version.outputs.already_tagged != 'true'
         run: npm run prepare:package
 
-      - name: Publish to npm (OIDC trusted publisher)
+      - name: Publish to npm
         if: steps.version.outputs.already_tagged != 'true'
         working-directory: dist
-        # OIDC trusted publishing requires npm >= 11.5.1; the Node pinned in
-        # .nvmrc ships an older npm, so upgrade in-step before publishing.
-        # No NODE_AUTH_TOKEN — the id-token:write permission above lets npm
-        # exchange the GitHub OIDC token for a registry credential, and a
-        # stale/empty token env would shadow that exchange. --provenance
-        # emits a signed provenance attestation (also OIDC-backed).
-        run: |
-          npm install -g npm@latest
-          npm --version
-          npm publish --access public --provenance
+        # Token auth via NPM_TOKEN. Requires the package's "Publishing access"
+        # to allow "2FA or a granular access token with bypass 2fa enabled"
+        # (not "disallow tokens"), and NPM_TOKEN to be a granular token with
+        # @protolabsai org + package write. OIDC trusted publishing was
+        # attempted (#278/#280) but npm never engaged the exchange — see #255.
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Configure git
         if: steps.version.outputs.already_tagged != 'true'
