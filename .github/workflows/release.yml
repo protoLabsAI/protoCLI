@@ -53,7 +53,13 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: npm
-          registry-url: https://registry.npmjs.org
+          # NOTE: deliberately no `registry-url`. setup-node's registry-url
+          # writes a temp .npmrc with `_authToken=${NODE_AUTH_TOKEN}` +
+          # always-auth=true and injects a placeholder NODE_AUTH_TOKEN, which
+          # shadows OIDC trusted publishing (npm sees a token and skips the
+          # OIDC exchange → ENEEDAUTH/404). The committed root .npmrc already
+          # sets `registry=https://registry.npmjs.org`, so the registry is
+          # configured without the auth placeholder. See #245/#247.
 
       - name: Install dependencies
         run: npm ci
