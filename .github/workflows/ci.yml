@@ -44,7 +44,7 @@ env:
 jobs:
   lint:
     name: 'Lint'
-    runs-on: 'ubuntu-latest'
+    runs-on: namespace-profile-protolabs-linux
     steps:
       - name: 'Checkout'
         uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8' # ratchet:actions/checkout@v5
@@ -168,7 +168,7 @@ jobs:
 
   post_coverage_comment:
     name: 'Post Coverage Comment'
-    runs-on: 'ubuntu-latest'
+    runs-on: namespace-profile-protolabs-linux
     needs: 'test'
     if: |-
       ${{ always() && github.event_name == 'pull_request' && (github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -206,6 +206,7 @@ jobs:
 
   codeql:
     name: 'CodeQL'
+    # workspace-config: allow-hosted-runner CodeQL default setup requires hosted runner
     runs-on: 'ubuntu-latest'
     permissions:
       actions: 'read'

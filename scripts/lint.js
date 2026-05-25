@@ -92,7 +92,10 @@ const LINTERS = {
   },
   yamllint: {
     check: 'command -v yamllint',
-    installer: `pip3 install --user "yamllint==${YAMLLINT_VERSION}"`,
+    // --break-system-packages: org-owned CI runners ship a PEP 668
+    // externally-managed Python; a plain --user install is refused there.
+    // The flag is a no-op cost on GitHub-hosted runners (pip 23+). See #288.
+    installer: `pip3 install --user --break-system-packages "yamllint==${YAMLLINT_VERSION}"`,
     run: "git ls-files | grep -E '\\.(yaml|yml)' | xargs yamllint --format github",
   },
 };

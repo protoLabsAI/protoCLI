@@ -24,7 +24,7 @@ permissions: read-all
 
 jobs:
   auto-release:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     if: >-
       github.repository == 'protoLabsAI/protoCLI' &&
       github.event.workflow_run.conclusion == 'success' &&

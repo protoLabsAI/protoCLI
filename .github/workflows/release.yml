@@ -20,7 +20,7 @@ permissions: read-all
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-protolabs-linux
     if: >-
       github.repository == 'protoLabsAI/protoCLI' &&
       (
