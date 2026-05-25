@@ -61,19 +61,26 @@ jobs:
         working-directory: packages/sdk-typescript
         run: npm run build && npm run bundle:cli
 
+      # Trusted Publishing: npm exchanges the GitHub OIDC token (id-token:
+      # write at job level) for a short-lived publish credential. Same OIDC
+      # token also drives --provenance.
+      #
+      # Prerequisite (one-time, npm UI):
+      #   npmjs.com/package/@protolabsai/sdk/access →
+      #     Trusted Publishers → Add → GitHub Actions
+      #     repository:        protoLabsAI/protoCLI
+      #     workflow filename: sdk-release.yml
+      #     environment:       (none)
+
       - name: Publish to npm
         if: ${{ !inputs.dry_run }}
         working-directory: packages/sdk-typescript
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
         working-directory: packages/sdk-typescript
         run: npm publish --access public --provenance --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         if: ${{ !inputs.dry_run }}
