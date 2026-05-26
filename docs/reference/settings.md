@@ -45,16 +45,22 @@ In addition to `settings.json`, the `.proto/` directory can contain:
 
 ### `general`
 
-| Setting                         | Type    | Default | Description                                     |
-| ------------------------------- | ------- | ------- | ----------------------------------------------- |
-| `general.preferredEditor`       | string  | —       | Editor for opening files                        |
-| `general.vimMode`               | boolean | `false` | Vim keybindings in input                        |
-| `general.enableAutoUpdate`      | boolean | `true`  | Check for updates on startup                    |
-| `general.gitCoAuthor`           | boolean | `true`  | Add `Co-authored-by` trailer to git commits     |
-| `general.checkpointing.enabled` | boolean | `false` | Session checkpointing for recovery              |
-| `general.defaultFileEncoding`   | string  | `utf-8` | Encoding for new files (`utf-8` or `utf-8-bom`) |
-| `general.lsp`                   | boolean | —       | Enable LSP support globally                     |
-| `general.language`              | string  | auto    | UI language code (e.g. `en-US`, `zh-CN`)        |
+| Setting                                    | Type    | Default | Description                                                               |
+| ------------------------------------------ | ------- | ------- | ------------------------------------------------------------------------- |
+| `general.preferredEditor`                  | string  | —       | Editor for opening files                                                  |
+| `general.vimMode`                          | boolean | `false` | Vim keybindings in input                                                  |
+| `general.enableAutoUpdate`                 | boolean | `true`  | Check for updates on startup                                              |
+| `general.gitCoAuthor`                      | boolean | `true`  | Add `Co-authored-by` trailer to git commits                               |
+| `general.checkpointing.enabled`            | boolean | `false` | Session checkpointing for recovery                                        |
+| `general.showSessionRecap`                 | boolean | `false` | Auto-generate one-line recap after idle (>5 min) on focus-in              |
+| `general.sessionRecapAwayThresholdMinutes` | number  | `5`     | Minutes idle before auto-recap fires                                      |
+| `general.debugKeystrokeLogging`            | boolean | `false` | Log keystrokes to console (for debugging)                                 |
+| `general.terminalBell`                     | boolean | `true`  | Play terminal bell when response completes or needs approval              |
+| `general.chatRecording`                    | boolean | `true`  | Save chat history to disk (required for `--continue` / `--resume`)        |
+| `general.outputLanguage`                   | string  | `auto`  | LLM output language (`auto` or a language name like `Chinese`, `English`) |
+| `general.defaultFileEncoding`              | string  | `utf-8` | Encoding for new files (`utf-8` or `utf-8-bom`)                           |
+| `general.lsp`                              | boolean | —       | Enable LSP support globally (auto-enabled when `.lsp.json` exists)        |
+| `general.language`                         | string  | auto    | UI language code (e.g. `en-US`, `zh-CN`)                                  |
 
 ### `output`
 
