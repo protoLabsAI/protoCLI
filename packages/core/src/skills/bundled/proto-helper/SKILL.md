@@ -60,7 +60,6 @@ Use this index to locate the right document for the user's question. Load only t
 | Checkpointing                               | `docs/features/checkpointing.md` |
 | Token caching                               | `docs/features/token-caching.md` |
 | Language / i18n                             | `docs/features/language.md`      |
-| Arena mode                                  | `docs/features/arena.md`         |
 
 ### IDE Integration
 

@@ -303,7 +303,7 @@ export class InProcessBackend implements Backend {
 
   /**
    * Get an AgentInteractive instance by agent ID.
-   * Used by ArenaManager for direct event subscription.
+   * Used for direct event subscription.
    */
   getAgent(agentId: string): AgentInteractive | undefined {
     return this.agents.get(agentId);

@@ -22,8 +22,6 @@ import type { ContentGeneratorConfigSources } from '../core/contentGenerator.js'
 import type { MCPOAuthConfig } from '../mcp/oauth-provider.js';
 import type { ShellExecutionConfig } from '../services/shellExecutionService.js';
 import type { AnyToolInvocation } from '../tools/tools.js';
-import type { ArenaManager } from '../agents/arena/ArenaManager.js';
-import { ArenaAgentClient } from '../agents/arena/ArenaAgentClient.js';
 
 // Core
 import { BaseLlmClient } from '../core/baseLlmClient.js';
@@ -371,23 +369,11 @@ export interface SandboxConfig {
 }
 
 /**
- * Settings shared across multi-agent collaboration features
- * (Arena, Team, Swarm).
+ * Settings shared across multi-agent collaboration features (Team, Swarm).
  */
 export interface AgentsCollabSettings {
   /** Display mode for multi-agent sessions ('in-process' | 'tmux' | 'iterm2') */
   displayMode?: string;
-  /** Arena-specific settings */
-  arena?: {
-    /** Custom base directory for Arena worktrees (default: ~/.proto/arena) */
-    worktreeBaseDir?: string;
-    /** Preserve worktrees and state files after session ends */
-    preserveArtifacts?: boolean;
-    /** Maximum rounds (turns) per agent. No limit if unset. */
-    maxRoundsPerAgent?: number;
-    /** Total timeout in seconds for the Arena session. No limit if unset. */
-    timeoutSeconds?: number;
-  };
 }
 
 export interface ConfigParameters {
@@ -511,7 +497,7 @@ export interface ConfigParameters {
   channel?: string;
   /** Model providers configuration grouped by authType */
   modelProvidersConfig?: ModelProvidersConfig;
-  /** Multi-agent collaboration settings (Arena, Team, Swarm) */
+  /** Multi-agent collaboration settings (Team, Swarm) */
   agents?: AgentsCollabSettings;
   /** Disable all hooks (default: false, hooks enabled) */
   disableAllHooks?: boolean;
@@ -678,11 +664,6 @@ export class Config {
   private readonly shouldUseNodePtyShell: boolean;
   private readonly skipNextSpeakerCheck: boolean;
   private shellExecutionConfig: ShellExecutionConfig;
-  private arenaManager: ArenaManager | null = null;
-  private arenaManagerChangeCallback:
-    | ((manager: ArenaManager | null) => void)
-    | null = null;
-  private readonly arenaAgentClient: ArenaAgentClient | null;
   private readonly agentsSettings: AgentsCollabSettings;
   private readonly skipLoopDetection: boolean;
   private readonly skipStartupContext: boolean;
@@ -840,7 +821,6 @@ export class Config {
     this.inputFormat = params.inputFormat ?? InputFormat.TEXT;
     this.fileExclusions = new FileExclusions(this);
     this.eventEmitter = params.eventEmitter;
-    this.arenaAgentClient = ArenaAgentClient.create();
     this.agentsSettings = params.agents ?? {};
     if (params.contextFileName) {
       setGeminiMdFilename(params.contextFileName);
@@ -1581,8 +1561,6 @@ export class Config {
       if (this.toolRegistry) {
         await this.toolRegistry.stop();
       }
-
-      await this.cleanupArenaRuntime();
     } catch (error) {
       // Log but don't throw - cleanup should be best-effort
       this.debugLogger.error('Error during Config shutdown:', error);
@@ -1791,48 +1769,8 @@ export class Config {
     this.geminiMdFileCount = count;
   }
 
-  getArenaManager(): ArenaManager | null {
-    return this.arenaManager;
-  }
-
-  setArenaManager(manager: ArenaManager | null): void {
-    this.arenaManager = manager;
-    this.arenaManagerChangeCallback?.(manager);
-  }
-
-  /**
-   * Register a callback invoked whenever the arena manager changes.
-   * Pass `null` to unsubscribe. Only one subscriber is supported.
-   */
-  onArenaManagerChange(
-    cb: ((manager: ArenaManager | null) => void) | null,
-  ): void {
-    this.arenaManagerChangeCallback = cb;
-  }
-
-  getArenaAgentClient(): ArenaAgentClient | null {
-    return this.arenaAgentClient;
-  }
-
   getAgentsSettings(): AgentsCollabSettings {
     return this.agentsSettings;
-  }
-
-  /**
-   * Clean up Arena runtime. When `force` is true (e.g., /arena select --discard),
-   * always removes worktrees regardless of preserveArtifacts.
-   */
-  async cleanupArenaRuntime(force?: boolean): Promise<void> {
-    const manager = this.arenaManager;
-    if (!manager) {
-      return;
-    }
-    if (!force && this.agentsSettings.arena?.preserveArtifacts) {
-      await manager.cleanupRuntime();
-    } else {
-      await manager.cleanup();
-    }
-    this.setArenaManager(null);
   }
 
   getApprovalMode(): ApprovalMode {

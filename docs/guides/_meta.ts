@@ -22,7 +22,6 @@ export default {
   'trusted-folders': 'Trusted Folders',
   'session-export': 'Export Sessions',
   'token-caching': 'Token Caching',
-  arena: 'Agent Arena',
   // --- IDE & CI ---
   'ide-vscode': 'Visual Studio Code',
   'ide-zed': 'Zed',

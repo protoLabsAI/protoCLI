@@ -426,7 +426,7 @@ generation; not just observability.
 2026-04. We have not evaluated yet whether to adopt their implementation
 or keep ours — ours is more tightly coupled to checkpoint snapshots.
 
-### 6.7 Background subagents, teams, arena
+### 6.7 Background subagents, teams
 
 - `agents/runtime/` — `AgentCore` (stateless engine), `AgentHeadless`
   (one-shot), `AgentInteractive` (persistent loop), `compaction.ts`.
@@ -434,8 +434,6 @@ or keep ours — ours is more tightly coupled to checkpoint snapshots.
   `team-registry.ts` — multi-agent team execution.
 - `agents/background-store.ts` — persists background agent state to
   `.proto/agents/background.json`.
-- `agents/arena/` — A/B-style model comparison. Surfaced via
-  `arenaCommand`.
 
 Upstream has #3076 (background subagents) but our tree is more developed.
 

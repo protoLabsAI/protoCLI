@@ -170,6 +170,5 @@ The orchestrator registers all members in the mailbox before spawning the first 
 ## Related
 
 - [Use Sub-Agents](./use-sub-agents) — single-agent delegation patterns
-- [Agent Arena](./arena) — run multiple model variants competitively
 - [Use Hooks](./use-hooks) — react to team events
 - [Explanation → Sub-Agents Design](../explanation/sub-agents-design) — architectural context
