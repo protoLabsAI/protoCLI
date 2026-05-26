@@ -87,8 +87,26 @@ proto -p "Review this patch" --append-system-prompt "Be terse and focus on block
 | `--approval-mode`            | `default`, `auto_edit`, `plan`, `yolo`         |
 | `--all-files`, `-a`          | Include all files in context                   |
 | `--include-directories`      | Include additional directories                 |
+| `--max-tool-calls`           | Abort after N tool calls (exit code 55)        |
 | `-d`, `--debug`              | Enable debug output                            |
 | `--lsp`                      | Enable LSP code intelligence                   |
+
+## Capping a run
+
+For unattended runs (CI, cron, background agents) use `--max-tool-calls` to
+bound how much work a single invocation can do. Once the budget is reached the
+run aborts before the next tool dispatch and exits with code **55** — distinct
+from the turn cap (53) and user cancellation (130), so scripts can branch on it:
+
+```bash
+proto -p "Triage the failing tests" --yolo --max-tool-calls 50
+if [ $? -eq 55 ]; then
+  echo "Run hit its tool-call budget; inspect partial output."
+fi
+```
+
+The cap also covers tool calls made by cron sub-turns. It can be set in
+`settings.json` as `model.maxToolCalls`; `-1` (the default) means unlimited.
 
 ## Common automation patterns
 
