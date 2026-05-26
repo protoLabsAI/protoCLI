@@ -56,7 +56,6 @@ import { useAuthCommand } from './auth/useAuth.js';
 import { useEditorSettings } from './hooks/useEditorSettings.js';
 import { useSettingsCommand } from './hooks/useSettingsCommand.js';
 import { useModelCommand } from './hooks/useModelCommand.js';
-import { useArenaCommand } from './hooks/useArenaCommand.js';
 import { useApprovalModeCommand } from './hooks/useApprovalModeCommand.js';
 import { useResumeCommand } from './hooks/useResumeCommand.js';
 import { useDeleteCommand } from './hooks/useDeleteCommand.js';
@@ -79,6 +78,7 @@ import { useFocus } from './hooks/useFocus.js';
 import { useAwaySummary } from './hooks/useAwaySummary.js';
 import { useBracketedPaste } from './hooks/useBracketedPaste.js';
 import { useKeyboardHandling } from './hooks/useKeyboardHandling.js';
+import { useTranscriptOverlay } from './hooks/useTranscriptOverlay.js';
 import { useLoadingIndicator } from './hooks/useLoadingIndicator.js';
 import { useFolderTrust } from './hooks/useFolderTrust.js';
 import { useIdeTrustListener } from './hooks/useIdeTrustListener.js';
@@ -506,8 +506,6 @@ export const AppContainer = (props: AppContainerProps) => {
     openModelDialog,
     closeModelDialog,
   } = useModelCommand();
-  const { activeArenaDialog, openArenaDialog, closeArenaDialog } =
-    useArenaCommand();
 
   const {
     isResumeDialogOpen,
@@ -566,7 +564,6 @@ export const AppContainer = (props: AppContainerProps) => {
       openSettingsDialog,
       openModelDialog,
       openTrustDialog,
-      openArenaDialog,
       openPermissionsDialog,
       openApprovalModeDialog,
       quit: (messages: HistoryItem[]) => {
@@ -595,7 +592,6 @@ export const AppContainer = (props: AppContainerProps) => {
       openEditorDialog,
       openSettingsDialog,
       openModelDialog,
-      openArenaDialog,
       setDebugMessage,
       dispatchExtensionStateUpdate,
       openTrustDialog,
@@ -959,15 +955,6 @@ export const AppContainer = (props: AppContainerProps) => {
     ],
   );
 
-  const handleArenaModelsSelected = useCallback(
-    (models: string[]) => {
-      const value = models.join(',');
-      buffer.setText(`/arena start --models ${value} `);
-      closeArenaDialog();
-    },
-    [buffer, closeArenaDialog],
-  );
-
   // Welcome back functionality (must be after handleFinalSubmit)
   const {
     welcomeBackInfo,
@@ -1147,9 +1134,9 @@ export const AppContainer = (props: AppContainerProps) => {
   }, []);
   const shouldShowIdePrompt = Boolean(
     currentIDE &&
-    !config.getIdeMode() &&
-    !settings.merged.ide?.hasSeenNudge &&
-    !idePromptAnswered,
+      !config.getIdeMode() &&
+      !settings.merged.ide?.hasSeenNudge &&
+      !idePromptAnswered,
   );
 
   // Command migration nudge
@@ -1320,8 +1307,6 @@ export const AppContainer = (props: AppContainerProps) => {
     exitEditorDialog,
     isSettingsDialogOpen,
     closeSettingsDialog,
-    activeArenaDialog,
-    closeArenaDialog,
     isFolderTrustDialogOpen,
     showWelcomeBackDialog,
     handleWelcomeBackClose,
@@ -1335,6 +1320,8 @@ export const AppContainer = (props: AppContainerProps) => {
     cancelOngoingRequest,
     buffer,
   });
+
+  const { isTranscriptOpen, closeTranscript } = useTranscriptOverlay();
 
   const {
     showToolDescriptions,
@@ -1363,6 +1350,7 @@ export const AppContainer = (props: AppContainerProps) => {
     handleExit,
     debugKeystrokeLogging: settings.merged.general?.debugKeystrokeLogging,
     onBackgroundSession: backgroundCurrentSession,
+    isTranscriptOpen,
   });
 
   // Update terminal title with proto status and thoughts
@@ -1392,7 +1380,6 @@ export const AppContainer = (props: AppContainerProps) => {
     isSettingsDialogOpen ||
     isModelDialogOpen ||
     isTrustDialogOpen ||
-    activeArenaDialog !== null ||
     isPermissionsDialogOpen ||
     isAuthDialogOpen ||
     isAuthenticating ||
@@ -1447,7 +1434,6 @@ export const AppContainer = (props: AppContainerProps) => {
       isModelDialogOpen,
       isFastModelMode,
       isTrustDialogOpen,
-      activeArenaDialog,
       isPermissionsDialogOpen,
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
@@ -1545,6 +1531,8 @@ export const AppContainer = (props: AppContainerProps) => {
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
+      // Transcript overlay (Ctrl+O)
+      isTranscriptOpen,
     }),
     [
       isThemeDialogOpen,
@@ -1562,7 +1550,6 @@ export const AppContainer = (props: AppContainerProps) => {
       isModelDialogOpen,
       isFastModelMode,
       isTrustDialogOpen,
-      activeArenaDialog,
       isPermissionsDialogOpen,
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
@@ -1661,6 +1648,8 @@ export const AppContainer = (props: AppContainerProps) => {
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
+      // Transcript overlay (Ctrl+O)
+      isTranscriptOpen,
     ],
   );
 
@@ -1681,9 +1670,6 @@ export const AppContainer = (props: AppContainerProps) => {
       exitEditorDialog,
       closeSettingsDialog,
       closeModelDialog,
-      openArenaDialog,
-      closeArenaDialog,
-      handleArenaModelsSelected,
       dismissCodingPlanUpdate,
       closeTrustDialog,
       closePermissionsDialog,
@@ -1738,6 +1724,8 @@ export const AppContainer = (props: AppContainerProps) => {
       closeFeedbackDialog,
       temporaryCloseFeedbackDialog,
       submitFeedback,
+      // Transcript overlay (Ctrl+O)
+      closeTranscript,
     }),
     [
       openThemeDialog,
@@ -1755,9 +1743,6 @@ export const AppContainer = (props: AppContainerProps) => {
       exitEditorDialog,
       closeSettingsDialog,
       closeModelDialog,
-      openArenaDialog,
-      closeArenaDialog,
-      handleArenaModelsSelected,
       dismissCodingPlanUpdate,
       closeTrustDialog,
       closePermissionsDialog,
@@ -1807,6 +1792,8 @@ export const AppContainer = (props: AppContainerProps) => {
       closeFeedbackDialog,
       temporaryCloseFeedbackDialog,
       submitFeedback,
+      // Transcript overlay (Ctrl+O)
+      closeTranscript,
     ],
   );
 

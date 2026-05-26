@@ -13,7 +13,6 @@ import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { CliNotFoundError } from '../types/errors.js';
 
 /**
  * Executable types supported by the SDK
@@ -211,7 +210,7 @@ export function findBundledCliPath(): string {
   }
 
   const candidates = getBundledCliCandidatePaths();
-  throw new CliNotFoundError(
+  throw new Error(
     'Bundled qwen CLI not found. The CLI should be included in the SDK package.\n' +
       'Searched locations:\n' +
       candidates.map((c) => `  - ${c}`).join('\n') +
@@ -225,7 +224,7 @@ export function findBundledCliPath(): string {
  */
 function validateFilePath(filePath: string): void {
   if (!fs.existsSync(filePath)) {
-    throw new CliNotFoundError(
+    throw new Error(
       `Executable file not found at '${filePath}'. ` +
         'Please check the file path and ensure the file exists.',
     );
@@ -233,7 +232,7 @@ function validateFilePath(filePath: string): void {
 
   const stats = fs.statSync(filePath);
   if (!stats.isFile()) {
-    throw new CliNotFoundError(
+    throw new Error(
       `Path '${filePath}' exists but is not a file. ` +
         'Please provide a path to an executable file.',
     );

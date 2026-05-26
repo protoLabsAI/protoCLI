@@ -61,6 +61,8 @@ describe('keyMatchers', () => {
     [Command.SHOW_MORE_LINES]: (key: Key) => key.ctrl && key.name === 's',
     [Command.RETRY_LAST]: (key: Key) => key.ctrl && key.name === 'y',
     [Command.BACKGROUND_SESSION]: (key: Key) => key.ctrl && key.name === 'b',
+    [Command.TOGGLE_TRANSCRIPT]: (key: Key) =>
+      key.ctrl && (key.name === 'o' || key.sequence === '\x0f'),
     [Command.REVERSE_SEARCH]: (key: Key) => key.ctrl && key.name === 'r',
     [Command.SUBMIT_REVERSE_SEARCH]: (key: Key) =>
       key.name === 'return' && !key.ctrl,
@@ -258,6 +260,15 @@ describe('keyMatchers', () => {
       command: Command.RETRY_LAST,
       positive: [createKey('y', { ctrl: true })],
       negative: [createKey('y'), createKey('r', { ctrl: true })],
+    },
+    {
+      command: Command.TOGGLE_TRANSCRIPT,
+      positive: [
+        createKey('o', { ctrl: true }),
+        // Terminal fallback: raw SI control byte for Ctrl+O.
+        createKey('', { ctrl: true, sequence: '\x0f' }),
+      ],
+      negative: [createKey('o'), createKey('p', { ctrl: true })],
     },
 
     // Shell commands

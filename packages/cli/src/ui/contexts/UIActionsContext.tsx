@@ -18,7 +18,6 @@ import { type SettingScope } from '../../config/settings.js';
 import { type CodingPlanRegion } from '../../constants/codingPlan.js';
 import { type AlibabaStandardRegion } from '../../constants/alibabaStandardApiKey.js';
 import type { AuthState } from '../types.js';
-import { type ArenaDialogType } from '../hooks/useArenaCommand.js';
 // OpenAICredentials type (previously imported from OpenAIKeyPrompt)
 export interface OpenAICredentials {
   apiKey: string;
@@ -61,9 +60,6 @@ export interface UIActions {
   exitEditorDialog: () => void;
   closeSettingsDialog: () => void;
   closeModelDialog: () => void;
-  openArenaDialog: (type: Exclude<ArenaDialogType, null>) => void;
-  closeArenaDialog: () => void;
-  handleArenaModelsSelected?: (models: string[]) => void;
   dismissCodingPlanUpdate: () => void;
   closeTrustDialog: () => void;
   closePermissionsDialog: () => void;
@@ -111,6 +107,8 @@ export interface UIActions {
   closeFeedbackDialog: () => void;
   temporaryCloseFeedbackDialog: () => void;
   submitFeedback: (rating: number) => void;
+  // Transcript overlay (Ctrl+O)
+  closeTranscript: () => void;
 }
 
 export const UIActionsContext = createContext<UIActions | null>(null);

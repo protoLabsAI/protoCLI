@@ -49,30 +49,27 @@ Commands in proto fall into three categories based on their prefix.
 
 ### Tools & models
 
-| Command                                                | Description                                                       |
-| ------------------------------------------------------ | ----------------------------------------------------------------- |
-| `/mcp`                                                 | Open MCP management dialog (list servers, tools, prompts)         |
-| `/tools`                                               | List available tools                                              |
-| `/skills [name]`                                       | List or invoke skills                                             |
-| `/approval-mode <mode>`                                | Change approval mode (`plan`, `default`, `auto-edit`, `yolo`)     |
-| `/model`                                               | Switch model                                                      |
-| `/model --fast <model>`                                | Set fast model for background tasks                               |
-| `/model info` / `list`                                 | Show current model info or list available providers               |
-| `/extensions manage` / `install` / `explore`           | Explore and manage extensions                                     |
-| `/memory show` / `add` / `list` / `forget` / `refresh` | Manage memory (see also: `/memory proposals`)                     |
-| `/memory proposals` / `accept` / `reject`              | Review and act on pending memory proposals                        |
-| `/agents create`                                       | Guided sub-agent creation wizard                                  |
-| `/agents manage`                                       | View, edit, delete sub-agents                                     |
-| `/team`                                                | Manage agent teams                                                |
-| `/arena start [task] --models`                         | Start an Agent Arena session (provide `--models` for multi-model) |
-| `/arena stop` / `status`                               | Stop or check arena session status                                |
-| `/arena select --discard`                              | Select from worktrees, discarding current if `--discard`          |
-| `/lsp status`                                          | Show LSP server status                                            |
-| `/loop [interval] <prompt>`                            | Schedule a recurring prompt (e.g. `/loop 5m check deploy`)        |
-| `/loop list` / `clear`                                 | List or cancel active loops                                       |
-| `/goal <condition>`                                    | Set a completion condition; keep working until it holds           |
-| `/goal clear` / `stop` / `off`                         | Cancel active goal                                                |
-| `/setup-github`                                        | Set up GitHub Actions integration                                 |
+| Command                                                | Description                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------------- |
+| `/mcp`                                                 | Open MCP management dialog (list servers, tools, prompts)     |
+| `/tools`                                               | List available tools                                          |
+| `/skills [name]`                                       | List or invoke skills                                         |
+| `/approval-mode <mode>`                                | Change approval mode (`plan`, `default`, `auto-edit`, `yolo`) |
+| `/model`                                               | Switch model                                                  |
+| `/model --fast <model>`                                | Set fast model for background tasks                           |
+| `/model info` / `list`                                 | Show current model info or list available providers           |
+| `/extensions manage` / `install` / `explore`           | Explore and manage extensions                                 |
+| `/memory show` / `add` / `list` / `forget` / `refresh` | Manage memory (see also: `/memory proposals`)                 |
+| `/memory proposals` / `accept` / `reject`              | Review and act on pending memory proposals                    |
+| `/agents create`                                       | Guided sub-agent creation wizard                              |
+| `/agents manage`                                       | View, edit, delete sub-agents                                 |
+| `/team`                                                | Manage agent teams                                            |
+| `/lsp status`                                          | Show LSP server status                                        |
+| `/loop [interval] <prompt>`                            | Schedule a recurring prompt (e.g. `/loop 5m check deploy`)    |
+| `/loop list` / `clear`                                 | List or cancel active loops                                   |
+| `/goal <condition>`                                    | Set a completion condition; keep working until it holds       |
+| `/goal clear` / `stop` / `off`                         | Cancel active goal                                            |
+| `/setup-github`                                        | Set up GitHub Actions integration                             |
 
 ### Information & settings
 

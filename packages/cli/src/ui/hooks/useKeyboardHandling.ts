@@ -37,6 +37,7 @@ interface UseKeyboardHandlingParams {
   ) => void;
   debugKeystrokeLogging: boolean | undefined;
   onBackgroundSession: (() => void) | undefined;
+  isTranscriptOpen: boolean;
 }
 
 interface UseKeyboardHandlingResult {
@@ -73,6 +74,7 @@ export function useKeyboardHandling(
     handleSlashCommand,
     debugKeystrokeLogging,
     onBackgroundSession,
+    isTranscriptOpen,
   } = params;
 
   const [showToolDescriptions, setShowToolDescriptions] =
@@ -101,6 +103,13 @@ export function useKeyboardHandling(
     if (debugKeystrokeLogging) {
       const debugLogger = config.getDebugLogger();
       debugLogger.debug('[DEBUG] Keystroke:', JSON.stringify(key));
+    }
+
+    // While the transcript overlay is open it owns all input (scroll + close);
+    // only a hard quit is allowed through. Ctrl+O toggling closed is handled by
+    // useTranscriptOverlay's own subscriber, which this gate doesn't affect.
+    if (isTranscriptOpen && !keyMatchers[Command.QUIT](key)) {
+      return;
     }
 
     if (keyMatchers[Command.QUIT](key)) {

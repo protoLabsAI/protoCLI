@@ -43,11 +43,6 @@ export const EVENT_USER_FEEDBACK = 'proto.user_feedback';
 export const EVENT_PROMPT_SUGGESTION = 'proto.prompt_suggestion';
 export const EVENT_SPECULATION = 'proto.speculation';
 
-// Arena Events
-export const EVENT_ARENA_SESSION_STARTED = 'proto.arena_session_started';
-export const EVENT_ARENA_AGENT_COMPLETED = 'proto.arena_agent_completed';
-export const EVENT_ARENA_SESSION_ENDED = 'proto.arena_session_ended';
-
 // Harness Events — captured for Langfuse fine-tuning datasets
 export const EVENT_HARNESS_DOOM_LOOP = 'proto.harness.doom_loop';
 export const EVENT_HARNESS_SCOPE_VIOLATION = 'proto.harness.scope_violation';

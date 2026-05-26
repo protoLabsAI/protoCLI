@@ -147,15 +147,6 @@ Settings for multi-agent collaboration features.
 | -------------------- | ------ | ------------ | ---------------------------------------- |
 | `agents.displayMode` | string | `in-process` | Display mode (`in-process` only for now) |
 
-Arena settings (see also the top-level `arena` key for shorthand):
-
-| Setting                          | Type    | Default          | Description                               |
-| -------------------------------- | ------- | ---------------- | ----------------------------------------- |
-| `agents.arena.worktreeBaseDir`   | string  | `~/.proto/arena` | Base directory for Arena worktrees        |
-| `agents.arena.preserveArtifacts` | boolean | `false`          | Keep worktrees after session ends         |
-| `agents.arena.maxRoundsPerAgent` | number  | —                | Max turns per agent (no limit if unset)   |
-| `agents.arena.timeoutSeconds`    | number  | —                | Total session timeout (no limit if unset) |
-
 ### `telemetry`
 
 Observability configuration. Set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` to activate tracing.
@@ -188,17 +179,6 @@ Map of MCP server configurations. See [Guides → Connect via MCP](../guides/use
 | -------------- | -------- | ----------------------------- |
 | `mcp.allowed`  | string[] | Allowlist of MCP server names |
 | `mcp.excluded` | string[] | Denylist of MCP server names  |
-
-### `arena`
-
-Arena shorthand settings. Full arena config is also available under `agents.arena`.
-
-| Setting                   | Type    | Default          | Description                               |
-| ------------------------- | ------- | ---------------- | ----------------------------------------- |
-| `arena.worktreeBaseDir`   | string  | `~/.proto/arena` | Base directory for Arena worktrees        |
-| `arena.preserveArtifacts` | boolean | `false`          | Keep worktrees after session ends         |
-| `arena.maxRoundsPerAgent` | number  | —                | Max turns per agent (no limit if unset)   |
-| `arena.timeoutSeconds`    | number  | —                | Total session timeout (no limit if unset) |
 
 ### `voice`
 

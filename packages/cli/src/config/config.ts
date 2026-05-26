@@ -60,7 +60,7 @@ const SESSION_ID_REGEX =
 /**
  * Validates if a string is a valid session ID format.
  * Accepts a standard UUID, or a UUID followed by `-agent-{suffix}`
- * (used by Arena to give each agent a deterministic session ID).
+ * (used by multi-agent sessions to give each agent a deterministic session ID).
  */
 export function isValidSessionId(value: string): boolean {
   return SESSION_ID_REGEX.test(value);
@@ -351,6 +351,12 @@ export async function parseArguments(): Promise<CliArgs> {
         .option('experimental-lsp', {
           type: 'boolean',
           description: 'Deprecated: use --lsp instead. This flag is ignored.',
+          hidden: true,
+        })
+        .option('experimental-hooks', {
+          type: 'boolean',
+          description:
+            'Accept SDK hook registrations on the control plane. Set automatically by @protolabsai/sdk when hookCallbacks is provided.',
           hidden: true,
         })
         .option('lsp', {
@@ -1181,13 +1187,6 @@ export async function loadCliConfig(
     agents: settings.agents
       ? {
           displayMode: settings.agents.displayMode,
-          arena: settings.agents.arena
-            ? {
-                worktreeBaseDir: settings.agents.arena.worktreeBaseDir,
-                preserveArtifacts:
-                  settings.agents.arena.preserveArtifacts ?? false,
-              }
-            : undefined,
         }
       : undefined,
     memoryConsolidation: settings.context?.memoryConsolidation
