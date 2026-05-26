@@ -9,6 +9,8 @@ import { useCallback, useState } from 'react';
 import { LoadingIndicator } from './LoadingIndicator.js';
 import { InputPrompt } from './InputPrompt.js';
 import { Footer } from './Footer.js';
+import { StickyTaskList } from './StickyTaskList.js';
+import { useCurrentTodos } from '../hooks/useCurrentTodos.js';
 import { QueuedMessageDisplay } from './QueuedMessageDisplay.js';
 import { KeyboardShortcuts } from './KeyboardShortcuts.js';
 import { useUIState } from '../contexts/UIStateContext.js';
@@ -38,6 +40,10 @@ export const Composer = () => {
   );
 
   const taskTokens = tokens.candidates - taskStartTokens;
+
+  // Current task list, derived from the most recent todo_list tool result so
+  // it stays pinned above the input instead of scrolling away inline.
+  const currentTodos = useCurrentTodos(uiState.history);
 
   // State for keyboard shortcuts display toggle
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -83,6 +89,8 @@ export const Composer = () => {
       <QueuedMessageDisplay messageQueue={uiState.messageQueue} />
 
       {uiState.isFeedbackDialogOpen && <FeedbackDialog />}
+
+      {uiState.isInputActive && <StickyTaskList todos={currentTodos} />}
 
       {uiState.isInputActive && (
         <InputPrompt
