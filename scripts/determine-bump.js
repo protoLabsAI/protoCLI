@@ -18,7 +18,11 @@ import { execSync } from 'node:child_process';
 
 function getLastTag() {
   try {
-    return execSync('git describe --tags --abbrev=0', {
+    // Only consider proto release tags (`v1.2.3`). `sdk-v*` tags must not set
+    // the bump baseline — they're cut on arbitrary commits (often HEAD), which
+    // would make the calculator think there's nothing new to release and skip
+    // a legitimate CLI release.
+    return execSync("git describe --tags --abbrev=0 --match 'v[0-9]*'", {
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
