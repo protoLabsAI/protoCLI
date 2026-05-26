@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/sdk",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "TypeScript SDK for programmatic access to protoCLI",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
