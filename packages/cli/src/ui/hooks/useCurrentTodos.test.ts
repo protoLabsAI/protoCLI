@@ -33,6 +33,12 @@ const todoList = (
 });
 
 describe('extractCurrentTodos', () => {
+  it('returns an empty array when history is missing (defensive)', () => {
+    expect(extractCurrentTodos(undefined as unknown as HistoryItem[])).toEqual(
+      [],
+    );
+  });
+
   it('returns an empty array when history has no todo_list result', () => {
     const history: HistoryItem[] = [
       { id: 1, type: 'user', text: 'hi' } as HistoryItem,
