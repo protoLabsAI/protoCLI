@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/sdk",
-  "version": "0.2.0",
+  "version": "0.3.3",
   "description": "TypeScript SDK for programmatic access to protoCLI",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./anthropic-compat": {
+      "types": "./dist/anthropic-compat.d.ts",
+      "import": "./dist/anthropic-compat.mjs",
+      "require": "./dist/anthropic-compat.cjs"
     },
     "./package.json": "./package.json"
   },
