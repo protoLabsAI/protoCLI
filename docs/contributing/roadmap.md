@@ -14,7 +14,6 @@ The proto roadmap is tracked in our public GitHub repository.
 
 - Agent Swarm mode (batch parallel agents with on-the-fly spawning)
 - Agent Team improvements (better coordination and visibility)
-- Split-pane Agent Arena display via tmux/iTerm2
 
 ### Developer experience
 

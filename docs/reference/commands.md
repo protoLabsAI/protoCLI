@@ -51,7 +51,6 @@ Commands in proto fall into three categories based on their prefix.
 | `/agents create`        | Guided sub-agent creation wizard                              |
 | `/agents manage`        | View, edit, delete sub-agents                                 |
 | `/team`                 | Manage agent teams                                            |
-| `/arena`                | Start an Agent Arena session                                  |
 | `/lsp status`           | Show LSP server status                                        |
 
 ### Information & settings

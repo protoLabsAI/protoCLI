@@ -52,9 +52,6 @@ export {
   logAuth,
   logSkillLaunch,
   logUserFeedback,
-  logArenaSessionStarted,
-  logArenaAgentCompleted,
-  logArenaSessionEnded,
 } from './loggers.js';
 export type { SlashCommandEvent, ChatCompressionEvent } from './types.js';
 export {
@@ -78,18 +75,8 @@ export {
   SkillLaunchEvent,
   UserFeedbackEvent,
   UserFeedbackRating,
-  makeArenaSessionStartedEvent,
-  makeArenaAgentCompletedEvent,
-  makeArenaSessionEndedEvent,
 } from './types.js';
 export { makeSlashCommandEvent, makeChatCompressionEvent } from './types.js';
-export type {
-  ArenaSessionStartedEvent,
-  ArenaAgentCompletedEvent,
-  ArenaSessionEndedEvent,
-  ArenaSessionEndedStatus,
-  ArenaAgentCompletedStatus,
-} from './types.js';
 export type { TelemetryEvent } from './types.js';
 export { SpanStatusCode, ValueType } from '@opentelemetry/api';
 export { SemanticAttributes } from '@opentelemetry/semantic-conventions';
@@ -116,10 +103,6 @@ export {
   recordPerformanceRegression,
   recordBaselineComparison,
   isPerformanceMonitoringActive,
-  // Arena metrics functions
-  recordArenaSessionStartedMetrics,
-  recordArenaAgentCompletedMetrics,
-  recordArenaSessionEndedMetrics,
   // Performance monitoring types
   PerformanceMetricType,
   MemoryMetricType,

@@ -126,14 +126,6 @@ Map of MCP server configurations. See [Guides → Connect via MCP](../guides/use
 | `mcp.allowed`  | string[] | Allowlist of MCP server names |
 | `mcp.excluded` | string[] | Denylist of MCP server names  |
 
-### `arena`
-
-| Setting                   | Type   | Default          | Description                        |
-| ------------------------- | ------ | ---------------- | ---------------------------------- |
-| `arena.worktreeBaseDir`   | string | `~/.proto/arena` | Base directory for Arena worktrees |
-| `arena.maxRoundsPerAgent` | number | `50`             | Max reasoning rounds per agent     |
-| `arena.timeoutSeconds`    | number | `600`            | Timeout per agent                  |
-
 ### `voice`
 
 | Setting             | Type    | Default                                         | Description                                                                                                          |

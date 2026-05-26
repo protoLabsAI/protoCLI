@@ -153,9 +153,9 @@ Two PRs, in order:
 
 - **PR-1: housekeeping** (zero new behavior, pure reorganization)
   - Reconcile `task-stop.ts`. Our version (`config.getTaskStore()`,
-    cascading task cancellation tied to Arena/Team) and upstream's
+    cascading task cancellation tied to Team) and upstream's
     (`config.getBackgroundTaskRegistry()`, single-task stop) collide on
-    filename only. Since Arena/Team are unused in our workflow, drop
+    filename only. Since Team is unused in our workflow, drop
     ours and adopt upstream's.
   - Adopt upstream's `tools/agent/` nested directory layout. Our flat
     layout will keep stepping on every cherry-pick from this area.
@@ -195,7 +195,7 @@ Reopen only if a real terminal user requests this.
 ### Settings
 
 Upstream's bg-agent settings have grown into their own block. We have an
-`agents.*` section (Arena/Team/Swarm — unused in current workflow) plus
+`agents.*` section (Team/Swarm — unused in current workflow) plus
 a flat `backgroundModel`. Before Track 2 PR-2 lands, decide whether to
 nest under `agents.background.*` or keep flat. **Recommendation:** nest
 with a back-compat read of `backgroundModel`.
@@ -231,7 +231,7 @@ smoke test once the Track 1 progress-event shape stabilizes.
    the in-process executor, the surface is stable enough to layer
    agent-control tools on top.
 3. **Track 2 PR-1 risk:** dropping our `task-stop.ts` removes the
-   cascading-cancellation behavior used by Arena/Team. We have confirmed
+   cascading-cancellation behavior used by Team. We have confirmed
    nobody is using those constructs today, but if that changes, the
    upstream version is a regression. Worth a one-line audit of any
    `getTaskStore()` callers before the rename PR ships.
@@ -244,7 +244,7 @@ smoke test once the Track 1 progress-event shape stabilizes.
   follow-up doc per phase.
 - Performance work on the existing registry. Today's footprint is fine;
   revisit if Phase C's persistence changes that.
-- Anything about Arena, Team, or Swarm. Those are different agent
+- Anything about Team or Swarm. Those are different agent
   systems that live alongside the background path; see
   `sub-agents-design.md`.
 

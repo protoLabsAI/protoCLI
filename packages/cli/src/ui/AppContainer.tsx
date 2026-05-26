@@ -56,7 +56,6 @@ import { useAuthCommand } from './auth/useAuth.js';
 import { useEditorSettings } from './hooks/useEditorSettings.js';
 import { useSettingsCommand } from './hooks/useSettingsCommand.js';
 import { useModelCommand } from './hooks/useModelCommand.js';
-import { useArenaCommand } from './hooks/useArenaCommand.js';
 import { useApprovalModeCommand } from './hooks/useApprovalModeCommand.js';
 import { useResumeCommand } from './hooks/useResumeCommand.js';
 import { useDeleteCommand } from './hooks/useDeleteCommand.js';
@@ -507,8 +506,6 @@ export const AppContainer = (props: AppContainerProps) => {
     openModelDialog,
     closeModelDialog,
   } = useModelCommand();
-  const { activeArenaDialog, openArenaDialog, closeArenaDialog } =
-    useArenaCommand();
 
   const {
     isResumeDialogOpen,
@@ -567,7 +564,6 @@ export const AppContainer = (props: AppContainerProps) => {
       openSettingsDialog,
       openModelDialog,
       openTrustDialog,
-      openArenaDialog,
       openPermissionsDialog,
       openApprovalModeDialog,
       quit: (messages: HistoryItem[]) => {
@@ -596,7 +592,6 @@ export const AppContainer = (props: AppContainerProps) => {
       openEditorDialog,
       openSettingsDialog,
       openModelDialog,
-      openArenaDialog,
       setDebugMessage,
       dispatchExtensionStateUpdate,
       openTrustDialog,
@@ -960,15 +955,6 @@ export const AppContainer = (props: AppContainerProps) => {
     ],
   );
 
-  const handleArenaModelsSelected = useCallback(
-    (models: string[]) => {
-      const value = models.join(',');
-      buffer.setText(`/arena start --models ${value} `);
-      closeArenaDialog();
-    },
-    [buffer, closeArenaDialog],
-  );
-
   // Welcome back functionality (must be after handleFinalSubmit)
   const {
     welcomeBackInfo,
@@ -1321,8 +1307,6 @@ export const AppContainer = (props: AppContainerProps) => {
     exitEditorDialog,
     isSettingsDialogOpen,
     closeSettingsDialog,
-    activeArenaDialog,
-    closeArenaDialog,
     isFolderTrustDialogOpen,
     showWelcomeBackDialog,
     handleWelcomeBackClose,
@@ -1396,7 +1380,6 @@ export const AppContainer = (props: AppContainerProps) => {
     isSettingsDialogOpen ||
     isModelDialogOpen ||
     isTrustDialogOpen ||
-    activeArenaDialog !== null ||
     isPermissionsDialogOpen ||
     isAuthDialogOpen ||
     isAuthenticating ||
@@ -1451,7 +1434,6 @@ export const AppContainer = (props: AppContainerProps) => {
       isModelDialogOpen,
       isFastModelMode,
       isTrustDialogOpen,
-      activeArenaDialog,
       isPermissionsDialogOpen,
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
@@ -1568,7 +1550,6 @@ export const AppContainer = (props: AppContainerProps) => {
       isModelDialogOpen,
       isFastModelMode,
       isTrustDialogOpen,
-      activeArenaDialog,
       isPermissionsDialogOpen,
       isApprovalModeDialogOpen,
       isResumeDialogOpen,
@@ -1689,9 +1670,6 @@ export const AppContainer = (props: AppContainerProps) => {
       exitEditorDialog,
       closeSettingsDialog,
       closeModelDialog,
-      openArenaDialog,
-      closeArenaDialog,
-      handleArenaModelsSelected,
       dismissCodingPlanUpdate,
       closeTrustDialog,
       closePermissionsDialog,
@@ -1765,9 +1743,6 @@ export const AppContainer = (props: AppContainerProps) => {
       exitEditorDialog,
       closeSettingsDialog,
       closeModelDialog,
-      openArenaDialog,
-      closeArenaDialog,
-      handleArenaModelsSelected,
       dismissCodingPlanUpdate,
       closeTrustDialog,
       closePermissionsDialog,

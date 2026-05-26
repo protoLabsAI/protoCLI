@@ -26,7 +26,6 @@ Task-oriented how-tos for specific goals. Pick the guide that matches what you w
 - [Trusted Folders](/guides/trusted-folders) — Pre-approve tool use for specific directories
 - [Export Sessions](/guides/session-export) — Save and replay conversation history
 - [Token Caching](/guides/token-caching) — Reduce cost with prompt caching
-- [Agent Arena](/guides/arena) — Run multiple agents head-to-head for evaluation
 
 ## IDEs & CI
 

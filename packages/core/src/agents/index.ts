@@ -5,7 +5,7 @@
  */
 
 /**
- * @fileoverview Multi-agent infrastructure shared across Arena, Team, and Swarm modes.
+ * @fileoverview Multi-agent infrastructure shared across Team and Swarm modes.
  *
  * This module provides the common building blocks for managing multiple concurrent
  * agent subprocesses:
@@ -14,7 +14,6 @@
  */
 
 export * from './backends/index.js';
-export * from './arena/index.js';
 export * from './runtime/index.js';
 export * from './mailbox.js';
 export * from './team-config.js';
