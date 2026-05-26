@@ -52,6 +52,7 @@ export enum Command {
   SHOW_MORE_LINES = 'showMoreLines',
   RETRY_LAST = 'retryLast',
   BACKGROUND_SESSION = 'backgroundSession',
+  TOGGLE_TRANSCRIPT = 'toggleTranscript',
 
   // Shell commands
   REVERSE_SEARCH = 'reverseSearch',
@@ -174,6 +175,13 @@ export const defaultKeyBindings: KeyBindingConfig = {
   [Command.SHOW_MORE_LINES]: [{ key: 's', ctrl: true }],
   [Command.RETRY_LAST]: [{ key: 'y', ctrl: true }],
   [Command.BACKGROUND_SESSION]: [{ key: 'b', ctrl: true }],
+  // Ctrl+O opens/closes the full transcript overlay (thoughts expanded).
+  // Match both the parsed name and the raw SI control byte for robustness
+  // across terminals.
+  [Command.TOGGLE_TRANSCRIPT]: [
+    { key: 'o', ctrl: true },
+    { sequence: '\x0f', ctrl: true },
+  ],
 
   // Shell commands
   [Command.REVERSE_SEARCH]: [{ key: 'r', ctrl: true }],

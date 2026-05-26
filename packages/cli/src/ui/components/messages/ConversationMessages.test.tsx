@@ -6,7 +6,46 @@
 
 import { describe, expect, it } from 'vitest';
 import { render } from 'ink-testing-library';
-import { ThinkMessage, ThinkMessageContent } from './ConversationMessages.js';
+import {
+  AssistantMessage,
+  AssistantMessageContent,
+  ThinkMessage,
+  ThinkMessageContent,
+  ThoughtExpansionContext,
+} from './ConversationMessages.js';
+
+describe('AssistantMessage', () => {
+  it('renders the ⟡ prefix with prose', () => {
+    const { lastFrame } = render(
+      <AssistantMessage
+        text="Here you go."
+        isPending={false}
+        contentWidth={80}
+      />,
+    );
+    const output = lastFrame() ?? '';
+    expect(output).toContain('⟡');
+    expect(output).toContain('Here you go.');
+  });
+
+  it('renders nothing for an empty (tools-only) turn', () => {
+    const { lastFrame } = render(
+      <AssistantMessage text="" isPending={false} contentWidth={80} />,
+    );
+    expect((lastFrame() ?? '').trim()).toBe('');
+  });
+
+  it('renders nothing for whitespace-only text', () => {
+    const { lastFrame } = render(
+      <AssistantMessageContent
+        text={'   \n  '}
+        isPending={false}
+        contentWidth={80}
+      />,
+    );
+    expect((lastFrame() ?? '').trim()).toBe('');
+  });
+});
 
 describe('ThinkMessage', () => {
   it('renders the streaming text expanded while pending', () => {
@@ -44,6 +83,21 @@ describe('ThinkMessage', () => {
     const output = lastFrame() ?? '';
     expect(output).toContain('thinking (12,345 chars)');
   });
+
+  it('expands the full thought (no summary) inside an expanded context', () => {
+    const { lastFrame } = render(
+      <ThoughtExpansionContext.Provider value={true}>
+        <ThinkMessage
+          text="Let me weigh the tradeoffs before deciding."
+          isPending={false}
+          contentWidth={80}
+        />
+      </ThoughtExpansionContext.Provider>,
+    );
+    const output = lastFrame() ?? '';
+    expect(output).toContain('Let me weigh the tradeoffs');
+    expect(output).not.toContain('thinking (');
+  });
 });
 
 describe('ThinkMessageContent', () => {
@@ -69,5 +123,18 @@ describe('ThinkMessageContent', () => {
     );
     const output = lastFrame() ?? '';
     expect(output.trim()).toBe('');
+  });
+
+  it('renders the finalized continuation inside an expanded context', () => {
+    const { lastFrame } = render(
+      <ThoughtExpansionContext.Provider value={true}>
+        <ThinkMessageContent
+          text="continued reasoning text"
+          isPending={false}
+          contentWidth={80}
+        />
+      </ThoughtExpansionContext.Provider>,
+    );
+    expect(lastFrame() ?? '').toContain('continued reasoning text');
   });
 });

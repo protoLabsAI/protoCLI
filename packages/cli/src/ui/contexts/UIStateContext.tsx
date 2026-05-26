@@ -142,6 +142,8 @@ export interface UIState {
   isHooksDialogOpen: boolean;
   // Feedback dialog
   isFeedbackDialogOpen: boolean;
+  // Transcript overlay (Ctrl+O)
+  isTranscriptOpen: boolean;
   // Per-task token tracking
   taskStartTokens: number;
   // Voice input state
