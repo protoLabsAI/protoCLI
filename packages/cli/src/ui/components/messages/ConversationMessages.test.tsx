@@ -7,10 +7,45 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'ink-testing-library';
 import {
+  AssistantMessage,
+  AssistantMessageContent,
   ThinkMessage,
   ThinkMessageContent,
   ThoughtExpansionContext,
 } from './ConversationMessages.js';
+
+describe('AssistantMessage', () => {
+  it('renders the ⟡ prefix with prose', () => {
+    const { lastFrame } = render(
+      <AssistantMessage
+        text="Here you go."
+        isPending={false}
+        contentWidth={80}
+      />,
+    );
+    const output = lastFrame() ?? '';
+    expect(output).toContain('⟡');
+    expect(output).toContain('Here you go.');
+  });
+
+  it('renders nothing for an empty (tools-only) turn', () => {
+    const { lastFrame } = render(
+      <AssistantMessage text="" isPending={false} contentWidth={80} />,
+    );
+    expect((lastFrame() ?? '').trim()).toBe('');
+  });
+
+  it('renders nothing for whitespace-only text', () => {
+    const { lastFrame } = render(
+      <AssistantMessageContent
+        text={'   \n  '}
+        isPending={false}
+        contentWidth={80}
+      />,
+    );
+    expect((lastFrame() ?? '').trim()).toBe('');
+  });
+});
 
 describe('ThinkMessage', () => {
   it('renders the streaming text expanded while pending', () => {

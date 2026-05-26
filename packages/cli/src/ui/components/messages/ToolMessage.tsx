@@ -14,7 +14,6 @@ import { AnsiOutputText } from '../AnsiOutput.js';
 import { GeminiRespondingSpinner } from '../GeminiRespondingSpinner.js';
 import { MaxSizedBox, MINIMUM_MAX_HEIGHT } from '../shared/MaxSizedBox.js';
 import { getCachedStringWidth, toCodePoints } from '../../utils/textUtils.js';
-import { TodoDisplay } from '../TodoDisplay.js';
 import type {
   TodoResultDisplay,
   TaskUpdateDiffDisplay,
@@ -234,11 +233,24 @@ const useResultDisplayRenderer = (
   }, [resultDisplay]);
 
 /**
- * Component to render todo list results
+ * Inline breadcrumb for a task-list update. The full, live list is rendered by
+ * the sticky `StickyTaskList` pinned above the input, so here we only leave a
+ * compact one-line summary in the scrollback.
  */
 const TodoResultRenderer: React.FC<{ data: TodoResultDisplay }> = ({
   data,
-}) => <TodoDisplay todos={data.todos} />;
+}) => {
+  const todos = data.todos ?? [];
+  const total = todos.length;
+  const done = todos.filter((t) => t.status === 'completed').length;
+  const open = total - done;
+  return (
+    <Text color={theme.text.secondary}>
+      ▸ Task list updated · {total} task{total === 1 ? '' : 's'} ({done} done,{' '}
+      {open} open)
+    </Text>
+  );
+};
 
 const PlanResultRenderer: React.FC<{
   data: PlanResultDisplay;

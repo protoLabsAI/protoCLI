@@ -211,29 +211,42 @@ export const AssistantMessage: React.FC<AssistantMessageProps> = ({
   isPending,
   availableTerminalHeight,
   contentWidth,
-}) => (
-  <PrefixedMarkdownMessage
-    text={text}
-    prefix="⟡"
-    prefixColor={theme.text.accent}
-    ariaLabel={SCREEN_READER_MODEL_PREFIX}
-    isPending={isPending}
-    availableTerminalHeight={availableTerminalHeight}
-    contentWidth={contentWidth}
-  />
-);
+}) => {
+  // A turn that only calls tools (no prose) yields an empty assistant message.
+  // Rendering it would print a lone "⟡" on its own line above the tool group,
+  // so suppress it entirely when there's no text.
+  if (!text || text.trim() === '') {
+    return null;
+  }
+  return (
+    <PrefixedMarkdownMessage
+      text={text}
+      prefix="⟡"
+      prefixColor={theme.text.accent}
+      ariaLabel={SCREEN_READER_MODEL_PREFIX}
+      isPending={isPending}
+      availableTerminalHeight={availableTerminalHeight}
+      contentWidth={contentWidth}
+    />
+  );
+};
 
 export const AssistantMessageContent: React.FC<
   AssistantMessageContentProps
-> = ({ text, isPending, availableTerminalHeight, contentWidth }) => (
-  <ContinuationMarkdownMessage
-    text={text}
-    isPending={isPending}
-    availableTerminalHeight={availableTerminalHeight}
-    contentWidth={contentWidth}
-    basePrefix="⟡"
-  />
-);
+> = ({ text, isPending, availableTerminalHeight, contentWidth }) => {
+  if (!text || text.trim() === '') {
+    return null;
+  }
+  return (
+    <ContinuationMarkdownMessage
+      text={text}
+      isPending={isPending}
+      availableTerminalHeight={availableTerminalHeight}
+      contentWidth={contentWidth}
+      basePrefix="⟡"
+    />
+  );
+};
 
 // Post-stream summary line ("▸ thinking (N chars)"). Phase 1 of the reasoning
 // rendering work (see #162): full text remains live in Langfuse, ACP
@@ -262,6 +275,12 @@ export const ThinkMessage: React.FC<ThinkMessageProps> = ({
   contentWidth,
 }) => {
   const expanded = useContext(ThoughtExpansionContext);
+  // An empty thought (e.g. a thought/continuation split boundary) would render
+  // either a lone "⟡" while streaming or "▸ thinking (0 chars)" once finalized.
+  // Neither is useful, so suppress it.
+  if (!text || text.trim() === '') {
+    return null;
+  }
   // Collapse to the summary only in the normal scrollback. While streaming, or
   // when an expanded view (the transcript overlay) asks for it, show the full
   // thought.
