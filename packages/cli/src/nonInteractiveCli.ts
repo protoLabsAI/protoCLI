@@ -36,7 +36,9 @@ import {
   handleToolError,
   handleCancellationError,
   handleMaxTurnsExceededError,
+  handleBudgetExceededError,
 } from './utils/errors.js';
+import { RunBudgetEnforcer } from './utils/runBudget.js';
 
 const debugLogger = createDebugLogger('NON_INTERACTIVE_CLI');
 
@@ -213,6 +215,26 @@ export async function runNonInteractive(
     const geminiClient = config.getGeminiClient();
     const abortController = options.abortController ?? new AbortController();
 
+    // Headless run budget: caps total tool executions across the whole run
+    // (including cron sub-turns) so an unattended `proto -p ...` can't run
+    // away. `tickToolCall()` fires before each `executeToolCall`; on overrun
+    // the enforcer aborts the shared controller, and `routeAbort` maps that
+    // to exit code 55. Ported from QwenLM/qwen-code#4103.
+    const budgetEnforcer = new RunBudgetEnforcer(
+      { maxToolCalls: config.getMaxToolCalls() },
+      abortController,
+    );
+
+    // When the abort signal fires, distinguish a budget overrun (exit 55)
+    // from a user SIGINT / external cancellation (exit 130).
+    const routeAbort = (): never => {
+      const exceeded = budgetEnforcer.getExceeded();
+      if (exceeded) {
+        handleBudgetExceededError(config, exceeded);
+      }
+      handleCancellationError(config);
+    };
+
     // Auth pre-flight: fail fast before any session work
     const authError = await checkAuthPreflight(config);
     if (authError) {
@@ -341,6 +363,8 @@ export async function runNonInteractive(
       const initialParts = normalizePartList(initialPartList);
       let currentMessages: Content[] = [{ role: 'user', parts: initialParts }];
 
+      budgetEnforcer.start();
+
       let isFirstTurn = true;
       while (true) {
         turnCount++;
@@ -370,7 +394,7 @@ export async function runNonInteractive(
 
         for await (const event of responseStream) {
           if (abortController.signal.aborted) {
-            handleCancellationError(config);
+            routeAbort();
           }
           // Use adapter for all event processing
           adapter.processEvent(event);
@@ -425,6 +449,14 @@ export async function runNonInteractive(
                   adapter,
                 )
               : createToolProgressHandler(finalRequestInfo, adapter);
+
+            // Count this execution against the run budget before dispatching.
+            // On overrun the enforcer aborts the controller, so route out now
+            // rather than firing one more tool call past the cap.
+            budgetEnforcer.tickToolCall();
+            if (abortController.signal.aborted) {
+              routeAbort();
+            }
 
             const toolResponse = await executeToolCall(
               config,
@@ -544,6 +576,12 @@ export async function runNonInteractive(
                               )
                             : createToolProgressHandler(requestInfo, adapter);
 
+                          // Cron sub-turns share the same run budget.
+                          budgetEnforcer.tickToolCall();
+                          if (abortController.signal.aborted) {
+                            routeAbort();
+                          }
+
                           const toolResponse = await executeToolCall(
                             config,
                             requestInfo,
@@ -646,6 +684,7 @@ export async function runNonInteractive(
       });
       handleError(error, config);
     } finally {
+      budgetEnforcer.stop();
       process.stdout.removeListener('error', stdoutErrorHandler);
       // Cleanup signal handlers
       process.removeListener('SIGINT', shutdownHandler);

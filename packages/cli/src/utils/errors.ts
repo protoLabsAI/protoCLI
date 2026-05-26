@@ -11,10 +11,12 @@ import {
   parseAndFormatApiError,
   FatalTurnLimitedError,
   FatalCancellationError,
+  FatalBudgetExceededError,
   ToolErrorType,
   createDebugLogger,
 } from '@qwen-code/qwen-code-core';
 import { writeStderrLine } from './stdioHelpers.js';
+import type { BudgetExceeded } from './runBudget.js';
 
 const debugLogger = createDebugLogger('CLI_ERRORS');
 
@@ -194,4 +196,25 @@ export function handleMaxTurnsExceededError(config: Config): never {
     writeStderrLine(maxTurnsError.message);
     process.exit(maxTurnsError.exitCode);
   }
+}
+
+/**
+ * Handles a headless run exceeding its configured budget (e.g.
+ * `--max-tool-calls`). Exit code 55, distinct from the turn-limit (53) and
+ * cancellation (130) paths so harness/CI scripts can branch on it.
+ * Ported from QwenLM/qwen-code#4103.
+ */
+export function handleBudgetExceededError(
+  config: Config,
+  exceeded: BudgetExceeded,
+): never {
+  const budgetError = new FatalBudgetExceededError(exceeded.message);
+
+  if (config.getOutputFormat() === OutputFormat.JSON) {
+    const formatter = new JsonFormatter();
+    writeStderrLine(formatter.formatError(budgetError, budgetError.exitCode));
+  } else {
+    writeStderrLine(budgetError.message);
+  }
+  process.exit(budgetError.exitCode);
 }

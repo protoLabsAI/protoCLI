@@ -713,6 +713,16 @@ const SETTINGS_SCHEMA = {
           'Maximum number of user/model/tool turns to keep in a session. -1 means unlimited.',
         showInDialog: false,
       },
+      maxToolCalls: {
+        type: 'number',
+        label: 'Max Tool Calls',
+        category: 'Model',
+        requiresRestart: false,
+        default: -1,
+        description:
+          'Maximum number of tool calls for a headless run before aborting (exit code 55). -1 means unlimited.',
+        showInDialog: false,
+      },
       chatCompression: {
         type: 'object',
         label: 'Chat Compression',

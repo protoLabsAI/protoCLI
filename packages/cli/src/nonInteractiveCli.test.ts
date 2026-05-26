@@ -122,6 +122,7 @@ describe('runNonInteractive', () => {
       getGeminiClient: vi.fn().mockReturnValue(mockGeminiClient),
       getToolRegistry: vi.fn().mockReturnValue(mockToolRegistry),
       getMaxSessionTurns: vi.fn().mockReturnValue(10),
+      getMaxToolCalls: vi.fn().mockReturnValue(-1),
       getProjectRoot: vi.fn().mockReturnValue('/test/project'),
       getTargetDir: vi.fn().mockReturnValue('/test/project'),
       getMcpServers: vi.fn().mockReturnValue(undefined),
@@ -169,8 +170,9 @@ describe('runNonInteractive', () => {
       computeMergedSettings: vi.fn(),
     } as unknown as LoadedSettings;
 
-    const { handleAtCommand } =
-      await import('./ui/hooks/atCommandProcessor.js');
+    const { handleAtCommand } = await import(
+      './ui/hooks/atCommandProcessor.js'
+    );
     vi.mocked(handleAtCommand).mockImplementation(async ({ query }) => ({
       processedQuery: [{ text: query }],
       shouldProceed: true,
@@ -467,11 +469,51 @@ describe('runNonInteractive', () => {
     ).rejects.toThrow('process.exit(53) called');
   });
 
+  it('should abort with exit code 55 when the tool-call budget is exceeded', async () => {
+    setupMetricsMock();
+    vi.mocked(mockConfig.getMaxToolCalls).mockReturnValue(1);
+
+    // One turn requesting two tool calls. With a budget of 1 the first call
+    // runs; the second `tickToolCall` trips the cap and aborts before dispatch.
+    const toolCall = (callId: string): ServerGeminiStreamEvent => ({
+      type: GeminiEventType.ToolCallRequest,
+      value: {
+        callId,
+        name: 'someTool',
+        args: {},
+        isClientInitiated: false,
+        prompt_id: 'prompt-id-budget',
+      },
+    });
+    mockCoreExecuteToolCall.mockResolvedValue({
+      responseParts: [
+        { functionResponse: { name: 'someTool', response: { output: 'ok' } } },
+      ],
+      resultDisplay: 'ok',
+    });
+    mockGeminiClient.sendMessageStream.mockReturnValue(
+      createStreamFromEvents([toolCall('tool-1'), toolCall('tool-2')]),
+    );
+
+    await expect(
+      runNonInteractive(
+        mockConfig,
+        mockSettings,
+        'Trigger budget',
+        'prompt-id-budget',
+      ),
+    ).rejects.toThrow('process.exit(55) called');
+
+    // Exactly the budgeted number of tools executed before the abort.
+    expect(mockCoreExecuteToolCall).toHaveBeenCalledTimes(1);
+  });
+
   it('should preprocess @include commands before sending to the model', async () => {
     setupMetricsMock();
     // 1. Mock the imported atCommandProcessor
-    const { handleAtCommand } =
-      await import('./ui/hooks/atCommandProcessor.js');
+    const { handleAtCommand } = await import(
+      './ui/hooks/atCommandProcessor.js'
+    );
     const mockHandleAtCommand = vi.mocked(handleAtCommand);
 
     // 2. Define the raw input and the expected processed output

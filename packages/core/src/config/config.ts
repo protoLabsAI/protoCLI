@@ -443,6 +443,8 @@ export interface ConfigParameters {
   model?: string;
   outputLanguageFilePath?: string;
   maxSessionTurns?: number;
+  /** Max cumulative tool calls for a headless/unattended run. -1 = unlimited. */
+  maxToolCalls?: number;
   sessionTokenLimit?: number;
   experimentalZedIntegration?: boolean;
   cronEnabled?: boolean;
@@ -637,6 +639,7 @@ export class Config {
   private ideMode: boolean;
 
   private readonly maxSessionTurns: number;
+  private readonly maxToolCalls: number;
   private readonly sessionTokenLimit: number;
   private readonly listExtensions: boolean;
   private readonly overrideExtensions?: string[];
@@ -769,6 +772,7 @@ export class Config {
     this.fileDiscoveryService = params.fileDiscoveryService ?? null;
     this.bugCommand = params.bugCommand;
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
+    this.maxToolCalls = params.maxToolCalls ?? -1;
     this.sessionTokenLimit = params.sessionTokenLimit ?? -1;
     this.experimentalZedIntegration =
       params.experimentalZedIntegration ?? false;
@@ -1437,6 +1441,10 @@ export class Config {
 
   getMaxSessionTurns(): number {
     return this.maxSessionTurns;
+  }
+
+  getMaxToolCalls(): number {
+    return this.maxToolCalls;
   }
 
   getSessionTokenLimit(): number {
