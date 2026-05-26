@@ -104,10 +104,13 @@ export const TranscriptOverlay: React.FC<TranscriptOverlayProps> = ({
         setScrollOffset((p) => clampScroll(p - pageStep, max));
       } else if (key.name === 'pagedown' || key.sequence === ' ') {
         setScrollOffset((p) => clampScroll(p + pageStep, max));
+      } else if ((key.name === 'g' && key.shift) || key.sequence === 'G') {
+        // KeypressContext lowercases printable letters into `name` (shift is a
+        // separate flag), so `name === 'G'` never matches. Detect Shift+g via
+        // the shift flag (kitty protocol) or the raw sequence (legacy).
+        setScrollOffset(max);
       } else if (key.name === 'g') {
         setScrollOffset(0);
-      } else if (key.name === 'G') {
-        setScrollOffset(max);
       }
     },
     [onClose, pageStep],
