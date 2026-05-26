@@ -23,38 +23,39 @@ describe('StickyTaskList', () => {
     expect(lastFrame()).toBe('');
   });
 
-  it('renders a count header with done/open totals', () => {
+  it('renders a count header breaking out done/in-progress/open', () => {
     const todos: TodoItem[] = [
       todo('1', 'do a thing', 'pending'),
       todo('2', 'in flight', 'in_progress'),
       todo('3', 'finished', 'completed'),
     ];
     const { lastFrame } = render(<StickyTaskList todos={todos} />);
-    expect(lastFrame()).toContain('3 tasks (1 done, 2 open)');
+    expect(lastFrame()).toContain('3 tasks (1 done, 1 in progress, 1 open)');
   });
 
   it('uses the singular noun for a single task', () => {
     const { lastFrame } = render(
       <StickyTaskList todos={[todo('1', 'only one', 'pending')]} />,
     );
-    expect(lastFrame()).toContain('1 task (0 done, 1 open)');
+    expect(lastFrame()).toContain('1 task (0 done, 0 in progress, 1 open)');
   });
 
-  it('lists open items with the open glyph and previews completed items', () => {
+  it('uses the filled glyph for in-progress, hollow for pending, check for done', () => {
     const todos: TodoItem[] = [
-      todo('1', 'open alpha', 'pending'),
-      todo('2', 'open beta', 'in_progress'),
+      todo('1', 'pending alpha', 'pending'),
+      todo('2', 'active beta', 'in_progress'),
       todo('3', 'done gamma', 'completed'),
     ];
     const frame = render(<StickyTaskList todos={todos} />).lastFrame() ?? '';
-    expect(frame).toContain('◻');
-    expect(frame).toContain('open alpha');
-    expect(frame).toContain('open beta');
-    expect(frame).toContain('✔');
+    expect(frame).toContain('■'); // in progress
+    expect(frame).toContain('□'); // pending
+    expect(frame).toContain('✔'); // completed
+    expect(frame).toContain('active beta');
+    expect(frame).toContain('pending alpha');
     expect(frame).toContain('done gamma');
   });
 
-  it('collapses extra completed items into a "+N completed" line', () => {
+  it('collapses extra completed items into a "+N done" line', () => {
     const todos: TodoItem[] = [
       todo('o1', 'open one', 'pending'),
       ...Array.from({ length: 16 }, (_, i) =>
@@ -63,16 +64,16 @@ describe('StickyTaskList', () => {
     ];
     const frame = render(<StickyTaskList todos={todos} />).lastFrame() ?? '';
     // 17 total: 1 open, 16 done. Two completed previewed, 14 collapsed.
-    expect(frame).toContain('17 tasks (16 done, 1 open)');
-    expect(frame).toContain('… +14 completed');
+    expect(frame).toContain('17 tasks (16 done, 0 in progress, 1 open)');
+    expect(frame).toContain('… +14 done');
   });
 
-  it('collapses extra open items into a "+N more open" line', () => {
+  it('collapses extra pending items into a "+N pending" line', () => {
     const todos: TodoItem[] = Array.from({ length: 10 }, (_, i) =>
       todo(`o${i}`, `open ${i}`, 'pending' as const),
     );
     const frame = render(<StickyTaskList todos={todos} />).lastFrame() ?? '';
-    // 10 open, cap is 7 -> 3 collapsed.
-    expect(frame).toContain('… +3 more open');
+    // 10 pending, cap is 7 -> 3 collapsed.
+    expect(frame).toContain('… +3 pending');
   });
 });
