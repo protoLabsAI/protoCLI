@@ -64,7 +64,7 @@ Verify that the updated docs cover the actual delta:
 ## Practical heuristics
 
 - If a change affects commands, also check quickstart, workflows, and feature pages for drift.
-- If a change affects configuration, also check `docs/users/configuration/settings.md`, feature pages, and auth/provider docs.
+- If a change affects configuration, also check `docs/reference/settings.md`, feature pages, and auth/provider docs.
 - If a change affects tools or agent behavior, check both `docs/users/features/**` and `docs/developers/tools/**` when relevant.
 - If tests reveal expected behavior more clearly than implementation code, use tests to confirm wording.
 
