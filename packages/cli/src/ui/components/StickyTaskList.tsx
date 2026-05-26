@@ -9,23 +9,23 @@ import { Box, Text } from 'ink';
 import { theme } from '../semantic-colors.js';
 import type { TodoItem } from './TodoDisplay.js';
 
-/** Most open items to list before collapsing the remainder. */
-const MAX_OPEN_DISPLAY = 7;
-/** How many completed items to preview before "… +N completed". */
+/** Most pending items to list before collapsing the remainder. */
+const MAX_PENDING_DISPLAY = 7;
+/** How many completed items to preview before "… +N done". */
 const COMPLETED_PREVIEW = 2;
 
 /**
  * Sticky summary of the current task list, pinned directly above the input
- * instead of scrolling away inline with the tool output. Shows a count header
- * (`19 tasks (16 done, 3 open)`), the open/in-progress items, a short preview
- * of completed items, and a collapsed count for the rest:
+ * instead of scrolling away inline with the tool output. Mirrors Claude Code's
+ * todo styling: a count header that breaks out in-progress, the active item in
+ * a bold/filled style, pending items dimmed, and collapsed counts for the rest:
  *
  * ```
- * 19 tasks (16 done, 3 open)
- * ◻ Wire Temporal healthcheck + Postiz depends_on: service_healthy
- * ◻ Manual cleanup of orphaned mlflow data dir
- * ✔ Deploy studio stack + restart cloudflared
- *    … +14 completed
+ * 6 tasks (0 done, 1 in progress, 5 open)
+ * ■ Phase A — Friend invite over the new wire
+ * □ Phase B — Cloud coordinator › blocked by #94
+ * □ Phase C — Identity / accounts / friends › blocked by #94
+ *  … +1 pending
  * ```
  *
  * Returns null when there are no tasks so the caller can mount it
@@ -36,34 +36,54 @@ export const StickyTaskList: React.FC<{ todos: TodoItem[] }> = ({ todos }) => {
     return null;
   }
 
-  const open = todos.filter((t) => t.status !== 'completed');
+  const inProgress = todos.filter((t) => t.status === 'in_progress');
+  const pending = todos.filter((t) => t.status === 'pending');
   const completed = todos.filter((t) => t.status === 'completed');
   const total = todos.length;
 
-  const openShown = open.slice(0, MAX_OPEN_DISPLAY);
-  const openHidden = open.length - openShown.length;
+  const pendingShown = pending.slice(0, MAX_PENDING_DISPLAY);
+  const pendingHidden = pending.length - pendingShown.length;
   const completedShown = completed.slice(0, COMPLETED_PREVIEW);
   const completedHidden = completed.length - completedShown.length;
 
   return (
-    <Box flexDirection="column" marginBottom={1}>
+    <Box flexDirection="column" marginLeft={2} marginBottom={1}>
+      {/* Count header — numbers emphasized, labels dimmed. */}
       <Text color={theme.text.secondary}>
-        {total} task{total === 1 ? '' : 's'} ({completed.length} done,{' '}
-        {open.length} open)
+        <Text bold color={theme.text.primary}>
+          {total}
+        </Text>{' '}
+        task{total === 1 ? '' : 's'} (
+        <Text bold color={theme.text.primary}>
+          {completed.length}
+        </Text>{' '}
+        done,{' '}
+        <Text bold color={theme.text.primary}>
+          {inProgress.length}
+        </Text>{' '}
+        in progress,{' '}
+        <Text bold color={theme.text.primary}>
+          {pending.length}
+        </Text>{' '}
+        open)
       </Text>
 
-      {openShown.map((todo) => (
+      {/* Active items first, then pending, then a preview of completed. */}
+      {inProgress.map((todo) => (
         <TaskRow key={todo.id} todo={todo} />
       ))}
-      {openHidden > 0 && (
-        <Text color={theme.ui.comment}> … +{openHidden} more open</Text>
+      {pendingShown.map((todo) => (
+        <TaskRow key={todo.id} todo={todo} />
+      ))}
+      {pendingHidden > 0 && (
+        <Text color={theme.ui.comment}> … +{pendingHidden} pending</Text>
       )}
 
       {completedShown.map((todo) => (
         <TaskRow key={todo.id} todo={todo} />
       ))}
       {completedHidden > 0 && (
-        <Text color={theme.ui.comment}> … +{completedHidden} completed</Text>
+        <Text color={theme.ui.comment}> … +{completedHidden} done</Text>
       )}
     </Box>
   );
@@ -73,22 +93,29 @@ const TaskRow: React.FC<{ todo: TodoItem }> = ({ todo }) => {
   const isCompleted = todo.status === 'completed';
   const isInProgress = todo.status === 'in_progress';
 
+  // Filled marker for the active item (accent), hollow for pending (dim),
+  // check for completed (success).
+  const glyph = isCompleted ? '✔' : isInProgress ? '■' : '□';
+  const glyphColor = isCompleted
+    ? theme.status.success
+    : isInProgress
+      ? theme.status.warning
+      : theme.ui.comment;
+  const textColor = isCompleted
+    ? theme.ui.comment
+    : isInProgress
+      ? theme.text.primary
+      : theme.text.secondary;
+
   return (
     <Box flexDirection="row">
-      <Box width={2}>
-        <Text color={isCompleted ? theme.status.success : theme.ui.comment}>
-          {isCompleted ? '✔' : '◻'}
-        </Text>
+      <Box marginRight={1}>
+        <Text color={glyphColor}>{glyph}</Text>
       </Box>
       <Box flexGrow={1}>
         <Text
-          color={
-            isCompleted
-              ? theme.ui.comment
-              : isInProgress
-                ? theme.status.success
-                : theme.text.primary
-          }
+          bold={isInProgress}
+          color={textColor}
           strikethrough={isCompleted}
           wrap="truncate-end"
         >
