@@ -3,11 +3,9 @@ name: 'Release'
 # Fires when a release-bearing PR is merged into main.
 # Builds the bundle, publishes @protolabsai/proto to npm, tags, and creates a GitHub Release.
 #
-# Two flows trigger this:
-#   1. Auto-release: auto-release.yml opens an `auto-release/v*` PR with the
-#      version bump, which merges to main and triggers this workflow.
-#   2. Manual dev→main promotion: dev branch PR'd into main (legacy path,
-#      still supported).
+# Trigger: auto-release.yml opens an `auto-release/v*` PR with the version bump,
+# which merges to main and triggers this workflow. (Can also be run manually via
+# workflow_dispatch.)
 
 on:
   pull_request:
@@ -27,10 +25,7 @@ jobs:
         github.event_name == 'workflow_dispatch' ||
         (
           github.event.pull_request.merged == true &&
-          (
-            github.event.pull_request.head.ref == 'dev' ||
-            startsWith(github.event.pull_request.head.ref, 'auto-release/')
-          )
+          startsWith(github.event.pull_request.head.ref, 'auto-release/')
         )
       )
     timeout-minutes: 30
@@ -167,38 +162,8 @@ jobs:
             -d "$(jq -n --arg c "$MSG" '{content: $c}')" \
             "$WEBHOOK" || echo "::warning::Webhook post also failed."
 
-      - name: Sync main back to dev
-        id: sync_dev
-        if: steps.version.outputs.already_tagged != 'true'
-        continue-on-error: true
-        run: |
-          # After tagging on main, merge back to dev so the branches stay aligned.
-          git fetch origin dev
-          git checkout dev
-          git merge origin/main --no-edit -m "chore: sync main back to dev after release"
-          git push origin dev
-
-      # dev has been drifting for many releases (merge conflicts in
-      # package.json / package-lock.json when dev is far behind). Surface the
-      # failure instead of letting `continue-on-error` swallow it silently.
-      - name: Warn on dev-sync failure
-        if: steps.sync_dev.outcome == 'failure'
-        env:
-          WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-          VERSION: ${{ steps.version.outputs.tag }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ -z "$WEBHOOK" ]; then
-            echo "::warning::DISCORD_RELEASE_WEBHOOK not set; skipping warning post."
-            exit 0
-          fi
-          MSG=":warning: **dev-branch sync failed** for \`$VERSION\` — likely merge conflicts vs. main. dev is drifting. Run: $RUN_URL"
-          curl -fsS -X POST -H 'Content-Type: application/json' \
-            -d "$(jq -n --arg c "$MSG" '{content: $c}')" \
-            "$WEBHOOK" || echo "::warning::Webhook post also failed."
-
       - name: Alert on already-tagged
         if: steps.version.outputs.already_tagged == 'true'
         run: |
-          echo "::warning::${{ steps.version.outputs.tag }} is already tagged. Ensure prepare-release.yml ran on dev first."
+          echo "::warning::${{ steps.version.outputs.tag }} is already tagged. Ensure auto-release.yml bumped the version first."
           exit 1

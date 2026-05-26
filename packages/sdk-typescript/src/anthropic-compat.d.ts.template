@@ -1,0 +1,285 @@
+/**
+ * @license
+ * Copyright 2025 protoLabs
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * Anthropic SDK compatibility layer for `@protolabsai/sdk`.
+ *
+ * Drop-in API surface for code that was written against
+ * `@anthropic-ai/claude-agent-sdk`. Migration is a one-line import path
+ * change:
+ *
+ *   - import { query, Options, HookCallback } from '@anthropic-ai/claude-agent-sdk';
+ *   + import { query, Options, HookCallback } from '@protolabsai/sdk/anthropic-compat';
+ *
+ * This file is the hand-rolled type surface for the compat subpath. The
+ * runtime implementation lives in `dist/anthropic-compat.{mjs,cjs}` (built
+ * from `src/anthropic-compat.ts`). See that file for full translation logic.
+ */
+
+// =============================================================================
+// Runtime re-exports — identical between Claude SDK and proto SDK
+// =============================================================================
+
+export declare class AbortError extends Error {
+  constructor(message?: string);
+}
+export declare function isAbortError(error: unknown): error is AbortError;
+
+export declare function tool<TSchema = unknown>(definition: {
+  name: string;
+  description?: string;
+  inputSchema: TSchema;
+  handler: (input: unknown) => unknown | Promise<unknown>;
+}): unknown;
+
+export declare function createSdkMcpServer(
+  name: string,
+  version: string,
+  tools: unknown[]
+): unknown;
+
+// SDK message types pass through unchanged — proto and Claude SDK use the same
+// SDK*Message shape. They're re-exported here so consumers don't need a second
+// import path.
+
+export interface SDKUserMessage {
+  type: 'user';
+  session_id: string;
+  message: {
+    role: 'user';
+    content: unknown;
+  };
+  parent_tool_use_id: string | null;
+}
+
+export interface SDKAssistantMessage {
+  type: 'assistant';
+  session_id?: string;
+  message?: {
+    role: 'assistant';
+    content?: Array<{ type: string; text?: string; [k: string]: unknown }>;
+  };
+  parent_tool_use_id?: string | null;
+}
+
+export interface SDKSystemMessage {
+  type: 'system';
+  subtype?: string;
+  session_id?: string;
+  [k: string]: unknown;
+}
+
+export interface SDKResultMessage {
+  type: 'result';
+  subtype: 'success' | 'error' | string;
+  result?: unknown;
+  [k: string]: unknown;
+}
+
+export interface SDKPartialAssistantMessage {
+  type: 'stream_event';
+  [k: string]: unknown;
+}
+
+export type SDKMessage =
+  | SDKUserMessage
+  | SDKAssistantMessage
+  | SDKSystemMessage
+  | SDKResultMessage
+  | SDKPartialAssistantMessage;
+
+export declare function isSDKUserMessage(msg: unknown): msg is SDKUserMessage;
+export declare function isSDKAssistantMessage(msg: unknown): msg is SDKAssistantMessage;
+export declare function isSDKSystemMessage(msg: unknown): msg is SDKSystemMessage;
+export declare function isSDKResultMessage(msg: unknown): msg is SDKResultMessage;
+export declare function isSDKPartialAssistantMessage(
+  msg: unknown
+): msg is SDKPartialAssistantMessage;
+
+// =============================================================================
+// Claude-shaped types — the migration surface
+// =============================================================================
+
+/**
+ * Hook input passed to PreToolUse hook callbacks (Claude SDK shape).
+ */
+export interface PreToolUseHookInput {
+  hook_event_name: 'PreToolUse';
+  tool_name: string;
+  tool_input: unknown;
+  tool_use_id: string | null;
+}
+
+/**
+ * Hook input passed to PostToolUse hook callbacks.
+ */
+export interface PostToolUseHookInput {
+  hook_event_name: 'PostToolUse';
+  tool_name: string;
+  tool_input: unknown;
+  tool_use_id: string | null;
+  tool_response?: unknown;
+}
+
+export interface StopHookInput {
+  hook_event_name: 'Stop';
+  tool_use_id: string | null;
+}
+
+export interface SubagentStopHookInput {
+  hook_event_name: 'SubagentStop';
+  tool_use_id: string | null;
+}
+
+export interface NotificationHookInput {
+  hook_event_name: 'Notification';
+  tool_use_id: string | null;
+  message?: string;
+}
+
+export type HookInput =
+  | PreToolUseHookInput
+  | PostToolUseHookInput
+  | StopHookInput
+  | SubagentStopHookInput
+  | NotificationHookInput;
+
+/**
+ * Result a Claude-shaped HookCallback may return.
+ *
+ *   - `{ decision: 'block', reason: '...' }` — block the tool, surface `reason`
+ *   - `{ continue: false }` — interrupt the session
+ *   - `{}` or `undefined` — allow
+ */
+export interface HookCallbackResult {
+  decision?: 'block';
+  reason?: string;
+  continue?: boolean;
+  suppressOutput?: boolean;
+}
+
+/**
+ * Claude-shaped hook callback signature.
+ */
+export type HookCallback = (
+  input: HookInput
+) => HookCallbackResult | void | Promise<HookCallbackResult | void>;
+
+/**
+ * Matcher object used in Claude's `hooks` option.
+ */
+export interface HookCallbackMatcher {
+  hooks?: HookCallback[];
+}
+
+/**
+ * Permission decision returned by a `canUseTool` callback.
+ */
+export type PermissionResult =
+  | { behavior: 'allow'; updatedInput?: Record<string, unknown> }
+  | { behavior: 'deny'; message?: string };
+
+/**
+ * Permission callback invoked before a tool runs. Always async — wrap a sync
+ * function in `async` if you have one.
+ */
+export type CanUseTool = (
+  toolName: string,
+  input: Record<string, unknown>
+) => Promise<PermissionResult>;
+
+/**
+ * MCP server config. Loose `Record<string, unknown>` here so consumers can
+ * pass through proto's structured shapes; the runtime translation passes
+ * `mcpServers` through verbatim.
+ */
+export type McpServerConfig = Record<string, unknown>;
+
+/**
+ * Permission modes accepted by the compat layer. `bypassPermissions` is
+ * mapped to proto's `yolo` at runtime.
+ */
+export type PermissionMode =
+  | 'default'
+  | 'plan'
+  | 'auto-edit'
+  | 'yolo'
+  | 'bypassPermissions';
+
+type HookEventName =
+  | 'PreToolUse'
+  | 'PostToolUse'
+  | 'Stop'
+  | 'Notification'
+  | 'SubagentStop';
+
+/**
+ * Claude-shaped Options. Field names mirror `@anthropic-ai/claude-agent-sdk`'s
+ * Options so consumers can swap the import path with no other changes.
+ *
+ * The compat layer translates these into proto's QueryOptions before invoking
+ * the underlying transport:
+ *   - maxTurns → maxSessionTurns
+ *   - allowedTools → coreTools
+ *   - disallowedTools → excludeTools
+ *   - pathToClaudeCodeExecutable → pathToQwenExecutable
+ *   - permissionMode: 'bypassPermissions' → permissionMode: 'yolo'
+ *   - hooks (matcher arrays) → hookCallbacks (flat record)
+ *
+ * Claude-only options accepted at the type level but silently dropped at
+ * runtime: settingSources, resume, agents, maxThinkingTokens, outputFormat,
+ * allowDangerouslySkipPermissions.
+ */
+export interface Options {
+  model?: string;
+  cwd?: string;
+  systemPrompt?: string;
+  maxTurns?: number;
+  allowedTools?: string[];
+  disallowedTools?: string[];
+  permissionMode?: PermissionMode;
+  allowDangerouslySkipPermissions?: boolean;
+  canUseTool?: CanUseTool;
+  mcpServers?: Record<string, McpServerConfig>;
+  abortController?: AbortController;
+  env?: Record<string, string>;
+  hooks?: Partial<Record<HookEventName, HookCallbackMatcher[]>>;
+  pathToClaudeCodeExecutable?: string;
+  // Claude-specific fields accepted for source compatibility, dropped at runtime.
+  settingSources?: Array<'user' | 'project' | 'local'>;
+  resume?: string;
+  agents?: Record<string, unknown>;
+  maxThinkingTokens?: number;
+  outputFormat?: string;
+}
+
+/**
+ * Opaque handle to a running query. Implements `AsyncIterable<SDKMessage>` so
+ * callers can `for await (const msg of query(...))`. Method surface includes
+ * `interrupt()`, `setModel()`, `setPermissionMode()`, `close()` etc.; see
+ * `@protolabsai/sdk`'s `Query` class for the full proto-side type.
+ */
+export interface Query extends AsyncIterable<SDKMessage> {
+  getSessionId(): string;
+  isClosed(): boolean;
+  interrupt(): Promise<void>;
+  setPermissionMode(mode: PermissionMode): Promise<void>;
+  setModel(model: string): Promise<void>;
+  close(): Promise<void>;
+}
+
+/**
+ * Drop-in replacement for `@anthropic-ai/claude-agent-sdk`'s `query()`.
+ *
+ * Accepts the same `{ prompt, options }` argument shape, translates the
+ * options into proto's native QueryOptions, and delegates to the underlying
+ * proto query transport. Returns an async-iterable `Query` whose message
+ * shape matches the Claude SDK.
+ */
+export declare function query(args: {
+  prompt: string | AsyncIterable<SDKUserMessage>;
+  options?: Options;
+}): Query;

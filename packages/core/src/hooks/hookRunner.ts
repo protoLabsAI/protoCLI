@@ -11,12 +11,25 @@ import type {
   CommandHookConfig,
   HttpHookConfig,
   PromptHookConfig,
+  SdkCallbackHookConfig,
   HookInput,
   HookOutput,
   HookExecutionResult,
   PreToolUseInput,
   UserPromptSubmitInput,
 } from './types.js';
+
+/**
+ * Invokes a host-registered SDK callback by id and resolves to the host's
+ * response (or undefined if there is no response). Wired by the CLI's
+ * non-interactive session at SDK INITIALIZE time so this module stays free
+ * of dispatcher dependencies.
+ */
+export type SdkCallbackInvoker = (
+  callbackId: string,
+  input: HookInput,
+  toolUseId: string | null,
+) => Promise<HookOutput | undefined>;
 import { createDebugLogger } from '../utils/debugLogger.js';
 import {
   escapeShellArg,
@@ -47,6 +60,16 @@ const EXIT_CODE_NON_BLOCKING_ERROR = 1;
  * Hook runner that executes command hooks
  */
 export class HookRunner {
+  private sdkCallbackInvoker: SdkCallbackInvoker | undefined;
+
+  /**
+   * Set the function used to invoke SDK-callback hooks. Called by the CLI's
+   * non-interactive session once the control dispatcher is ready. Pass
+   * `undefined` to clear (e.g. on session teardown).
+   */
+  setSdkCallbackInvoker(invoker: SdkCallbackInvoker | undefined): void {
+    this.sdkCallbackInvoker = invoker;
+  }
   /**
    * Execute a single hook
    * @param hookConfig Hook configuration
@@ -259,6 +282,15 @@ export class HookRunner {
     if (hookConfig.type === HookType.Prompt) {
       return this.executePromptHook(hookConfig, eventName, input, startTime);
     }
+    if (hookConfig.type === HookType.SdkCallback) {
+      return this.executeSdkCallbackHook(
+        hookConfig,
+        eventName,
+        input,
+        startTime,
+        signal,
+      );
+    }
     // Default: command hooks (including unknown types as fallback)
     return this.executeCommandHook(
       hookConfig as CommandHookConfig,
@@ -267,6 +299,72 @@ export class HookRunner {
       startTime,
       signal,
     );
+  }
+
+  /**
+   * Execute an SDK callback hook — round-trip the event back to the host
+   * process via the registered invoker and use its response as the hook
+   * output. If no invoker is wired (e.g. running outside SDK mode) or the
+   * host throws, treat as a non-blocking error so the agent keeps running.
+   */
+  private async executeSdkCallbackHook(
+    hookConfig: SdkCallbackHookConfig,
+    eventName: HookEventName,
+    input: HookInput,
+    startTime: number,
+    signal?: AbortSignal,
+  ): Promise<HookExecutionResult> {
+    if (!this.sdkCallbackInvoker) {
+      debugLogger.warn(
+        `SDK callback hook ${hookConfig.callbackId} fired for ${eventName} but no invoker is registered; skipping.`,
+      );
+      return {
+        hookConfig,
+        eventName,
+        success: true,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    const toolUseId =
+      (input as { tool_use_id?: string | null }).tool_use_id ?? null;
+
+    try {
+      const output = await this.sdkCallbackInvoker(
+        hookConfig.callbackId,
+        input,
+        toolUseId,
+      );
+      return {
+        hookConfig,
+        eventName,
+        success: true,
+        output,
+        exitCode: 0,
+        duration: Date.now() - startTime,
+      };
+    } catch (error) {
+      if (signal?.aborted) {
+        return {
+          hookConfig,
+          eventName,
+          success: false,
+          error: new Error('SDK callback hook cancelled (aborted)'),
+          duration: Date.now() - startTime,
+        };
+      }
+      const msg = error instanceof Error ? error.message : String(error);
+      debugLogger.warn(
+        `SDK callback hook ${hookConfig.callbackId} threw: ${msg}`,
+      );
+      return {
+        hookConfig,
+        eventName,
+        success: false,
+        error: error instanceof Error ? error : new Error(msg),
+        duration: Date.now() - startTime,
+      };
+    }
   }
 
   /**

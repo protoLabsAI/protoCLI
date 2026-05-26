@@ -16,7 +16,7 @@
 import type { Config, MCPServerConfig } from '@qwen-code/qwen-code-core';
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { StreamJsonOutputAdapter } from '../io/StreamJsonOutputAdapter.js';
-import type { PermissionMode } from '../types.js';
+import type { HookRegistration, PermissionMode } from '../types.js';
 
 /**
  * Control Context interface
@@ -37,6 +37,13 @@ export interface IControlContext {
   mcpClients: Map<string, { client: Client; config: MCPServerConfig }>;
   inputClosed: boolean;
 
+  /**
+   * Hook registrations received in the INITIALIZE payload. handleInitialize
+   * runs before Config.initialize() (which builds the HookSystem), so we
+   * stash them here and wire them once the hook system exists.
+   */
+  pendingHookRegistrations: HookRegistration[];
+
   onInterrupt?: () => void;
 }
 
@@ -54,6 +61,7 @@ export class ControlContext implements IControlContext {
   sdkMcpServers: Set<string>;
   mcpClients: Map<string, { client: Client; config: MCPServerConfig }>;
   inputClosed: boolean;
+  pendingHookRegistrations: HookRegistration[];
 
   onInterrupt?: () => void;
 
@@ -74,6 +82,7 @@ export class ControlContext implements IControlContext {
     this.sdkMcpServers = new Set();
     this.mcpClients = new Map();
     this.inputClosed = false;
+    this.pendingHookRegistrations = [];
     this.onInterrupt = options.onInterrupt;
   }
 }
