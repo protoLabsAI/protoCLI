@@ -61,6 +61,7 @@ describe('keyMatchers', () => {
     [Command.SHOW_MORE_LINES]: (key: Key) => key.ctrl && key.name === 's',
     [Command.RETRY_LAST]: (key: Key) => key.ctrl && key.name === 'y',
     [Command.BACKGROUND_SESSION]: (key: Key) => key.ctrl && key.name === 'b',
+    [Command.TOGGLE_TRANSCRIPT]: (key: Key) => key.ctrl && key.name === 'o',
     [Command.REVERSE_SEARCH]: (key: Key) => key.ctrl && key.name === 'r',
     [Command.SUBMIT_REVERSE_SEARCH]: (key: Key) =>
       key.name === 'return' && !key.ctrl,

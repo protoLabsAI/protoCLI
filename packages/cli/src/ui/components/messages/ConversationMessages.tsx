@@ -5,6 +5,7 @@
  */
 
 import type React from 'react';
+import { createContext, useContext } from 'react';
 import { Box, Text } from 'ink';
 import stringWidth from 'string-width';
 import { MarkdownDisplay } from '../../utils/MarkdownDisplay.js';
@@ -79,6 +80,13 @@ interface ContinuationMarkdownMessageProps {
   basePrefix: string;
   textColor?: string;
 }
+
+/**
+ * When true, finalized thoughts render their full text instead of collapsing
+ * to the "▸ thinking (N chars)" summary. The transcript overlay (Ctrl+O) flips
+ * this on so the scrollback stays compact while the overlay shows everything.
+ */
+export const ThoughtExpansionContext = createContext<boolean>(false);
 
 function getPrefixWidth(prefix: string): number {
   // Reserve one extra column so text never touches the prefix glyph.
@@ -266,13 +274,17 @@ export const ThinkMessage: React.FC<ThinkMessageProps> = ({
   availableTerminalHeight,
   contentWidth,
 }) => {
+  const expanded = useContext(ThoughtExpansionContext);
   // An empty thought (e.g. a thought/continuation split boundary) would render
   // either a lone "⟡" while streaming or "▸ thinking (0 chars)" once finalized.
   // Neither is useful, so suppress it.
   if (!text || text.trim() === '') {
     return null;
   }
-  if (!isPending) {
+  // Collapse to the summary only in the normal scrollback. While streaming, or
+  // when an expanded view (the transcript overlay) asks for it, show the full
+  // thought.
+  if (!isPending && !expanded) {
     return <ThinkSummary text={text} />;
   }
   return (
@@ -294,12 +306,12 @@ export const ThinkMessageContent: React.FC<ThinkMessageContentProps> = ({
   availableTerminalHeight,
   contentWidth,
 }) => {
-  // When the stream has finalized, suppress the continuation block. The
-  // adjacent ThinkMessage already renders the summary line; rendering this
-  // continuation as another summary would double-count and drop chars across
-  // the split boundary. Streaming-time renders unchanged so live thoughts
-  // still appear.
-  if (!isPending) {
+  const expanded = useContext(ThoughtExpansionContext);
+  // In the normal scrollback the finalized continuation is suppressed (the
+  // adjacent ThinkMessage owns the collapsed summary; rendering this too would
+  // double-count). An expanded view wants the continuation in full so split
+  // thoughts read completely.
+  if (!isPending && !expanded) {
     return null;
   }
   return (
