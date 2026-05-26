@@ -21,7 +21,9 @@ import type { TodoItem } from '../components/TodoDisplay.js';
  *
  * Returns an empty array when no task list has been produced this session.
  */
-export function extractCurrentTodos(history: HistoryItem[]): TodoItem[] {
+export function extractCurrentTodos(
+  history: HistoryItem[] | undefined,
+): TodoItem[] {
   if (!history) return [];
   for (let i = history.length - 1; i >= 0; i--) {
     const item = history[i];
