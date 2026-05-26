@@ -1162,7 +1162,13 @@ export async function loadCliConfig(
     useRipgrep: settings.tools?.useRipgrep,
     useBuiltinRipgrep: settings.tools?.useBuiltinRipgrep,
     shouldUseNodePtyShell: settings.tools?.shell?.enableInteractiveShell,
-    skipNextSpeakerCheck: settings.model?.skipNextSpeakerCheck,
+    // Autonomous sessions (SDK / headless / non-TTY) default to RUNNING the
+    // next-speaker check so the loop nudges the model to continue after a turn
+    // that states intent without a tool call, instead of silently ending
+    // (#307). Interactive REPL keeps the check skipped by default for snappy
+    // responses — a human (or an active /goal) drives continuation there.
+    // An explicit `model.skipNextSpeakerCheck` setting overrides either way.
+    skipNextSpeakerCheck: settings.model?.skipNextSpeakerCheck ?? interactive,
     skipLoopDetection: settings.model?.skipLoopDetection ?? true,
     skipStartupContext: settings.model?.skipStartupContext ?? false,
     truncateToolOutputThreshold: settings.tools?.truncateToolOutputThreshold,

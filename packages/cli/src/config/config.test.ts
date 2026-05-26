@@ -646,6 +646,32 @@ describe('loadCliConfig', () => {
     expect(config.getIncludePartialMessages()).toBe(true);
   });
 
+  it('defaults skipNextSpeakerCheck=false for non-interactive (SDK/headless) sessions (#307)', async () => {
+    process.argv = ['node', 'script.js', '--prompt', 'do the thing'];
+    const argv = await parseArguments();
+    const config = await loadCliConfig({}, argv);
+    // Autonomous loop must run the next-speaker check so it continues after a
+    // turn that states intent without a tool call, instead of stopping.
+    expect(config.getSkipNextSpeakerCheck()).toBe(false);
+  });
+
+  it('defaults skipNextSpeakerCheck=true for interactive sessions', async () => {
+    process.argv = ['node', 'script.js', '--prompt-interactive', 'help me'];
+    const argv = await parseArguments();
+    const config = await loadCliConfig({}, argv);
+    expect(config.getSkipNextSpeakerCheck()).toBe(true);
+  });
+
+  it('honors an explicit model.skipNextSpeakerCheck setting over the default', async () => {
+    process.argv = ['node', 'script.js', '--prompt', 'do the thing'];
+    const argv = await parseArguments();
+    const config = await loadCliConfig(
+      { model: { skipNextSpeakerCheck: true } },
+      argv,
+    );
+    expect(config.getSkipNextSpeakerCheck()).toBe(true);
+  });
+
   it('should reset context filenames to defaults when context.fileName is not configured', async () => {
     process.argv = ['node', 'script.js'];
     const argv = await parseArguments();
