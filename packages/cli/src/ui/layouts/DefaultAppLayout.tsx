@@ -16,6 +16,7 @@ import { AgentTabBar } from '../components/agent-view/AgentTabBar.js';
 import { AgentChatView } from '../components/agent-view/AgentChatView.js';
 import { AgentComposer } from '../components/agent-view/AgentComposer.js';
 import { StatusBar } from '../components/StatusBar.js';
+import { TranscriptOverlay } from '../components/TranscriptOverlay.js';
 import { StreamingState } from '../types.js';
 import { useUIState } from '../contexts/UIStateContext.js';
 import { useUIActions } from '../contexts/UIActionsContext.js';
@@ -25,7 +26,7 @@ import { useTerminalSize } from '../hooks/useTerminalSize.js';
 
 export const DefaultAppLayout: React.FC = () => {
   const uiState = useUIState();
-  const { refreshStatic } = useUIActions();
+  const { refreshStatic, closeTranscript } = useUIActions();
   const { activeView, agents } = useAgentViewState();
   const { columns: terminalWidth } = useTerminalSize();
   const config = useConfig();
@@ -43,6 +44,23 @@ export const DefaultAppLayout: React.FC = () => {
       refreshStatic();
     }
   }, [activeView, refreshStatic]);
+
+  // Opening/closing the transcript overlay swaps the whole main view in and
+  // out. Clear the terminal on each transition so the overlay starts on a
+  // clean screen and the scrollback reprints intact once it closes (mirrors
+  // the agent-view switch above).
+  const isTranscriptOpen = uiState.isTranscriptOpen;
+  const prevTranscriptRef = useRef(isTranscriptOpen);
+  useEffect(() => {
+    if (prevTranscriptRef.current !== isTranscriptOpen) {
+      prevTranscriptRef.current = isTranscriptOpen;
+      refreshStatic();
+    }
+  }, [isTranscriptOpen, refreshStatic]);
+
+  if (isTranscriptOpen) {
+    return <TranscriptOverlay onClose={closeTranscript} />;
+  }
 
   return (
     <Box flexDirection="column" width={terminalWidth}>

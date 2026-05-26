@@ -77,6 +77,7 @@ import { type InitializationResult } from '../core/initializer.js';
 import { useFocus } from './hooks/useFocus.js';
 import { useBracketedPaste } from './hooks/useBracketedPaste.js';
 import { useKeyboardHandling } from './hooks/useKeyboardHandling.js';
+import { useTranscriptOverlay } from './hooks/useTranscriptOverlay.js';
 import { useLoadingIndicator } from './hooks/useLoadingIndicator.js';
 import { useFolderTrust } from './hooks/useFolderTrust.js';
 import { useIdeTrustListener } from './hooks/useIdeTrustListener.js';
@@ -1299,6 +1300,8 @@ export const AppContainer = (props: AppContainerProps) => {
     buffer,
   });
 
+  const { isTranscriptOpen, closeTranscript } = useTranscriptOverlay();
+
   const {
     showToolDescriptions,
     ctrlCPressedOnce,
@@ -1326,6 +1329,7 @@ export const AppContainer = (props: AppContainerProps) => {
     handleExit,
     debugKeystrokeLogging: settings.merged.general?.debugKeystrokeLogging,
     onBackgroundSession: backgroundCurrentSession,
+    isTranscriptOpen,
   });
 
   // Update terminal title with proto status and thoughts
@@ -1502,6 +1506,8 @@ export const AppContainer = (props: AppContainerProps) => {
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
+      // Transcript overlay (Ctrl+O)
+      isTranscriptOpen,
     }),
     [
       isThemeDialogOpen,
@@ -1613,6 +1619,8 @@ export const AppContainer = (props: AppContainerProps) => {
       // Prompt suggestion
       promptSuggestion,
       dismissPromptSuggestion,
+      // Transcript overlay (Ctrl+O)
+      isTranscriptOpen,
     ],
   );
 
@@ -1686,6 +1694,8 @@ export const AppContainer = (props: AppContainerProps) => {
       closeFeedbackDialog,
       temporaryCloseFeedbackDialog,
       submitFeedback,
+      // Transcript overlay (Ctrl+O)
+      closeTranscript,
     }),
     [
       openThemeDialog,
@@ -1751,6 +1761,8 @@ export const AppContainer = (props: AppContainerProps) => {
       closeFeedbackDialog,
       temporaryCloseFeedbackDialog,
       submitFeedback,
+      // Transcript overlay (Ctrl+O)
+      closeTranscript,
     ],
   );
 

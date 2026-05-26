@@ -107,6 +107,8 @@ export interface UIActions {
   closeFeedbackDialog: () => void;
   temporaryCloseFeedbackDialog: () => void;
   submitFeedback: (rating: number) => void;
+  // Transcript overlay (Ctrl+O)
+  closeTranscript: () => void;
 }
 
 export const UIActionsContext = createContext<UIActions | null>(null);
