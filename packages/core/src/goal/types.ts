@@ -36,6 +36,11 @@ export interface GoalState {
   tokensSpent: number;
   /** Unix-ms timestamp when the goal was achieved. Unset on active goals. */
   achievedAt?: number;
+  /**
+   * Unix-ms timestamp when the goal was abandoned as impossible. Unset on
+   * active and achieved goals; mutually exclusive with `achievedAt`.
+   */
+  failedAt?: number;
 }
 
 export interface GoalEvaluationContext {
@@ -50,6 +55,13 @@ export interface GoalEvaluationContext {
 export interface GoalEvaluationResult {
   /** Whether the evaluator considers the condition satisfied. */
   met: boolean;
+  /**
+   * Whether the condition is genuinely unachievable in this session (e.g.
+   * self-contradictory, depends on an unavailable resource, or all reasonable
+   * approaches are exhausted). Only meaningful when `met` is false. When set,
+   * the goal is abandoned as a terminal failure instead of looping further.
+   */
+  impossible?: boolean;
   /** Short reason supporting the decision. */
   reason: string;
   /** Tokens consumed by the evaluator call. */

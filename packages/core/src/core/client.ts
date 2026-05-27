@@ -1032,6 +1032,17 @@ export class GeminiClient {
 
           if (evalResult.met) {
             goalManager.markAchieved();
+          } else if (evalResult.impossible) {
+            // Terminal failure: the condition is genuinely unachievable, so
+            // stop the autonomous loop instead of continuing forever. The
+            // just-finished turn's output is already surfaced; `/goal` reports
+            // the abandonment reason. (Ported from QwenLM/qwen-code#4230.)
+            goalManager.markImpossible(evalResult.reason);
+            this.config
+              .getDebugLogger()
+              .info(
+                `[goal] abandoned as impossible: ${evalResult.reason.slice(0, 120)}`,
+              );
           } else {
             const continueReason = `Goal not yet met. Evaluator: ${evalResult.reason}\n\nKeep working toward: ${active.condition}`;
             const continueRequest = [{ text: continueReason }];

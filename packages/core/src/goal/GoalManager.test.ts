@@ -95,6 +95,29 @@ describe('GoalManager', () => {
     });
   });
 
+  describe('markImpossible', () => {
+    it('moves the active goal into lastFailed with failedAt and reason', () => {
+      manager.setGoal('make 2 + 2 equal 5');
+      manager.recordTurn();
+      const failed = manager.markImpossible('arithmetic is fixed; impossible');
+      expect(failed?.failedAt).toBeGreaterThan(0);
+      expect(failed?.lastReason).toBe('arithmetic is fixed; impossible');
+      expect(manager.hasActiveGoal()).toBe(false);
+      expect(manager.getLastFailedGoal()?.condition).toBe('make 2 + 2 equal 5');
+      expect(manager.getLastFailedGoal()?.achievedAt).toBeUndefined();
+    });
+
+    it('returns undefined when no goal is active', () => {
+      expect(manager.markImpossible('n/a')).toBeUndefined();
+    });
+
+    it('does not populate lastAchieved', () => {
+      manager.setGoal('x');
+      manager.markImpossible('cannot');
+      expect(manager.getLastAchievedGoal()).toBeUndefined();
+    });
+  });
+
   describe('recordTurn', () => {
     it('increments the active goal turn count', () => {
       manager.setGoal('x');
@@ -134,13 +157,16 @@ describe('GoalManager', () => {
   });
 
   describe('reset', () => {
-    it('clears both active and achieved state', () => {
+    it('clears active, achieved, and failed state', () => {
       manager.setGoal('first');
       manager.markAchieved();
       manager.setGoal('second');
+      manager.markImpossible('cannot');
+      manager.setGoal('third');
       manager.reset();
       expect(manager.hasActiveGoal()).toBe(false);
       expect(manager.getLastAchievedGoal()).toBeUndefined();
+      expect(manager.getLastFailedGoal()).toBeUndefined();
     });
   });
 

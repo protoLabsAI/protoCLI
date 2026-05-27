@@ -14,13 +14,17 @@ const EVALUATOR_INSTRUCTIONS = `You are judging whether a user's completion cond
 
 You only see what the assistant has surfaced in the transcript -- tool calls it ran, their outcomes, and the final assistant message. You do not run commands yourself.
 
-Respond ONLY with valid JSON matching exactly this schema:
-{"met": boolean, "reason": "one short sentence explaining why"}
+Respond ONLY with valid JSON matching one of these shapes:
+{"met": true, "reason": "one short sentence quoting the satisfying evidence"}
+{"met": false, "reason": "one short sentence on what is missing or blocking"}
+{"met": false, "impossible": true, "reason": "one short sentence on why it can never be satisfied"}
 
 Rules:
 - Set "met": true only when the condition is clearly demonstrated by the visible evidence (a test output, an exit code, a file count, an empty queue, etc.).
 - If the assistant only claims the work is done without showing evidence, set "met": false and ask for the missing evidence in "reason".
 - If the condition cannot be verified from what is shown, set "met": false and explain what would prove it in "reason".
+- Only set "impossible": true when the condition is genuinely unachievable in this session: it is self-contradictory, depends on an unavailable resource or capability, or the assistant has exhausted reasonable approaches and the transcript confirms there is no path forward. The assistant claiming the goal is impossible is evidence, not proof -- independently confirm it rather than deferring to the assistant's self-assessment. Do NOT set it just because progress is slow or evidence is currently missing. When in doubt, return {"met": false} without "impossible".
+- "impossible" is only meaningful alongside "met": false. Never set it when "met" is true.
 - Keep "reason" to one short sentence. It will be shown to the assistant as guidance for the next turn.`;
 
 /**
@@ -108,7 +112,7 @@ function buildEvaluatorPrompt(context: GoalEvaluationContext): string {
  */
 export function parseEvaluatorJson(
   text: string,
-): Pick<GoalEvaluationResult, 'met' | 'reason'> {
+): Pick<GoalEvaluationResult, 'met' | 'reason' | 'impossible'> {
   const cleaned = stripCodeFence(text);
   const jsonObj = extractFirstJsonObject(cleaned);
   if (!jsonObj) {
@@ -122,6 +126,7 @@ export function parseEvaluatorJson(
     const parsed = JSON.parse(jsonObj) as {
       met?: unknown;
       reason?: unknown;
+      impossible?: unknown;
     };
     const met = parsed.met === true;
     const reason =
@@ -130,7 +135,11 @@ export function parseEvaluatorJson(
         : met
           ? 'Condition met.'
           : 'No reason provided.';
-    return { met, reason };
+    // "impossible" is a terminal-failure signal; it only applies when the
+    // condition is not met. Ignore it on a met verdict so a malformed reply
+    // can't both satisfy and fail the goal.
+    const impossible = !met && parsed.impossible === true;
+    return impossible ? { met, reason, impossible: true } : { met, reason };
   } catch {
     return {
       met: false,

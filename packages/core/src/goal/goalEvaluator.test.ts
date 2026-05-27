@@ -63,6 +63,35 @@ describe('parseEvaluatorJson', () => {
     expect(r.met).toBe(false);
   });
 
+  it('parses an impossible verdict when not met', () => {
+    const r = parseEvaluatorJson(
+      '{"met": false, "impossible": true, "reason": "condition is self-contradictory"}',
+    );
+    expect(r.met).toBe(false);
+    expect(r.impossible).toBe(true);
+    expect(r.reason).toBe('condition is self-contradictory');
+  });
+
+  it('ignores impossible when the condition is met', () => {
+    const r = parseEvaluatorJson(
+      '{"met": true, "impossible": true, "reason": "contradictory reply"}',
+    );
+    expect(r.met).toBe(true);
+    expect(r.impossible).toBeUndefined();
+  });
+
+  it('omits impossible when absent or false', () => {
+    expect(
+      parseEvaluatorJson('{"met": false, "reason": "still working"}')
+        .impossible,
+    ).toBeUndefined();
+    expect(
+      parseEvaluatorJson(
+        '{"met": false, "impossible": false, "reason": "still working"}',
+      ).impossible,
+    ).toBeUndefined();
+  });
+
   it('handles braces inside JSON string values', () => {
     const r = parseEvaluatorJson(
       '{"met": true, "reason": "see {artifact} for proof"}',

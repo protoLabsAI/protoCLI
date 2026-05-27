@@ -104,7 +104,24 @@ export function statusText(manager: GoalManager): string {
     return lines.join('\n');
   }
 
+  // Report whichever terminal outcome happened most recently.
   const achieved = manager.getLastAchievedGoal();
+  const failed = manager.getLastFailedGoal();
+  const achievedAt = achieved?.achievedAt ?? 0;
+  const failedAt = failed?.failedAt ?? 0;
+
+  if (failed && failedAt >= achievedAt && failedAt > 0) {
+    const elapsed = formatElapsed(failedAt - failed.startedAt);
+    const lines = [
+      `Last goal abandoned as impossible after ${elapsed} (${failed.turnCount} turn(s), ${failed.tokensSpent} eval tokens):`,
+      `  ${failed.condition}`,
+    ];
+    if (failed.lastReason) {
+      lines.push(`Reason: ${failed.lastReason}`);
+    }
+    return lines.join('\n');
+  }
+
   if (achieved && achieved.achievedAt) {
     const elapsed = formatElapsed(achieved.achievedAt - achieved.startedAt);
     return [

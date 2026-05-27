@@ -21,6 +21,7 @@ const debugLogger = createDebugLogger('GOAL_MANAGER');
 export class GoalManager {
   private active: GoalState | undefined;
   private lastAchieved: GoalState | undefined;
+  private lastFailed: GoalState | undefined;
 
   /**
    * Set a new goal. Replaces any active goal. Returns the created state.
@@ -85,6 +86,26 @@ export class GoalManager {
     return achieved;
   }
 
+  /**
+   * Mark the active goal as abandoned because the condition is impossible, and
+   * move it to `lastFailed`. Records the evaluator's reason so `/goal` can
+   * report why it stopped. Returns the failed record. No-op if no goal active.
+   */
+  markImpossible(reason: string): GoalState | undefined {
+    if (!this.active) return undefined;
+    const failed: GoalState = {
+      ...this.active,
+      lastReason: reason,
+      failedAt: Date.now(),
+    };
+    this.lastFailed = failed;
+    this.active = undefined;
+    debugLogger.info(
+      `Goal abandoned as impossible after ${failed.turnCount} turns: "${truncate(failed.condition, 60)}" (${truncate(reason, 80)}).`,
+    );
+    return failed;
+  }
+
   /** Record that the agent completed a turn while the goal was active. */
   recordTurn(): void {
     if (this.active) {
@@ -114,10 +135,15 @@ export class GoalManager {
     return this.lastAchieved ? { ...this.lastAchieved } : undefined;
   }
 
-  /** Reset both active and achieved state. Used on session clear/end. */
+  getLastFailedGoal(): GoalState | undefined {
+    return this.lastFailed ? { ...this.lastFailed } : undefined;
+  }
+
+  /** Reset active, achieved, and failed state. Used on session clear/end. */
   reset(): void {
     this.active = undefined;
     this.lastAchieved = undefined;
+    this.lastFailed = undefined;
   }
 }
 
