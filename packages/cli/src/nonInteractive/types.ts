@@ -358,6 +358,13 @@ export interface CLIControlInitializeRequest {
   subtype: 'initialize';
   hooks?: HookRegistration[] | null;
   /**
+   * Per-operation timeouts forwarded from the SDK. `canUseTool` bounds how long
+   * the CLI waits for a permission control response before timing out.
+   */
+  timeout?: {
+    canUseTool?: number;
+  };
+  /**
    * SDK MCP servers config
    * These are MCP servers running in the SDK process, connected via control plane.
    * External MCP servers are configured separately in settings, not via initialization.

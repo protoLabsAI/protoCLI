@@ -33,6 +33,11 @@ export interface IControlContext {
   readonly debugMode: boolean;
 
   permissionMode: PermissionMode;
+  /**
+   * Timeout (ms) for canUseTool control requests, set from the SDK's
+   * `initialize` payload. Undefined falls back to the controller default.
+   */
+  sdkCanUseToolTimeoutMs?: number;
   sdkMcpServers: Set<string>;
   mcpClients: Map<string, { client: Client; config: MCPServerConfig }>;
   inputClosed: boolean;
@@ -58,6 +63,11 @@ export class ControlContext implements IControlContext {
   readonly debugMode: boolean;
 
   permissionMode: PermissionMode;
+  /**
+   * Timeout (ms) for canUseTool control requests, set from the SDK's
+   * `initialize` payload. Undefined falls back to the controller default.
+   */
+  sdkCanUseToolTimeoutMs?: number;
   sdkMcpServers: Set<string>;
   mcpClients: Map<string, { client: Client; config: MCPServerConfig }>;
   inputClosed: boolean;
