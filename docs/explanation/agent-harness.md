@@ -67,6 +67,16 @@ No configuration required.
 
 ---
 
+## Reactive compression
+
+Compression normally runs *proactively* — before a turn is sent, once history crosses a token threshold. Estimates can still be wrong (a tool returns far more than expected, or a provider counts tokens differently), so the harness also compresses *reactively*: if a provider rejects a request because the prompt exceeds the context window, the harness force-compresses the live history once and retries the same request automatically.
+
+Context-overflow rejections are classified provider-agnostically (distinguished from superficially-similar timeouts, which are *not* compressed). The reactive retry fires at most once per request — if the prompt is still too large after compression, the original error surfaces rather than looping.
+
+No configuration required.
+
+---
+
 ## Repo map
 
 `repo_map` is a tool available to agents that builds a PageRank-ranked map of the most relevant source files in the repository, using the import graph and optionally seed files to personalize results.

@@ -54,14 +54,22 @@ Returns a `Query` instance (implements `AsyncIterable<SDKMessage>`).
 
 ### Permissions
 
-| Option           | Type       | Default   | Description                            |
-| ---------------- | ---------- | --------- | -------------------------------------- |
-| `permissionMode` | string     | `default` | `default`, `plan`, `auto-edit`, `yolo` |
-| `canUseTool`     | CanUseTool | —         | Custom per-tool permission callback    |
-| `allowedTools`   | string[]   | —         | Auto-approved tools                    |
-| `excludeTools`   | string[]   | —         | Blocked tools (highest priority)       |
-| `coreTools`      | string[]   | —         | If set, only these tools are available |
-| `authType`       | AuthType   | `openai`  | `openai`, `anthropic`, `gemini`        |
+| Option           | Type                       | Default   | Description                                  |
+| ---------------- | -------------------------- | --------- | -------------------------------------------- |
+| `permissionMode` | string                     | `default` | `default`, `plan`, `auto-edit`, `yolo`       |
+| `canUseTool`     | CanUseTool                 | —         | Custom per-tool permission callback          |
+| `timeout`        | `{ canUseTool?: number }`  | —         | Per-operation timeouts (ms). See note below. |
+| `allowedTools`   | string[]                   | —         | Auto-approved tools                          |
+| `excludeTools`   | string[]                   | —         | Blocked tools (highest priority)             |
+| `coreTools`      | string[]                   | —         | If set, only these tools are available       |
+| `authType`       | AuthType                   | `openai`  | `openai`, `anthropic`, `gemini`              |
+
+> **`timeout.canUseTool`** bounds how long a `canUseTool` permission request may
+> stay pending before it is rejected. The SDK forwards this value to the CLI at
+> session initialization, so the CLI's control-plane timeout matches your
+> callback's — a long-running approval handler is no longer cut short by the
+> CLI's default (60s) before your own timeout elapses. Capped at 10 minutes.
+> When unset, the CLI default applies.
 
 ### Session
 
