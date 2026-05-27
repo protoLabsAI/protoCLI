@@ -47,7 +47,7 @@ Run `/goal` with no arguments to inspect the current state.
 /goal
 ```
 
-If a goal is active, the status shows the condition, how long it has been running, how many turns have been evaluated, the tokens spent on evaluation so far, and the evaluator's most recent reason. If no goal is active but one was achieved earlier in the session, the status shows the achieved condition along with how long it took.
+If a goal is active, the status shows the condition, how long it has been running, how many turns have been evaluated, the tokens spent on evaluation so far, and the evaluator's most recent reason. If no goal is active but one ended earlier in the session, the status reports the most recent outcome: a goal that was **achieved** (with how long it took) or one that was **abandoned as impossible** (with the reason it was deemed unachievable — see [How evaluation works](#how-evaluation-works)).
 
 ## Clear a goal
 
@@ -59,9 +59,15 @@ Run `/goal clear` to remove an active goal before its condition is met. Any of `
 
 ## How evaluation works
 
-Each time the main agent finishes a turn, the condition and the conversation so far are sent to your configured content generator for a one-shot evaluator call. The evaluator returns a yes-or-no decision and a short reason. A "no" tells proto to keep working and includes the reason as guidance for the next turn; a "yes" clears the goal and records the achieved entry on `/goal`.
+Each time the main agent finishes a turn, the condition and the conversation so far are sent to your configured content generator for a one-shot evaluator call. The evaluator returns one of three verdicts and a short reason:
 
-The evaluator does not call tools, so it can only judge what proto has already surfaced in the conversation. If the evaluator can't tell from the transcript, treat it as "no" and ask for the missing evidence.
+- **Met** — clears the goal and records the achieved entry on `/goal`.
+- **Not met** — proto keeps working, passing the reason as guidance for the next turn.
+- **Impossible** — the condition is genuinely unachievable in this session (it is self-contradictory, depends on a resource or capability that isn't available, or every reasonable approach has been exhausted with no path forward). Proto stops the autonomous loop and records the goal as **abandoned**, rather than looping forever on something it can never satisfy.
+
+The "impossible" verdict is deliberately conservative: the assistant *claiming* a goal is impossible counts as evidence, not proof, and the evaluator independently confirms it. Slow progress or temporarily missing evidence is treated as "not met", not "impossible".
+
+The evaluator does not call tools, so it can only judge what proto has already surfaced in the conversation. If the evaluator can't tell from the transcript, treat it as "not met" and ask for the missing evidence.
 
 ## How `/goal` differs from `/loop`
 

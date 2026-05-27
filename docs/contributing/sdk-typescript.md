@@ -164,6 +164,7 @@ const session = query({
 | `model`                  | string           | —               | Model ID                           |
 | `permissionMode`         | string           | `default`       | Approval mode                      |
 | `canUseTool`             | function         | —               | Per-tool approval callback         |
+| `timeout`                | object           | —               | `{ canUseTool?: number }` ms; forwarded to the CLI so its control-plane timeout matches your callback (capped 10m) |
 | `allowedTools`           | string[]         | —               | Auto-approved tools                |
 | `excludeTools`           | string[]         | —               | Blocked tools (highest priority)   |
 | `coreTools`              | string[]         | —               | If set, only these tools available |
