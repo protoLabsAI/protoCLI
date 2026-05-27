@@ -155,4 +155,25 @@ describe('goalCommand statusText', () => {
     expect(text).toMatch(/lint failing/);
     expect(text).toMatch(/1 turn/);
   });
+
+  it('renders a goal abandoned as impossible', () => {
+    const m = new GoalManager();
+    m.setGoal('make the build pass without a compiler');
+    m.recordTurn();
+    m.markImpossible('no compiler is available in this environment');
+    const text = statusText(m);
+    expect(text).toMatch(/impossible/i);
+    expect(text).toMatch(/make the build pass without a compiler/);
+    expect(text).toMatch(/no compiler is available/);
+  });
+
+  it('prefers the more recent terminal outcome', () => {
+    const m = new GoalManager();
+    m.setGoal('achieved one');
+    m.markAchieved();
+    m.setGoal('impossible one');
+    m.markImpossible('cannot be done');
+    // Failure happened most recently, so it should win.
+    expect(statusText(m)).toMatch(/impossible/i);
+  });
 });
