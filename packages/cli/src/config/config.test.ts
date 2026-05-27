@@ -1704,6 +1704,68 @@ describe('loadCliConfig chatCompression', () => {
   });
 });
 
+describe('loadCliConfig run budget', () => {
+  const originalArgv = process.argv;
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(os.homedir).mockReturnValue('/mock/home/user');
+    vi.stubEnv('GEMINI_API_KEY', 'test-api-key');
+  });
+
+  afterEach(() => {
+    process.argv = originalArgv;
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('defaults to unlimited (-1) when neither flag nor setting is set', async () => {
+    process.argv = ['node', 'script.js'];
+    const argv = await parseArguments();
+    const config = await loadCliConfig({}, argv, undefined, []);
+    expect(config.getMaxToolCalls()).toBe(-1);
+    expect(config.getMaxWallTimeSeconds()).toBe(-1);
+  });
+
+  it('maps --max-tool-calls to the core config', async () => {
+    process.argv = ['node', 'script.js', '--max-tool-calls', '50'];
+    const argv = await parseArguments();
+    const config = await loadCliConfig({}, argv, undefined, []);
+    expect(config.getMaxToolCalls()).toBe(50);
+  });
+
+  it('parses --max-wall-time duration strings to seconds', async () => {
+    process.argv = ['node', 'script.js', '--max-wall-time', '5m'];
+    const argv = await parseArguments();
+    const config = await loadCliConfig({}, argv, undefined, []);
+    expect(config.getMaxWallTimeSeconds()).toBe(300);
+  });
+
+  it('falls back to model.maxWallTimeSeconds from settings', async () => {
+    process.argv = ['node', 'script.js'];
+    const argv = await parseArguments();
+    const settings: Settings = { model: { maxWallTimeSeconds: 120 } };
+    const config = await loadCliConfig(settings, argv, undefined, []);
+    expect(config.getMaxWallTimeSeconds()).toBe(120);
+  });
+
+  it('lets --max-wall-time win over the settings value', async () => {
+    process.argv = ['node', 'script.js', '--max-wall-time', '1h'];
+    const argv = await parseArguments();
+    const settings: Settings = { model: { maxWallTimeSeconds: 120 } };
+    const config = await loadCliConfig(settings, argv, undefined, []);
+    expect(config.getMaxWallTimeSeconds()).toBe(3600);
+  });
+
+  it('rejects a malformed --max-wall-time value', async () => {
+    process.argv = ['node', 'script.js', '--max-wall-time', 'soon'];
+    const argv = await parseArguments();
+    await expect(loadCliConfig({}, argv, undefined, [])).rejects.toThrow(
+      /Invalid duration/,
+    );
+  });
+});
+
 describe('loadCliConfig useRipgrep', () => {
   const originalArgv = process.argv;
 

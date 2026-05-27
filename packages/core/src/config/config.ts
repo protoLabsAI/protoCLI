@@ -445,6 +445,8 @@ export interface ConfigParameters {
   maxSessionTurns?: number;
   /** Max cumulative tool calls for a headless/unattended run. -1 = unlimited. */
   maxToolCalls?: number;
+  /** Wall-clock budget in seconds for a headless/unattended run. -1 = unlimited. */
+  maxWallTimeSeconds?: number;
   sessionTokenLimit?: number;
   experimentalZedIntegration?: boolean;
   cronEnabled?: boolean;
@@ -640,6 +642,7 @@ export class Config {
 
   private readonly maxSessionTurns: number;
   private readonly maxToolCalls: number;
+  private readonly maxWallTimeSeconds: number;
   private readonly sessionTokenLimit: number;
   private readonly listExtensions: boolean;
   private readonly overrideExtensions?: string[];
@@ -773,6 +776,7 @@ export class Config {
     this.bugCommand = params.bugCommand;
     this.maxSessionTurns = params.maxSessionTurns ?? -1;
     this.maxToolCalls = params.maxToolCalls ?? -1;
+    this.maxWallTimeSeconds = params.maxWallTimeSeconds ?? -1;
     this.sessionTokenLimit = params.sessionTokenLimit ?? -1;
     this.experimentalZedIntegration =
       params.experimentalZedIntegration ?? false;
@@ -1445,6 +1449,10 @@ export class Config {
 
   getMaxToolCalls(): number {
     return this.maxToolCalls;
+  }
+
+  getMaxWallTimeSeconds(): number {
+    return this.maxWallTimeSeconds;
   }
 
   getSessionTokenLimit(): number {

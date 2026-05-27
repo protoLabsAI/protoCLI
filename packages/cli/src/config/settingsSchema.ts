@@ -723,6 +723,16 @@ const SETTINGS_SCHEMA = {
           'Maximum number of tool calls for a headless run before aborting (exit code 55). -1 means unlimited.',
         showInDialog: false,
       },
+      maxWallTimeSeconds: {
+        type: 'number',
+        label: 'Max Wall Time (seconds)',
+        category: 'Model',
+        requiresRestart: false,
+        default: -1,
+        description:
+          'Wall-clock budget in seconds for a headless run before aborting (exit code 55). -1 means unlimited.',
+        showInDialog: false,
+      },
       chatCompression: {
         type: 'object',
         label: 'Chat Compression',

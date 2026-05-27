@@ -88,25 +88,32 @@ proto -p "Review this patch" --append-system-prompt "Be terse and focus on block
 | `--all-files`, `-a`          | Include all files in context                   |
 | `--include-directories`      | Include additional directories                 |
 | `--max-tool-calls`           | Abort after N tool calls (exit code 55)        |
+| `--max-wall-time`            | Abort after a wall-clock budget (exit code 55) |
 | `-d`, `--debug`              | Enable debug output                            |
 | `--lsp`                      | Enable LSP code intelligence                   |
 
 ## Capping a run
 
-For unattended runs (CI, cron, background agents) use `--max-tool-calls` to
-bound how much work a single invocation can do. Once the budget is reached the
-run aborts before the next tool dispatch and exits with code **55** — distinct
-from the turn cap (53) and user cancellation (130), so scripts can branch on it:
+For unattended runs (CI, cron, background agents) you can bound how much a
+single invocation does with two budgets:
+
+- `--max-tool-calls N` — abort before the (N+1)th tool dispatch.
+- `--max-wall-time <duration>` — abort once the clock budget elapses. Accepts
+  bare seconds (`90`) or a unit suffix (`30s`, `5m`, `1h`).
+
+Either budget aborts the run with exit code **55** — distinct from the turn cap
+(53) and user cancellation (130), so scripts can branch on it:
 
 ```bash
-proto -p "Triage the failing tests" --yolo --max-tool-calls 50
+proto -p "Triage the failing tests" --yolo --max-tool-calls 50 --max-wall-time 10m
 if [ $? -eq 55 ]; then
-  echo "Run hit its tool-call budget; inspect partial output."
+  echo "Run hit its budget; inspect partial output."
 fi
 ```
 
-The cap also covers tool calls made by cron sub-turns. It can be set in
-`settings.json` as `model.maxToolCalls`; `-1` (the default) means unlimited.
+Both budgets also cover tool calls and time spent in cron sub-turns. They can be
+set in `settings.json` as `model.maxToolCalls` and `model.maxWallTimeSeconds`
+(a plain number of seconds); `-1` (the default) means unlimited.
 
 ## Common automation patterns
 

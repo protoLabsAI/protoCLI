@@ -69,7 +69,11 @@ export function isValidSessionId(value: string): boolean {
 import { isWorkspaceTrusted } from './trustedFolders.js';
 import { buildWebSearchConfig } from './webSearch.js';
 import { writeStderrLine } from '../utils/stdioHelpers.js';
-import { validateMaxToolCalls } from '../utils/runBudget.js';
+import {
+  validateMaxToolCalls,
+  parseDurationSeconds,
+  validateMaxWallTimeSetting,
+} from '../utils/runBudget.js';
 
 const debugLogger = createDebugLogger('CONFIG');
 
@@ -160,6 +164,7 @@ export interface CliArgs {
   sessionId: string | undefined;
   maxSessionTurns: number | undefined;
   maxToolCalls: number | undefined;
+  maxWallTime: string | undefined;
   coreTools: string[] | undefined;
   excludeTools: string[] | undefined;
   disabledSlashCommands: string[] | undefined;
@@ -499,6 +504,11 @@ export async function parseArguments(): Promise<CliArgs> {
           type: 'number',
           description:
             'Maximum number of tool calls for a headless run before aborting (exit code 55). Defaults to unlimited.',
+        })
+        .option('max-wall-time', {
+          type: 'string',
+          description:
+            'Wall-clock budget for a headless run before aborting (exit code 55). Accepts seconds or a unit suffix (e.g. 90, 30s, 5m, 1h). Defaults to unlimited.',
         })
         .option('core-tools', {
           type: 'array',
@@ -1149,6 +1159,13 @@ export async function loadCliConfig(
     maxToolCalls: validateMaxToolCalls(
       argv.maxToolCalls ?? settings.model?.maxToolCalls ?? -1,
     ),
+    // The CLI flag is a duration string (parsed/validated by
+    // parseDurationSeconds); the settings entry is a plain number of seconds
+    // (validated by validateMaxWallTimeSetting). Flag wins when both are set.
+    maxWallTimeSeconds:
+      argv.maxWallTime !== undefined
+        ? parseDurationSeconds(argv.maxWallTime)
+        : validateMaxWallTimeSetting(settings.model?.maxWallTimeSeconds ?? -1),
     experimentalZedIntegration: argv.acp || argv.experimentalAcp || false,
     cronEnabled: settings.experimental?.cron ?? false,
     listExtensions: argv.listExtensions || false,

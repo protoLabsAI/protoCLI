@@ -215,13 +215,17 @@ export async function runNonInteractive(
     const geminiClient = config.getGeminiClient();
     const abortController = options.abortController ?? new AbortController();
 
-    // Headless run budget: caps total tool executions across the whole run
-    // (including cron sub-turns) so an unattended `proto -p ...` can't run
-    // away. `tickToolCall()` fires before each `executeToolCall`; on overrun
-    // the enforcer aborts the shared controller, and `routeAbort` maps that
-    // to exit code 55. Ported from QwenLM/qwen-code#4103.
+    // Headless run budget: bounds an unattended `proto -p ...` by total tool
+    // executions (`--max-tool-calls`, ticked before each `executeToolCall`)
+    // and/or wall-clock time (`--max-wall-time`, a timer armed by `start()`).
+    // Both cover cron sub-turns. On overrun the enforcer aborts the shared
+    // controller, and `routeAbort` maps that to exit code 55. Ported from
+    // QwenLM/qwen-code#4103.
     const budgetEnforcer = new RunBudgetEnforcer(
-      { maxToolCalls: config.getMaxToolCalls() },
+      {
+        maxToolCalls: config.getMaxToolCalls(),
+        maxWallTimeSeconds: config.getMaxWallTimeSeconds(),
+      },
       abortController,
     );
 
@@ -373,6 +377,13 @@ export async function runNonInteractive(
           turnCount > config.getMaxSessionTurns()
         ) {
           handleMaxTurnsExceededError(config);
+        }
+
+        // The wall-clock budget can fire asynchronously between turns; catch
+        // it here before re-streaming so it surfaces as exit 55 rather than
+        // an aborted-stream error in the generic catch below.
+        if (abortController.signal.aborted) {
+          routeAbort();
         }
 
         const toolCallRequests: ToolCallRequestInfo[] = [];
@@ -546,6 +557,13 @@ export async function runNonInteractive(
 
                       for await (const event of cronStream) {
                         if (abortController.signal.aborted) {
+                          // A budget overrun (e.g. wall-time firing mid cron
+                          // turn) must exit 55, not resolve gracefully as a
+                          // normal scheduler shutdown.
+                          if (budgetEnforcer.getExceeded()) {
+                            scheduler.stop();
+                            routeAbort();
+                          }
                           const summary = scheduler.getExitSummary();
                           scheduler.stop();
                           if (summary) {
