@@ -22,6 +22,7 @@ import { StreamContentError } from './openaiContentGenerator/pipeline.js';
 import type { Config } from '../config/config.js';
 import { setSimulate429 } from '../utils/testUtils.js';
 import { uiTelemetryService } from '../telemetry/uiTelemetry.js';
+import { CompressionStatus } from './turn.js';
 
 // Mock fs module to prevent actual file system operations during tests
 const mockFileSystem = new Map<string, string>();
@@ -79,6 +80,27 @@ vi.mock('../telemetry/uiTelemetry.js', () => ({
   },
 }));
 
+// Mock the compression service so the reactive-compression path can be driven
+// deterministically. Only the reactive-compression tests exercise this; all
+// other geminiChat tests never instantiate it.
+const { mockCompress } = vi.hoisted(() => ({ mockCompress: vi.fn() }));
+
+vi.mock('../services/chatCompressionService.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../services/chatCompressionService.js')
+    >();
+  return {
+    ...actual,
+    // A plain class (not vi.fn().mockImplementation) so the constructor
+    // binding survives the suite's afterEach vi.resetAllMocks(); only the
+    // delegated `mockCompress` is reset/reconfigured per test.
+    ChatCompressionService: class {
+      compress = mockCompress;
+    },
+  };
+});
+
 describe('GeminiChat', async () => {
   let mockContentGenerator: ContentGenerator;
   let chat: GeminiChat;
@@ -119,6 +141,7 @@ describe('GeminiChat', async () => {
         getTool: vi.fn(),
       }),
       getContentGenerator: vi.fn().mockReturnValue(mockContentGenerator),
+      getFileReadCache: vi.fn().mockReturnValue({ clear: vi.fn() }),
     } as unknown as Config;
 
     // Disable 429 simulation for tests
@@ -1833,6 +1856,121 @@ describe('GeminiChat', async () => {
       chat.stripOrphanedUserEntriesFromHistory();
 
       expect(chat.getHistory()).toEqual([]);
+    });
+  });
+
+  describe('reactive compression on context overflow', () => {
+    function validStream(
+      text: string,
+    ): AsyncGenerator<GenerateContentResponse> {
+      return (async function* () {
+        yield {
+          candidates: [
+            {
+              content: { role: 'model', parts: [{ text }] },
+              finishReason: 'STOP',
+            },
+          ],
+        } as unknown as GenerateContentResponse;
+      })();
+    }
+
+    const overflowError = () =>
+      new Error('prompt is too long: 200000 tokens > 128000 maximum');
+
+    it('force-compresses and retries once when the provider rejects for context overflow', async () => {
+      vi.mocked(mockContentGenerator.generateContentStream)
+        .mockRejectedValueOnce(overflowError())
+        .mockResolvedValueOnce(validStream('answer after compression'));
+
+      mockCompress.mockResolvedValue({
+        newHistory: [{ role: 'user', parts: [{ text: 'summary' }] }],
+        info: {
+          compressionStatus: CompressionStatus.COMPRESSED,
+          originalTokenCount: 200000,
+          newTokenCount: 50000,
+        },
+      });
+
+      const stream = await chat.sendMessageStream(
+        'test-model',
+        { message: 'hi' },
+        'pid-reactive-ok',
+      );
+      const events: StreamEvent[] = [];
+      for await (const event of stream) {
+        events.push(event);
+      }
+
+      // Compressed exactly once, with force=true (3rd positional arg).
+      expect(mockCompress).toHaveBeenCalledTimes(1);
+      expect(mockCompress.mock.calls[0]![2]).toBe(true);
+      // Two API calls: the rejected one + the post-compression retry.
+      expect(mockContentGenerator.generateContentStream).toHaveBeenCalledTimes(
+        2,
+      );
+      // A RETRY signal was emitted so the UI discards the failed attempt.
+      expect(events.some((e) => e.type === StreamEventType.RETRY)).toBe(true);
+      // Side effects mirrored from client.tryCompressChat.
+      expect(mockConfig.getFileReadCache().clear).toHaveBeenCalled();
+    });
+
+    it('does not compress for non-overflow errors', async () => {
+      vi.mocked(mockContentGenerator.generateContentStream).mockRejectedValue(
+        new Error('some unrelated 400 bad request'),
+      );
+
+      const stream = await chat.sendMessageStream(
+        'test-model',
+        { message: 'hi' },
+        'pid-reactive-skip',
+      );
+
+      await expect(
+        (async () => {
+          for await (const _ of stream) {
+            /* consume */
+          }
+        })(),
+      ).rejects.toThrow();
+
+      expect(mockCompress).not.toHaveBeenCalled();
+    });
+
+    it('attempts reactive compression at most once (no compress/retry loop)', async () => {
+      // The request stays too large even after compression — both API calls
+      // reject for overflow. The second must NOT trigger another compression.
+      vi.mocked(mockContentGenerator.generateContentStream)
+        .mockRejectedValueOnce(overflowError())
+        .mockRejectedValueOnce(overflowError());
+
+      mockCompress.mockResolvedValue({
+        newHistory: [{ role: 'user', parts: [{ text: 'summary' }] }],
+        info: {
+          compressionStatus: CompressionStatus.COMPRESSED,
+          originalTokenCount: 200000,
+          newTokenCount: 150000,
+        },
+      });
+
+      const stream = await chat.sendMessageStream(
+        'test-model',
+        { message: 'hi' },
+        'pid-reactive-loop',
+      );
+
+      await expect(
+        (async () => {
+          for await (const _ of stream) {
+            /* consume */
+          }
+        })(),
+      ).rejects.toThrow();
+
+      expect(mockCompress).toHaveBeenCalledTimes(1);
+      expect(mockContentGenerator.generateContentStream).toHaveBeenCalledTimes(
+        2,
+      );
     });
   });
 });

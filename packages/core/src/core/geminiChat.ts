@@ -22,9 +22,11 @@ import { getErrorStatus } from '../utils/errors.js';
 import { createDebugLogger } from '../utils/debugLogger.js';
 import { parseAndFormatApiError } from '../utils/errorParsing.js';
 import { isRateLimitError, type RetryInfo } from '../utils/rateLimit.js';
+import { getContextLengthExceededInfo } from '../utils/contextLengthError.js';
 import type { Config } from '../config/config.js';
 import { hasCycleInSchema } from '../tools/tools.js';
-import type { StructuredError } from './turn.js';
+import { ChatCompressionService } from '../services/chatCompressionService.js';
+import { type StructuredError, CompressionStatus } from './turn.js';
 import {
   logContentRetry,
   logContentRetryFailure,
@@ -439,6 +441,11 @@ export class GeminiChat {
         let lastError: unknown = new Error('Request failed after all retries.');
         let rateLimitRetryCount = 0;
         let invalidStreamRetryCount = 0;
+        // Reactive compression fires at most once per request: a single
+        // force-compress + retry after a provider rejects for context
+        // overflow. The flag prevents an unbounded compress/retry loop if the
+        // request is still too large after compression.
+        let reactiveCompressionAttempted = false;
 
         // Read per-config overrides; fall back to built-in defaults.
         const cgConfig = self.config.getContentGeneratorConfig();
@@ -573,6 +580,72 @@ export class GeminiChat {
             }
             if (isTransientStreamError) {
               break;
+            }
+
+            // Reactive compression: the provider rejected the request because
+            // the prompt exceeds the context window. Force-compress the live
+            // history once and retry. Distinct from the proactive pre-send
+            // compression in client.tryCompressChat — and we compress `self`
+            // directly rather than calling that, because tryCompressChat runs
+            // startChat() which swaps the chat instance out from under this
+            // in-flight generator. Ported from QwenLM/qwen-code#3879.
+            if (!reactiveCompressionAttempted) {
+              const overflow = getContextLengthExceededInfo(error);
+              if (overflow.isExceeded) {
+                reactiveCompressionAttempted = true;
+                debugLogger.warn(
+                  'Context length exceeded; attempting reactive compression and one retry.',
+                );
+                try {
+                  const { newHistory, info } =
+                    await new ChatCompressionService().compress(
+                      self,
+                      prompt_id,
+                      true, // force — bypasses the hasFailedCompressionAttempt guard
+                      model,
+                      self.config,
+                      false,
+                      params.config?.abortSignal,
+                    );
+                  if (
+                    info.compressionStatus === CompressionStatus.COMPRESSED &&
+                    newHistory
+                  ) {
+                    self.setHistory(newHistory);
+                    // Post-compaction the FileReadCache may point at content
+                    // summarised out of context; clear it so follow-up Reads
+                    // re-emit bytes. Mirror the token-count update that
+                    // client.tryCompressChat performs.
+                    self.config.getFileReadCache().clear();
+                    self.telemetryService?.setLastPromptTokenCount(
+                      info.newTokenCount,
+                    );
+                    requestContents = self.getHistory(true);
+                    debugLogger.info(
+                      `Reactive compression succeeded ` +
+                        `(${info.originalTokenCount} -> ${info.newTokenCount} tokens); retrying.`,
+                    );
+                    // Don't charge this against the content-retry budget.
+                    attempt--;
+                    yield { type: StreamEventType.RETRY };
+                    continue;
+                  }
+                  debugLogger.warn(
+                    'Reactive compression did not reduce context; giving up.',
+                  );
+                } catch (compressionError) {
+                  debugLogger.warn(
+                    `Reactive compression failed: ${
+                      compressionError instanceof Error
+                        ? compressionError.message
+                        : String(compressionError)
+                    }`,
+                  );
+                }
+                // Compression didn't help (or threw) — stop and let the
+                // original overflow error propagate below.
+                break;
+              }
             }
 
             // Other content validation errors (e.g. NO_FINISH_REASON).
