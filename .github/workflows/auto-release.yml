@@ -22,6 +22,17 @@ on:
 
 permissions: read-all
 
+# Serialize auto-release runs. When several PRs merge in quick succession each
+# CI completion triggers this workflow; without serialization they race and
+# each opens a bump PR for the *same* next version (computed from the same
+# last tag), producing duplicate release PRs and a spurious already-tagged
+# failure in release.yml. Running one at a time lets the later run observe the
+# branch/tag the earlier one created and skip. `cancel-in-progress: false` so
+# an in-flight bump is never aborted half-way.
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
 jobs:
   auto-release:
     runs-on: ubuntu-latest
@@ -96,10 +107,32 @@ jobs:
         id: version
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Create release PR
+      # Guard against a duplicate release for this version. Even with the
+      # concurrency lock, a queued run computes the same next version as the
+      # one that just finished; bail if that version is already tagged or a
+      # release branch for it already exists.
+      - name: Skip if release already in flight or tagged
         if: >-
           steps.bump.outputs.type != 'skip' &&
           steps.guard.outputs.skip != 'true'
+        id: exists
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git ls-remote --tags origin "refs/tags/v${VERSION}" | grep -q .; then
+            echo "v${VERSION} is already tagged — skipping duplicate release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --heads origin "refs/heads/auto-release/v${VERSION}" | grep -q .; then
+            echo "Branch auto-release/v${VERSION} already exists — a release PR is already in flight; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release PR
+        if: >-
+          steps.bump.outputs.type != 'skip' &&
+          steps.guard.outputs.skip != 'true' &&
+          steps.exists.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         run: |
