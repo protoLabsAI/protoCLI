@@ -105,6 +105,7 @@ export async function handleQwenAuth(
       sessionId: undefined,
       maxSessionTurns: undefined,
       maxToolCalls: undefined,
+      maxWallTime: undefined,
       coreTools: undefined,
       excludeTools: undefined,
       disabledSlashCommands: undefined,

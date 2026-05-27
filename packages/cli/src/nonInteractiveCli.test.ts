@@ -123,6 +123,7 @@ describe('runNonInteractive', () => {
       getToolRegistry: vi.fn().mockReturnValue(mockToolRegistry),
       getMaxSessionTurns: vi.fn().mockReturnValue(10),
       getMaxToolCalls: vi.fn().mockReturnValue(-1),
+      getMaxWallTimeSeconds: vi.fn().mockReturnValue(-1),
       getProjectRoot: vi.fn().mockReturnValue('/test/project'),
       getTargetDir: vi.fn().mockReturnValue('/test/project'),
       getMcpServers: vi.fn().mockReturnValue(undefined),
