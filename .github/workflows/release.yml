@@ -162,8 +162,12 @@ jobs:
             -d "$(jq -n --arg c "$MSG" '{content: $c}')" \
             "$WEBHOOK" || echo "::warning::Webhook post also failed."
 
-      - name: Alert on already-tagged
+      # An already-tagged version is an expected, benign outcome — e.g. two
+      # auto-release runs raced and opened duplicate bump PRs for the same
+      # version (now prevented in auto-release.yml, but a merged duplicate can
+      # still reach here). The publish/tag steps above are correctly skipped;
+      # warn but exit 0 so the redundant run isn't a spurious red ❌.
+      - name: Note already-tagged (no-op release)
         if: steps.version.outputs.already_tagged == 'true'
         run: |
-          echo "::warning::${{ steps.version.outputs.tag }} is already tagged. Ensure auto-release.yml bumped the version first."
-          exit 1
+          echo "::warning::${{ steps.version.outputs.tag }} is already tagged; nothing to publish. This run is a no-op (likely a duplicate release PR)."
