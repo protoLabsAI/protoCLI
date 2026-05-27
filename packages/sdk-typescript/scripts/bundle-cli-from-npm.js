@@ -22,6 +22,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const sdkRoot = join(__dirname, '..');
 
+function copyOptionalDir(source, destination, label) {
+  if (existsSync(source)) {
+    cpSync(source, destination, { recursive: true });
+    console.log(`[sdk bundle] ✓ ${label}/ copied`);
+  }
+}
+
 function main() {
   // Get CLI package path from environment variable
   const cliPackagePath = process.env.CLI_PACKAGE_PATH;
@@ -68,19 +75,25 @@ function main() {
   cpSync(cliJsSource, join(sdkCliDistDir, 'cli.js'));
   console.log('[sdk bundle] ✓ cli.js copied');
 
-  // Copy vendor directory if exists
-  const vendorSource = join(cliDistDir, 'vendor');
-  if (existsSync(vendorSource)) {
-    cpSync(vendorSource, join(sdkCliDistDir, 'vendor'), { recursive: true });
-    console.log('[sdk bundle] ✓ vendor/ copied');
-  }
-
-  // Copy locales directory if exists
-  const localesSource = join(cliDistDir, 'locales');
-  if (existsSync(localesSource)) {
-    cpSync(localesSource, join(sdkCliDistDir, 'locales'), { recursive: true });
-    console.log('[sdk bundle] ✓ locales/ copied');
-  }
+  // Copy adjacent bundle artifacts when present. `chunks/` matters if the CLI
+  // bundle is ever code-split — without it the bundled CLI fails at runtime on
+  // missing chunk imports (the bug #4541 fixes upstream). Harmless no-op for a
+  // single-file bundle.
+  copyOptionalDir(
+    join(cliDistDir, 'chunks'),
+    join(sdkCliDistDir, 'chunks'),
+    'chunks',
+  );
+  copyOptionalDir(
+    join(cliDistDir, 'vendor'),
+    join(sdkCliDistDir, 'vendor'),
+    'vendor',
+  );
+  copyOptionalDir(
+    join(cliDistDir, 'locales'),
+    join(sdkCliDistDir, 'locales'),
+    'locales',
+  );
 
   console.log('[sdk bundle] CLI bundled successfully from npm package');
 }

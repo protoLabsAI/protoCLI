@@ -48,6 +48,13 @@ function ensureRootBundle() {
   run(npm, ['run', 'bundle'], { cwd: repoRoot });
 }
 
+function copyOptionalDir(source, destination, label) {
+  if (existsSync(source)) {
+    cpSync(source, destination, { recursive: true });
+    console.log(`[sdk prepack] ✓ ${label}/ copied`);
+  }
+}
+
 function main() {
   ensureRootBundle();
 
@@ -67,15 +74,23 @@ function main() {
   console.log('[sdk prepack] Copying CLI bundle into SDK dist/...');
   cpSync(rootCliJs, join(cliDistDir, 'cli.js'));
 
-  const vendorSource = join(rootDistDir, 'vendor');
-  if (existsSync(vendorSource)) {
-    cpSync(vendorSource, join(cliDistDir, 'vendor'), { recursive: true });
-  }
-
-  const localesSource = join(rootDistDir, 'locales');
-  if (existsSync(localesSource)) {
-    cpSync(localesSource, join(cliDistDir, 'locales'), { recursive: true });
-  }
+  // `chunks/` matters if the CLI bundle is ever code-split; copying it keeps
+  // the bundled CLI runnable. Harmless no-op for a single-file bundle. (#4541)
+  copyOptionalDir(
+    join(rootDistDir, 'chunks'),
+    join(cliDistDir, 'chunks'),
+    'chunks',
+  );
+  copyOptionalDir(
+    join(rootDistDir, 'vendor'),
+    join(cliDistDir, 'vendor'),
+    'vendor',
+  );
+  copyOptionalDir(
+    join(rootDistDir, 'locales'),
+    join(cliDistDir, 'locales'),
+    'locales',
+  );
 
   console.log('[sdk prepack] CLI bundle copied successfully');
 }
