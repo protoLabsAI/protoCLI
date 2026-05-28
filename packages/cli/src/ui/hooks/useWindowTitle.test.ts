@@ -11,7 +11,8 @@ import type { LoadedSettings } from '../../config/settings.js';
 import { computeWindowTitle } from '../../utils/windowTitle.js';
 import { useWindowTitle } from './useWindowTitle.js';
 
-const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+const GLYPH_ACTIVE = '●';
+const GLYPH_IDLE = '○';
 
 function makeSettings(ui: {
   showStatusInTitle?: boolean;
@@ -32,7 +33,6 @@ function makeStdout(): { stdout: NodeJS.WriteStream; writes: string[] } {
 }
 
 const thought = (subject: string) => ({ subject }) as unknown as ThoughtSummary;
-const hasSpinner = (s: string) => SPINNER_FRAMES.some((g) => s.includes(g));
 
 const TARGET = '/work/myrepo';
 
@@ -68,7 +68,7 @@ describe('useWindowTitle', () => {
     expect(stdout.write).not.toHaveBeenCalled();
   });
 
-  it('writes a plain, spinner-free title when idle', () => {
+  it('prefixes a hollow dot and the plain title when idle', () => {
     const { stdout, writes } = makeStdout();
     renderHook(() =>
       useWindowTitle(
@@ -80,11 +80,13 @@ describe('useWindowTitle', () => {
       ),
     );
     expect(writes).toHaveLength(1);
-    expect(writes[0]).toContain(computeWindowTitle('myrepo'));
-    expect(hasSpinner(writes[0]!)).toBe(false);
+    expect(writes[0]).toContain(
+      `${GLYPH_IDLE} ${computeWindowTitle('myrepo')}`,
+    );
+    expect(writes[0]).not.toContain(GLYPH_ACTIVE);
   });
 
-  it('animates a spinner through its frames while responding', () => {
+  it('prefixes a solid dot and the status while responding', () => {
     const { stdout, writes } = makeStdout();
     renderHook(() =>
       useWindowTitle(
@@ -95,17 +97,29 @@ describe('useWindowTitle', () => {
         TARGET,
       ),
     );
-    // First frame is written synchronously when the effect runs.
-    expect(writes[0]).toContain(SPINNER_FRAMES[0]);
-    expect(writes[0]).toContain('editing parser.ts');
-    // Each interval tick advances to the next frame.
-    act(() => vi.advanceTimersByTime(100));
-    expect(writes[1]).toContain(SPINNER_FRAMES[1]);
-    act(() => vi.advanceTimersByTime(100));
-    expect(writes[2]).toContain(SPINNER_FRAMES[2]);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain(`${GLYPH_ACTIVE} editing parser.ts`);
   });
 
-  it('shows status without a spinner while waiting for confirmation', () => {
+  it('does not animate — no further writes over time (regression guard)', () => {
+    const { stdout, writes } = makeStdout();
+    renderHook(() =>
+      useWindowTitle(
+        StreamingState.Responding,
+        thought('working'),
+        makeSettings({ showStatusInTitle: true }),
+        stdout,
+        TARGET,
+      ),
+    );
+    expect(writes).toHaveLength(1);
+    // A previous animated implementation rewrote the title on a 100ms timer,
+    // which caused input lag. There must be no timer-driven extra writes.
+    act(() => vi.advanceTimersByTime(2000));
+    expect(writes).toHaveLength(1);
+  });
+
+  it('uses the hollow dot while waiting for confirmation', () => {
     const { stdout, writes } = makeStdout();
     renderHook(() =>
       useWindowTitle(
@@ -117,14 +131,11 @@ describe('useWindowTitle', () => {
       ),
     );
     expect(writes).toHaveLength(1);
-    expect(writes[0]).toContain('approve edit');
-    expect(hasSpinner(writes[0]!)).toBe(false);
-    // No animation timer for this state.
-    act(() => vi.advanceTimersByTime(500));
-    expect(writes).toHaveLength(1);
+    expect(writes[0]).toContain(`${GLYPH_IDLE} approve edit`);
+    expect(writes[0]).not.toContain(GLYPH_ACTIVE);
   });
 
-  it('stops animating and resets to the plain title on return to idle', () => {
+  it('flips the dot from solid to hollow on return to idle', () => {
     const { stdout, writes } = makeStdout();
     const { rerender } = renderHook(
       ({ s }: { s: StreamingState }) =>
@@ -137,17 +148,13 @@ describe('useWindowTitle', () => {
         ),
       { initialProps: { s: StreamingState.Responding } },
     );
-    act(() => vi.advanceTimersByTime(100));
-    expect(hasSpinner(writes[writes.length - 1]!)).toBe(true);
+    expect(writes[writes.length - 1]).toContain(GLYPH_ACTIVE);
 
     rerender({ s: StreamingState.Idle });
     const idleWrite = writes[writes.length - 1]!;
-    expect(hasSpinner(idleWrite)).toBe(false);
-    expect(idleWrite).toContain(computeWindowTitle('myrepo'));
-
-    // The interval was torn down — no further frames are emitted.
-    const countAfterIdle = writes.length;
-    act(() => vi.advanceTimersByTime(500));
-    expect(writes).toHaveLength(countAfterIdle);
+    expect(idleWrite).toContain(
+      `${GLYPH_IDLE} ${computeWindowTitle('myrepo')}`,
+    );
+    expect(idleWrite).not.toContain(GLYPH_ACTIVE);
   });
 });
