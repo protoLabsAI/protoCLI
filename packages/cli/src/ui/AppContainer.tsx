@@ -87,6 +87,10 @@ import { type CommandMigrationNudgeResult } from './CommandFormatMigrationNudge.
 import { useCommandMigration } from './hooks/useCommandMigration.js';
 import { useIdleMessageDrain } from './hooks/useIdleMessageDrain.js';
 import { useWindowTitle } from './hooks/useWindowTitle.js';
+import {
+  useTabStatus,
+  tabStatusKindForStreamingState,
+} from './hooks/useTabStatus.js';
 import { useInitializationEffects } from './hooks/useInitializationEffects.js';
 import { usePromptSuggestions } from './hooks/usePromptSuggestions.js';
 import { useExitHandling } from './hooks/useExitHandling.js';
@@ -1360,6 +1364,17 @@ export const AppContainer = (props: AppContainerProps) => {
     settings,
     stdout,
     config.getTargetDir(),
+  );
+
+  // Drive the per-tab status indicator (OSC 21337) so tab-capable terminals
+  // show working/idle/waiting at a glance — the same surface Claude Code /
+  // Codex use. Shares the showStatusInTitle / hideWindowTitle toggles.
+  const tabStatusEnabled =
+    !!settings.merged.ui?.showStatusInTitle &&
+    !settings.merged.ui?.hideWindowTitle;
+  useTabStatus(
+    tabStatusEnabled ? tabStatusKindForStreamingState(streamingState) : null,
+    stdout,
   );
 
   const nightly = props.version.includes('nightly');
