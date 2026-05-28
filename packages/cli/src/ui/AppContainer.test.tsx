@@ -681,8 +681,9 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
+      // While responding the title is prefixed with the spinner's first frame.
       expect(titleWrites[0][0]).toContain(
-        `\x1b]2;${thoughtSubject.padEnd(80, ' ')}\x07`,
+        `\x1b]2;${`⠋ ${thoughtSubject}`.padEnd(80, ' ')}\x07`,
       );
       unmount();
     });
@@ -822,7 +823,8 @@ describe('AppContainer State Management', () => {
       );
       expect(titleWrites).toHaveLength(1);
       const calledWith = titleWrites[0][0];
-      const expectedTitle = shortTitle.padEnd(80, ' ');
+      // Responding state prefixes the spinner's first frame; still 80 chars.
+      const expectedTitle = `⠋ ${shortTitle}`.padEnd(80, ' ');
 
       expect(calledWith).toContain(shortTitle);
       expect(calledWith).toContain('\x1b]2;');
@@ -872,7 +874,8 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
-      const expectedEscapeSequence = `\x1b]2;${title.padEnd(80, ' ')}\x07`;
+      // Responding state prefixes the spinner's first frame.
+      const expectedEscapeSequence = `\x1b]2;${`⠋ ${title}`.padEnd(80, ' ')}\x07`;
       expect(titleWrites[0][0]).toContain(expectedEscapeSequence);
       unmount();
     });
