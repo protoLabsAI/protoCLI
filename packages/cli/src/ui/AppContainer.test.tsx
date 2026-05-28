@@ -681,9 +681,9 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
-      // While responding the title is prefixed with the spinner's first frame.
+      // While responding the title is prefixed with the solid status dot.
       expect(titleWrites[0][0]).toContain(
-        `\x1b]2;${`⠋ ${thoughtSubject}`.padEnd(80, ' ')}\x07`,
+        `\x1b]2;${`● ${thoughtSubject}`.padEnd(80, ' ')}\x07`,
       );
       unmount();
     });
@@ -728,8 +728,9 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
+      // Idle is prefixed with the hollow status dot.
       expect(titleWrites[0][0]).toContain(
-        `\x1b]2;${'protoCLI - workspace'.padEnd(80, ' ')}\x07`,
+        `\x1b]2;${`○ ${'protoCLI - workspace'}`.padEnd(80, ' ')}\x07`,
       );
       unmount();
     });
@@ -775,8 +776,9 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
+      // Waiting-for-confirmation isn't actively responding → hollow dot.
       expect(titleWrites[0][0]).toContain(
-        `\x1b]2;${thoughtSubject.padEnd(80, ' ')}\x07`,
+        `\x1b]2;${`○ ${thoughtSubject}`.padEnd(80, ' ')}\x07`,
       );
       unmount();
     });
@@ -823,8 +825,8 @@ describe('AppContainer State Management', () => {
       );
       expect(titleWrites).toHaveLength(1);
       const calledWith = titleWrites[0][0];
-      // Responding state prefixes the spinner's first frame; still 80 chars.
-      const expectedTitle = `⠋ ${shortTitle}`.padEnd(80, ' ');
+      // Responding state prefixes the solid status dot; still 80 chars.
+      const expectedTitle = `● ${shortTitle}`.padEnd(80, ' ');
 
       expect(calledWith).toContain(shortTitle);
       expect(calledWith).toContain('\x1b]2;');
@@ -874,8 +876,8 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
-      // Responding state prefixes the spinner's first frame.
-      const expectedEscapeSequence = `\x1b]2;${`⠋ ${title}`.padEnd(80, ' ')}\x07`;
+      // Responding state prefixes the solid status dot.
+      const expectedEscapeSequence = `\x1b]2;${`● ${title}`.padEnd(80, ' ')}\x07`;
       expect(titleWrites[0][0]).toContain(expectedEscapeSequence);
       unmount();
     });
@@ -923,8 +925,9 @@ describe('AppContainer State Management', () => {
         call[0].includes('\x1b]2;'),
       );
       expect(titleWrites).toHaveLength(1);
+      // Idle (CLI_TITLE override) is prefixed with the hollow status dot.
       expect(titleWrites[0][0]).toContain(
-        `\x1b]2;${'Custom Gemini Title'.padEnd(80, ' ')}\x07`,
+        `\x1b]2;${`○ ${'Custom Gemini Title'}`.padEnd(80, ' ')}\x07`,
       );
       unmount();
     });

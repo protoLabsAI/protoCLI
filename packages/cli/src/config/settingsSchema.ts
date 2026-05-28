@@ -472,7 +472,7 @@ const SETTINGS_SCHEMA = {
         requiresRestart: false,
         default: true,
         description:
-          'Show proto status and thoughts in the terminal window/tab title, with an animated spinner while running (so you can tell which tabs are active). Set to false to leave the title untouched.',
+          'Show proto status and thoughts in the terminal window/tab title, prefixed with a status dot (● working / ○ idle) so you can tell which tabs are active. Set to false to leave the title untouched.',
         showInDialog: false,
       },
       hideTips: {
