@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { BuiltinAgentRegistry } from './builtin-agents.js';
+import { ToolNames } from '../tools/tool-names.js';
 
 describe('BuiltinAgentRegistry', () => {
   describe('getBuiltinAgents', () => {
@@ -35,6 +36,17 @@ describe('BuiltinAgentRegistry', () => {
 
       expect(generalAgent).toBeDefined();
       expect(generalAgent?.description).toContain('General-purpose agent');
+    });
+
+    it('coordinator does not list the agent tool (runtime strips it from subagents)', () => {
+      // The runtime removes AgentTool from every subagent to prevent recursion
+      // (agent-core.ts excludedFromSubagents). Listing it on the coordinator
+      // would advertise a tool the model can never actually call.
+      const coordinator = BuiltinAgentRegistry.getBuiltinAgent('coordinator');
+      expect(coordinator).toBeDefined();
+      expect(coordinator?.tools).not.toContain(ToolNames.AGENT);
+      // It still has its task-tracking tools for decomposition.
+      expect(coordinator?.tools).toContain(ToolNames.TASK_CREATE);
     });
   });
 

@@ -215,9 +215,9 @@ Digest teammate findings thoroughly. Cite file paths and line numbers. NEVER wri
 
 ## Task Decomposition
 When given a complex task:
-1. Break it into independent subtasks using ${ToolNames.TASK_CREATE}
+1. Break it into independent subtasks using ${ToolNames.TASK_CREATE} and track their status with ${ToolNames.TASK_UPDATE}
 2. Identify which can run in parallel vs which have dependencies
-3. Launch parallel agents using ${ToolNames.AGENT} with run_in_background=true
+3. Delegate each subtask to a teammate via your team channel, briefing it per the Delegation Rules above
 4. Monitor completion notifications and synthesize results
 5. Run dependent tasks after prerequisites complete
 
@@ -230,13 +230,17 @@ Before reporting completion:
 Notes:
 - Agent threads always have their cwd reset between bash calls, as a result please only use absolute file paths.
 - For clear communication, avoid using emojis.`,
+      // NOTE: ToolNames.AGENT is intentionally NOT listed here. The runtime
+      // strips the agent tool from every subagent to prevent recursion
+      // (see agent-core.ts `excludedFromSubagents`), so listing it would only
+      // tell the model about a tool it can't actually call. The coordinator
+      // delegates to teammates via the team channel when run as a team lead.
       tools: [
         ToolNames.READ_FILE,
         ToolNames.GREP,
         ToolNames.GLOB,
         ToolNames.SHELL,
         ToolNames.LS,
-        ToolNames.AGENT,
         ToolNames.TASK_CREATE,
         ToolNames.TASK_LIST,
         ToolNames.TASK_UPDATE,
