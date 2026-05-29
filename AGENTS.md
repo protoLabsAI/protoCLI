@@ -131,6 +131,19 @@ npm run format        # Prettier
 npm run typecheck     # Type check
 ```
 
+## Git Workflow
+
+- **Always update `main` before starting a new branch of work.** Run
+  `git fetch origin && git checkout main && git pull` (or branch directly off
+  `origin/main`) so new branches are based on the latest released code. The
+  local `main` can fall many commits behind `origin/main`; branching off a
+  stale base forces error-prone manual integration with work that already
+  shipped.
+- Branch off `origin/main`, open a PR against `main`, and let CI run.
+- Releases are automated: merging a conventional-commit PR to `main` triggers
+  `auto-release.yml`, which bumps versions and publishes. Use `fix:` / `feat:`
+  prefixes so the bump is computed correctly. Do not publish manually.
+
 ## Configuration
 
 Settings live in `~/.proto/settings.json` (global) and `.proto/settings.json` (per-project).
