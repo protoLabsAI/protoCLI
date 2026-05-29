@@ -151,8 +151,54 @@ describe('GoalManager', () => {
     });
 
     it('is a no-op when no goal is active', () => {
-      manager.recordEvaluation({ met: true, reason: 'ok', tokensUsed: 10 });
+      expect(
+        manager.recordEvaluation({ met: true, reason: 'ok', tokensUsed: 10 }),
+      ).toBe(0);
       expect(manager.hasActiveGoal()).toBe(false);
+    });
+  });
+
+  describe('recordEvaluation stall detection', () => {
+    const notMet = (reason: string) => ({ met: false, reason, tokensUsed: 1 });
+
+    it('counts consecutive not-met evaluations repeating the same reason', () => {
+      manager.setGoal('x');
+      expect(manager.recordEvaluation(notMet('tests not run yet'))).toBe(1);
+      expect(manager.recordEvaluation(notMet('tests not run yet'))).toBe(2);
+      expect(manager.recordEvaluation(notMet('tests not run yet'))).toBe(3);
+    });
+
+    it('resets the count when the reason changes (goal is converging)', () => {
+      manager.setGoal('x');
+      expect(manager.recordEvaluation(notMet('no test output'))).toBe(1);
+      expect(manager.recordEvaluation(notMet('no test output'))).toBe(2);
+      expect(manager.recordEvaluation(notMet('2 tests still failing'))).toBe(1);
+    });
+
+    it('ignores case, whitespace, and trailing punctuation differences', () => {
+      manager.setGoal('x');
+      expect(manager.recordEvaluation(notMet('Tests not run yet.'))).toBe(1);
+      expect(manager.recordEvaluation(notMet('tests   not run yet'))).toBe(2);
+      expect(manager.recordEvaluation(notMet('TESTS NOT RUN YET!!!'))).toBe(3);
+    });
+
+    it('resets the count when an evaluation comes back met', () => {
+      manager.setGoal('x');
+      manager.recordEvaluation(notMet('not done'));
+      expect(manager.recordEvaluation(notMet('not done'))).toBe(2);
+      expect(
+        manager.recordEvaluation({ met: true, reason: 'done', tokensUsed: 1 }),
+      ).toBe(0);
+      // A subsequent not-met starts a fresh streak.
+      expect(manager.recordEvaluation(notMet('not done'))).toBe(1);
+    });
+
+    it('resets the count when a new goal is set', () => {
+      manager.setGoal('first');
+      manager.recordEvaluation(notMet('same complaint'));
+      expect(manager.recordEvaluation(notMet('same complaint'))).toBe(2);
+      manager.setGoal('second');
+      expect(manager.recordEvaluation(notMet('same complaint'))).toBe(1);
     });
   });
 

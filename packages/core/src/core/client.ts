@@ -102,7 +102,11 @@ import {
   CompletionChecker,
   type ToolCallRecord,
 } from '../hooks/completion-checker.js';
-import { evaluateGoal } from '../goal/index.js';
+import {
+  evaluateGoal,
+  GOAL_STALL_LIMIT,
+  summarizeToolCallsForGoal,
+} from '../goal/index.js';
 
 const MAX_TURNS = 100;
 
@@ -995,17 +999,7 @@ export class GeminiClient {
       const active = goalManager.getActiveGoal();
       if (active) {
         goalManager.recordTurn();
-        const toolCallSummary = goalToolCalls
-          .slice(-20)
-          .map((t) => {
-            const status = t.success ? 'ok' : 'failed';
-            const cmd =
-              typeof t.input?.['command'] === 'string'
-                ? `: ${(t.input['command'] as string).slice(0, 200)}`
-                : '';
-            return `- ${t.name} [${status}]${cmd}`;
-          })
-          .join('\n');
+        const toolCallSummary = summarizeToolCallsForGoal(goalToolCalls);
 
         let evalResult: Awaited<ReturnType<typeof evaluateGoal>> | undefined;
         try {
@@ -1028,7 +1022,7 @@ export class GeminiClient {
         }
 
         if (evalResult) {
-          goalManager.recordEvaluation(evalResult);
+          const repeatedReason = goalManager.recordEvaluation(evalResult);
 
           if (evalResult.met) {
             goalManager.markAchieved();
@@ -1043,6 +1037,28 @@ export class GeminiClient {
               .info(
                 `[goal] abandoned as impossible: ${evalResult.reason.slice(0, 120)}`,
               );
+          } else if (repeatedReason >= GOAL_STALL_LIMIT) {
+            // Stall: the evaluator has returned the same unmet verdict
+            // GOAL_STALL_LIMIT turns running without converging -- the goal is
+            // either already done (a false-negative the judge keeps repeating)
+            // or stuck, and re-firing would just loop. This is distinct from an
+            // `impossible` verdict: the judge never declared it unachievable, it
+            // just isn't making progress. Clear it so no further continuation
+            // runs, then spend one final turn telling the user where things
+            // stand. Clearing first means the nested turn's own post-turn goal
+            // block sees no active goal and can't re-enter this loop.
+            goalManager.clearGoal();
+            const stallReason = `Stopping the /goal loop: the completion check returned the same unmet verdict ${repeatedReason} turns in a row without converging ("${evalResult.reason}"). The goal "${active.condition}" is now cleared. Briefly tell the user where things stand and what they should decide or check next, then stop.`;
+            const stallRequest = [{ text: stallReason }];
+            const stallResult = yield* this.sendMessageStream(
+              stallRequest,
+              signal,
+              prompt_id,
+              { type: SendMessageType.GoalContinuation },
+              boundedTurns - 1,
+            );
+            if (ownsTurnSpan) endTurnSpan('ok');
+            return stallResult;
           } else {
             const continueReason = `Goal not yet met. Evaluator: ${evalResult.reason}\n\nKeep working toward: ${active.condition}`;
             const continueRequest = [{ text: continueReason }];

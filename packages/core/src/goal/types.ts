@@ -10,6 +10,16 @@
 export const MAX_GOAL_CONDITION_LENGTH = 4000;
 
 /**
+ * How many consecutive not-met evaluations repeating the same reason count as
+ * a stall. A converging goal sees the evaluator's reason change as different
+ * pieces complete; a stuck goal repeats one complaint while the agent churns.
+ * Once this many identical rejections stack up, the continuation loop bails
+ * instead of re-firing forever. Distinct from an `impossible` verdict, which
+ * ends the loop immediately on a single judgement.
+ */
+export const GOAL_STALL_LIMIT = 3;
+
+/**
  * Argument tokens that clear an active goal. Accepted by `/goal <token>`.
  */
 export const GOAL_CLEAR_ALIASES = [
