@@ -153,14 +153,35 @@ jobs:
           PREV: ${{ steps.prev_tag.outputs.tag }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          # The release is already published; the AI-rewritten notes are a
+          # nice-to-have. Diagnose why the post failed, surface it in the run
+          # summary, and never block the release (always exit 0).
+          note() { echo "$1"; echo "$1" >> "$GITHUB_STEP_SUMMARY"; }
+
           if [ -z "$WEBHOOK" ]; then
-            echo "::warning::DISCORD_RELEASE_WEBHOOK not set; skipping warning post."
+            note "::warning::DISCORD_RELEASE_WEBHOOK is not set — skipping Discord warning post for $VERSION."
             exit 0
           fi
+
           MSG=":warning: **Release notes pipeline failed** for \`$VERSION\` (prev \`$PREV\`). The release itself is published; only the AI-rewritten notes did not post. Run: $RUN_URL"
-          curl -fsS -X POST -H 'Content-Type: application/json' \
+          # Capture the HTTP status so we can tell a dead webhook (regenerate the
+          # secret) apart from a transient/network error (just retry the run).
+          CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' \
             -d "$(jq -n --arg c "$MSG" '{content: $c}')" \
-            "$WEBHOOK" || echo "::warning::Webhook post also failed."
+            "$WEBHOOK" || echo 000)
+
+          case "$CODE" in
+            2*)
+              note "Posted release-notes-failure warning to Discord for $VERSION (HTTP $CODE)." ;;
+            401|403|404|410)
+              note "::warning::DISCORD_RELEASE_WEBHOOK is invalid or deleted (HTTP $CODE — Discord \"Unknown Webhook\"). Regenerate the webhook in Discord and update the DISCORD_RELEASE_WEBHOOK repo secret. Release $VERSION published fine; only the Discord notification is affected." ;;
+            000)
+              note "::warning::Could not reach the Discord webhook (network error) when posting the $VERSION warning." ;;
+            *)
+              note "::warning::Discord webhook post returned HTTP $CODE for $VERSION." ;;
+          esac
+          exit 0
 
       # An already-tagged version is an expected, benign outcome — e.g. two
       # auto-release runs raced and opened duplicate bump PRs for the same
