@@ -22,6 +22,10 @@ export class GoalManager {
   private active: GoalState | undefined;
   private lastAchieved: GoalState | undefined;
   private lastFailed: GoalState | undefined;
+  /** Normalized text of the last not-met reason, for stall detection. */
+  private lastReasonNormalized: string | undefined;
+  /** Consecutive not-met evaluations repeating `lastReasonNormalized`. */
+  private repeatedReasonCount = 0;
 
   /**
    * Set a new goal. Replaces any active goal. Returns the created state.
@@ -50,6 +54,7 @@ export class GoalManager {
       turnCount: 0,
       tokensSpent: 0,
     };
+    this.resetStall();
     // Return a copy so callers can't mutate internal state.
     return { ...this.active };
   }
@@ -62,6 +67,7 @@ export class GoalManager {
     if (!this.active) return undefined;
     const cleared = { ...this.active };
     this.active = undefined;
+    this.resetStall();
     debugLogger.info(
       `Cleared goal "${truncate(cleared.condition, 60)}" after ${cleared.turnCount} turns.`,
     );
@@ -80,6 +86,7 @@ export class GoalManager {
     };
     this.lastAchieved = achieved;
     this.active = undefined;
+    this.resetStall();
     debugLogger.info(
       `Goal achieved after ${achieved.turnCount} turns: "${truncate(achieved.condition, 60)}".`,
     );
@@ -100,6 +107,7 @@ export class GoalManager {
     };
     this.lastFailed = failed;
     this.active = undefined;
+    this.resetStall();
     debugLogger.info(
       `Goal abandoned as impossible after ${failed.turnCount} turns: "${truncate(failed.condition, 60)}" (${truncate(reason, 80)}).`,
     );
@@ -113,14 +121,30 @@ export class GoalManager {
     }
   }
 
-  /** Record the result of an evaluation against the active goal. */
-  recordEvaluation(result: GoalEvaluationResult): void {
-    if (!this.active) return;
+  /**
+   * Record the result of an evaluation against the active goal. Returns the
+   * number of consecutive not-met evaluations that have repeated the same
+   * reason -- the stall signal a caller compares against {@link GOAL_STALL_LIMIT}.
+   * A converging goal sees the reason change as different pieces complete; a
+   * stuck goal repeats one complaint while the agent churns. Returns 0 when the
+   * goal is met or no goal is active.
+   */
+  recordEvaluation(result: GoalEvaluationResult): number {
+    if (!this.active) return 0;
     this.active = {
       ...this.active,
       lastReason: result.reason,
       tokensSpent: this.active.tokensSpent + result.tokensUsed,
     };
+    if (result.met) {
+      this.resetStall();
+      return 0;
+    }
+    const norm = normalizeReason(result.reason);
+    this.repeatedReasonCount =
+      norm === this.lastReasonNormalized ? this.repeatedReasonCount + 1 : 1;
+    this.lastReasonNormalized = norm;
+    return this.repeatedReasonCount;
   }
 
   hasActiveGoal(): boolean {
@@ -144,9 +168,30 @@ export class GoalManager {
     this.active = undefined;
     this.lastAchieved = undefined;
     this.lastFailed = undefined;
+    this.resetStall();
+  }
+
+  /** Clear stall-detection bookkeeping. */
+  private resetStall(): void {
+    this.lastReasonNormalized = undefined;
+    this.repeatedReasonCount = 0;
   }
 }
 
 function truncate(s: string, max: number): string {
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
+}
+
+/**
+ * Normalize an evaluator reason so cosmetic differences (case, whitespace,
+ * trailing punctuation) don't reset the stall counter. A temperature-0 judge
+ * facing an unchanged situation produces near-identical text, so this catches
+ * the repeated-verdict case without false positives on genuine progress.
+ */
+function normalizeReason(reason: string): string {
+  return reason
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?]+$/, '');
 }

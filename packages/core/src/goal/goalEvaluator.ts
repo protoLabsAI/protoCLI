@@ -20,9 +20,9 @@ Respond ONLY with valid JSON matching one of these shapes:
 {"met": false, "impossible": true, "reason": "one short sentence on why it can never be satisfied"}
 
 Rules:
-- Set "met": true only when the condition is clearly demonstrated by the visible evidence (a test output, an exit code, a file count, an empty queue, etc.).
-- If the assistant only claims the work is done without showing evidence, set "met": false and ask for the missing evidence in "reason".
-- If the condition cannot be verified from what is shown, set "met": false and explain what would prove it in "reason".
+- Set "met": true when the visible evidence shows the condition is satisfied. Evidence can be a command result (a test output, an exit code, a count, an empty queue) OR the requested artifact itself (files created or edited, content written, a result documented, output shown in the transcript). The existence of the deliverable the condition asked for IS evidence -- do not demand a test or an exit code for a goal that does not call for one.
+- Judge the condition exactly as written. If it asks to create, write, explore, or document something and the transcript shows that artifact exists, set "met": true. Do not invent acceptance criteria stricter than what the user stated.
+- Set "met": false only when the condition is genuinely unsatisfied, or when the assistant asserts success with nothing in the transcript backing it. When false, name the specific missing piece in "reason".
 - Only set "impossible": true when the condition is genuinely unachievable in this session: it is self-contradictory, depends on an unavailable resource or capability, or the assistant has exhausted reasonable approaches and the transcript confirms there is no path forward. The assistant claiming the goal is impossible is evidence, not proof -- independently confirm it rather than deferring to the assistant's self-assessment. Do NOT set it just because progress is slow or evidence is currently missing. When in doubt, return {"met": false} without "impossible".
 - "impossible" is only meaningful alongside "met": false. Never set it when "met" is true.
 - Keep "reason" to one short sentence. It will be shown to the assistant as guidance for the next turn.`;
@@ -98,7 +98,7 @@ function buildEvaluatorPrompt(context: GoalEvaluationContext): string {
     'Condition:',
     context.condition,
     '',
-    'Recent tool calls:',
+    'Tool activity so far (repeats collapsed; actions are state-changing, inspections are read-only):',
     context.toolCallSummary || '(none)',
     '',
     'Final assistant message:',
