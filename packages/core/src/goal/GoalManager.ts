@@ -189,9 +189,17 @@ function truncate(s: string, max: number): string {
  * the repeated-verdict case without false positives on genuine progress.
  */
 function normalizeReason(reason: string): string {
-  return reason
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.!?]+$/, '');
+  const collapsed = reason.trim().toLowerCase().replace(/\s+/g, ' ');
+  // Strip trailing sentence punctuation with a character scan rather than a
+  // regex: `/[.!?]+$/` backtracks polynomially on input full of '!' (CodeQL
+  // js/polynomial-redos), and the reason text comes from the evaluator model.
+  let end = collapsed.length;
+  while (end > 0 && isTrailingPunctuation(collapsed[end - 1])) {
+    end -= 1;
+  }
+  return collapsed.slice(0, end);
+}
+
+function isTrailingPunctuation(ch: string): boolean {
+  return ch === '.' || ch === '!' || ch === '?';
 }
