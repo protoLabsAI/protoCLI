@@ -122,10 +122,17 @@ export class ContentGenerationPipeline {
       effectiveModel,
       async (openaiRequest, context) => {
         // Stage 1: Create OpenAI stream
+        // Disable the client-level timeout for streaming requests. Streaming
+        // responses can run for many minutes (long agent turns, tool-call
+        // chains). A fixed wall-clock timeout on the client will abort an
+        // otherwise healthy stream mid-run. Instead rely on the user-provided
+        // abortSignal (user cancellation) and let the upstream server control
+        // its own timeouts.
         const stream = (await this.client.chat.completions.create(
           openaiRequest,
           {
             signal: request.config?.abortSignal,
+            timeout: 0,
           },
         )) as AsyncIterable<OpenAI.Chat.ChatCompletionChunk>;
 

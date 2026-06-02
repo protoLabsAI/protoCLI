@@ -1,4 +1,5 @@
-export const DEFAULT_TIMEOUT = 120000;
+export const DEFAULT_TIMEOUT = 600000;
+export const DEFAULT_STREAMING_TIMEOUT = 0;
 export const DEFAULT_MAX_RETRIES = 3;
 
 export const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';

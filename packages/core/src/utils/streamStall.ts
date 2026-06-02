@@ -5,11 +5,12 @@
  *
  * Stream stall detection — per-chunk idle watchdog for async generators.
  *
- * The SDK's overall request timeout (120 s) covers the full lifetime of a
- * request, but undici body/header timeouts are explicitly disabled in
- * runtimeFetchOptions.ts to allow long streaming responses.  This means a
- * stream that *starts* and then *freezes* (connection open, no more chunks
- * arriving) will not be detected until the full 120 s wall clock fires.
+ * The SDK's overall request timeout (configurable via contentGenerator.timeout,
+ * defaults to 600 s) covers the full lifetime of a request, but undici
+ * body/header timeouts are explicitly disabled in runtimeFetchOptions.ts to
+ * allow long streaming responses.  This means a stream that *starts* and then
+ * *freezes* (connection open, no more chunks arriving) will not be detected
+ * until the full SDK wall clock fires.
  *
  * `withChunkTimeout` wraps any AsyncGenerator and races each `.next()` call
  * against a per-chunk idle timer.  If no chunk arrives within `timeoutMs`,

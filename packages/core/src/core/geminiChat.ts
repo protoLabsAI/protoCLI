@@ -27,6 +27,7 @@ import type { Config } from '../config/config.js';
 import { hasCycleInSchema } from '../tools/tools.js';
 import { ChatCompressionService } from '../services/chatCompressionService.js';
 import { type StructuredError, CompressionStatus } from './turn.js';
+import { StreamStallError } from '../utils/streamStall.js';
 import {
   logContentRetry,
   logContentRetryFailure,
@@ -342,6 +343,26 @@ export class InvalidStreamError extends Error {
 }
 
 /**
+ * Returns true when the error looks like an SDK-level transport timeout
+ * (e.g. OpenAI or Anthropic SDK request timeout).  These are transient
+ * connectivity failures that should be retried mid-stream.
+ */
+function isSdkTransportTimeoutError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes('request timed out') ||
+    msg.includes('request timeout') ||
+    msg.includes('connection timeout') ||
+    msg.includes('timed out') ||
+    error.name === 'TimeoutError' ||
+    // OpenAI SDK wraps transport timeouts with these codes
+    (error as { code?: string }).code === 'ETIMEDOUT' ||
+    (error as { code?: string }).code === 'ESOCKETTIMEDOUT'
+  );
+}
+
+/**
  * Chat session that enables sending messages to the model with previous
  * conversation context.
  *
@@ -513,10 +534,17 @@ export class GeminiChat {
               continue;
             }
 
-            // Transient stream anomalies (NO_FINISH_REASON / NO_RESPONSE_TEXT):
-            // independent retry budget, similar to rate-limit handling.
-            // Does NOT consume the content retry budget.
-            const isTransientStreamError = error instanceof InvalidStreamError;
+            // Transient stream anomalies (NO_FINISH_REASON / NO_RESPONSE_TEXT /
+            // StreamStallError / SDK transport timeout): independent retry budget,
+            // similar to rate-limit handling. Does NOT consume the content retry
+            // budget. A stalled stream or transport timeout is a transient
+            // connectivity issue — the upstream server may have dropped the
+            // connection mid-turn, often during the reasoning phase, leading to an
+            // "empty response" error.
+            const isTransientStreamError =
+              error instanceof InvalidStreamError ||
+              error instanceof StreamStallError ||
+              isSdkTransportTimeoutError(error);
             if (
               isTransientStreamError &&
               invalidStreamRetryCount < INVALID_STREAM_RETRY_CONFIG.maxRetries
@@ -525,16 +553,32 @@ export class GeminiChat {
               const delayMs =
                 INVALID_STREAM_RETRY_CONFIG.initialDelayMs *
                 invalidStreamRetryCount;
-              debugLogger.warn(
-                `Invalid stream [${(error as InvalidStreamError).type}] ` +
-                  `(retry ${invalidStreamRetryCount}/${INVALID_STREAM_RETRY_CONFIG.maxRetries}). ` +
-                  `Waiting ${delayMs / 1000}s before retrying...`,
-              );
+              if (error instanceof StreamStallError) {
+                debugLogger.warn(
+                  `Stream stalled (retry ${invalidStreamRetryCount}/${INVALID_STREAM_RETRY_CONFIG.maxRetries}). ` +
+                    `Waiting ${delayMs / 1000}s before retrying...`,
+                );
+              } else if (isSdkTransportTimeoutError(error)) {
+                debugLogger.warn(
+                  `SDK transport timeout (retry ${invalidStreamRetryCount}/${INVALID_STREAM_RETRY_CONFIG.maxRetries}). ` +
+                    `Waiting ${delayMs / 1000}s before retrying...`,
+                );
+              } else {
+                debugLogger.warn(
+                  `Invalid stream [${(error as InvalidStreamError).type}] ` +
+                    `(retry ${invalidStreamRetryCount}/${INVALID_STREAM_RETRY_CONFIG.maxRetries}). ` +
+                    `Waiting ${delayMs / 1000}s before retrying...`,
+                );
+              }
               logContentRetry(
                 self.config,
                 new ContentRetryEvent(
                   invalidStreamRetryCount - 1,
-                  (error as InvalidStreamError).type,
+                  error instanceof StreamStallError
+                    ? 'STREAM_STALL'
+                    : isSdkTransportTimeoutError(error)
+                      ? 'SDK_TRANSPORT_TIMEOUT'
+                      : (error as InvalidStreamError).type,
                   delayMs,
                   model,
                 ),
@@ -683,6 +727,26 @@ export class GeminiChat {
               new ContentRetryFailureEvent(
                 totalAttempts,
                 lastError.type,
+                model,
+              ),
+            );
+          } else if (lastError instanceof StreamStallError) {
+            const totalAttempts = invalidStreamRetryCount + 1;
+            logContentRetryFailure(
+              self.config,
+              new ContentRetryFailureEvent(
+                totalAttempts,
+                'STREAM_STALL',
+                model,
+              ),
+            );
+          } else if (isSdkTransportTimeoutError(lastError)) {
+            const totalAttempts = invalidStreamRetryCount + 1;
+            logContentRetryFailure(
+              self.config,
+              new ContentRetryFailureEvent(
+                totalAttempts,
+                'SDK_TRANSPORT_TIMEOUT',
                 model,
               ),
             );

@@ -207,6 +207,10 @@ export class AnthropicContentGenerator implements ContentGenerator {
         streamingRequest as MessageCreateParamsStreaming,
         {
           signal: request.config?.abortSignal,
+          // Disable the client-level timeout for streaming requests. Same
+          // rationale as the OpenAI pipeline: long agent turns can exceed
+          // any fixed wall-clock timeout.
+          timeout: 0,
         },
       )) as AsyncIterable<RawMessageStreamEvent>;
 
