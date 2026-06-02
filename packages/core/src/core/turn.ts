@@ -38,13 +38,12 @@ import type { LoopType } from '../telemetry/types.js';
 
 /**
  * Max ms to wait between individual stream chunks before declaring a stall.
- * 5 min gives complex agentic responses (e.g. parallel subagent dispatch
- * and long mid-stream planning pauses) ample headroom while still catching
- * genuine frozen connections.
+ * 11 min exceeds the longest expected agent turn (gateway holds live streams
+ * to 650s+ without stalling) while still catching genuinely frozen connections.
  * Override via PROTO_STREAM_STALL_TIMEOUT_MS env var.
  */
 const STREAM_STALL_TIMEOUT_MS = parseInt(
-  process.env['PROTO_STREAM_STALL_TIMEOUT_MS'] ?? '300000',
+  process.env['PROTO_STREAM_STALL_TIMEOUT_MS'] ?? '660000',
   10,
 );
 
@@ -275,7 +274,7 @@ export class Turn {
 
       // Wrap with per-chunk idle watchdog.  If no chunk arrives within
       // STREAM_STALL_TIMEOUT_MS the generator throws StreamStallError,
-      // which the catch block below converts to a GeminiEventType.Error.
+      // which is re-thrown to GeminiChat.sendMessageStream for retry.
       const responseStream = withChunkTimeout(
         rawStream,
         STREAM_STALL_TIMEOUT_MS,
@@ -371,19 +370,13 @@ export class Turn {
         return;
       }
 
-      // Stream stall: surface a clear, actionable message without reporting
-      // to the error service (it's a connectivity issue, not a code bug).
+      // Stream stall: re-throw so the caller (GeminiChat.sendMessageStream)
+      // can retry the request. A stalled stream is a transient connectivity
+      // issue — the upstream server may have dropped the connection mid-turn.
+      // Retrying from scratch avoids the misleading "empty response" error
+      // that occurs when a stall happens during the reasoning phase.
       if (e instanceof StreamStallError) {
-        yield {
-          type: GeminiEventType.Error,
-          value: {
-            error: {
-              message: e.message,
-              status: undefined,
-            },
-          },
-        };
-        return;
+        throw e;
       }
 
       const error = toFriendlyError(e);
