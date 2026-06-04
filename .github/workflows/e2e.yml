@@ -61,12 +61,24 @@ jobs:
 
       - name: 'Run E2E tests'
         env:
-          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY }}'
-          OPENAI_BASE_URL: '${{ secrets.OPENAI_BASE_URL }}'
-          OPENAI_MODEL: '${{ secrets.OPENAI_MODEL }}'
+          # The gateway key lives in GATEWAY_API_KEY (same secret that powers the
+          # release-notes step); fall back to it when OPENAI_API_KEY isn't set.
+          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY || secrets.GATEWAY_API_KEY }}'
+          # Default base URL + model to the proto-labs.ai gateway so E2E only
+          # needs the gateway key. Without all three of API key + base URL +
+          # model, the CLI resolves no auth type and every SDK test fails with
+          # the cryptic "No auth type is selected" (getAuthTypeFromEnv requires
+          # all three). These OPENAI_* names are just the OpenAI-compatible
+          # client convention — base URL points at our gateway, not OpenAI.
+          OPENAI_BASE_URL: '${{ secrets.OPENAI_BASE_URL || ''https://api.proto-labs.ai/v1'' }}'
+          OPENAI_MODEL: '${{ secrets.OPENAI_MODEL || ''protolabs/fast'' }}'
           KEEP_OUTPUT: 'true'
           VERBOSE: 'true'
         run: |-
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning::No gateway key found — skipping E2E. Set GATEWAY_API_KEY (or OPENAI_API_KEY) in repo secrets to the proto-labs.ai gateway key. Base URL and model already default to the gateway."
+            exit 0
+          fi
           if [[ "${{ matrix.sandbox }}" == "sandbox:docker" ]]; then
             npm run test:integration:sandbox:docker
           else
@@ -105,7 +117,20 @@ jobs:
 
       - name: 'Run E2E tests'
         env:
-          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY }}'
-          OPENAI_BASE_URL: '${{ secrets.OPENAI_BASE_URL }}'
-          OPENAI_MODEL: '${{ secrets.OPENAI_MODEL }}'
-        run: 'npm run test:e2e'
+          # The gateway key lives in GATEWAY_API_KEY (same secret that powers the
+          # release-notes step); fall back to it when OPENAI_API_KEY isn't set.
+          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY || secrets.GATEWAY_API_KEY }}'
+          # Default base URL + model to the proto-labs.ai gateway so E2E only
+          # needs the gateway key. Without all three of API key + base URL +
+          # model, the CLI resolves no auth type and every SDK test fails with
+          # the cryptic "No auth type is selected" (getAuthTypeFromEnv requires
+          # all three). These OPENAI_* names are just the OpenAI-compatible
+          # client convention — base URL points at our gateway, not OpenAI.
+          OPENAI_BASE_URL: '${{ secrets.OPENAI_BASE_URL || ''https://api.proto-labs.ai/v1'' }}'
+          OPENAI_MODEL: '${{ secrets.OPENAI_MODEL || ''protolabs/fast'' }}'
+        run: |-
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning::No gateway key found — skipping E2E. Set GATEWAY_API_KEY (or OPENAI_API_KEY) in repo secrets to the proto-labs.ai gateway key. Base URL and model already default to the gateway."
+            exit 0
+          fi
+          npm run test:e2e
