@@ -62,8 +62,9 @@ jobs:
       - name: 'Run E2E tests'
         env:
           # The gateway key lives in GATEWAY_API_KEY (same secret that powers the
-          # release-notes step); fall back to it when OPENAI_API_KEY isn't set.
-          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY || secrets.GATEWAY_API_KEY }}'
+          # release-notes step). Prefer it — a stale/placeholder OPENAI_API_KEY
+          # would otherwise shadow it via || and get rejected (HTTP 401).
+          OPENAI_API_KEY: '${{ secrets.GATEWAY_API_KEY || secrets.OPENAI_API_KEY }}'
           # Default base URL + model to the proto-labs.ai gateway so E2E only
           # needs the gateway key. Without all three of API key + base URL +
           # model, the CLI resolves no auth type and every SDK test fails with
@@ -118,8 +119,9 @@ jobs:
       - name: 'Run E2E tests'
         env:
           # The gateway key lives in GATEWAY_API_KEY (same secret that powers the
-          # release-notes step); fall back to it when OPENAI_API_KEY isn't set.
-          OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY || secrets.GATEWAY_API_KEY }}'
+          # release-notes step). Prefer it — a stale/placeholder OPENAI_API_KEY
+          # would otherwise shadow it via || and get rejected (HTTP 401).
+          OPENAI_API_KEY: '${{ secrets.GATEWAY_API_KEY || secrets.OPENAI_API_KEY }}'
           # Default base URL + model to the proto-labs.ai gateway so E2E only
           # needs the gateway key. Without all three of API key + base URL +
           # model, the CLI resolves no auth type and every SDK test fails with
