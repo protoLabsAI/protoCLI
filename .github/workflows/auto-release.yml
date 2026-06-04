@@ -153,6 +153,12 @@ jobs:
           )
           echo "Created PR: ${PR_URL}"
 
-          # Enable auto-merge so it merges once required status checks pass
-          gh pr merge "${PR_URL}" --auto --squash
-          echo "Auto-merge enabled on ${PR_URL}"
+          # Enable auto-merge so it merges once required status checks pass.
+          # Tolerate repos where auto-merge is disabled (allow_auto_merge=false):
+          # the release PR is already open, so leave it for manual merge instead
+          # of failing the whole job and paging the Actions tab red on every release.
+          if gh pr merge "${PR_URL}" --auto --squash; then
+            echo "Auto-merge enabled on ${PR_URL}"
+          else
+            echo "::warning::Could not enable auto-merge (is 'Allow auto-merge' enabled in repo settings?). Release PR ${PR_URL} is open and must be merged manually."
+          fi
