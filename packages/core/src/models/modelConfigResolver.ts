@@ -146,7 +146,14 @@ export function resolveModelConfig(
   for (const envKey of envMapping.model) {
     modelLayers.push(envLayer(env, envKey));
   }
-  if (settings?.model) {
+
+  // Only use settings.model if settings also provides credentials for this
+  // auth type.  When auth is driven by environment variables (e.g.
+  // OPENAI_API_KEY set but OPENAI_MODEL not), a stale settings.model from a
+  // different provider (e.g. "haiku") would otherwise leak through and cause
+  // a 400 "Invalid model name" error at the API endpoint.
+  const settingsHasApiKey = !!settings?.apiKey;
+  if (settings?.model && settingsHasApiKey) {
     modelLayers.push(layer(settings.model, settingsSource('model.name')));
   }
 
