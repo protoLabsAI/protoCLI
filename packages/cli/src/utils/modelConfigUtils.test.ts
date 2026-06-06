@@ -47,7 +47,13 @@ describe('modelConfigUtils', () => {
       process.env = originalEnv;
     });
 
-    it('should return USE_OPENAI when all OpenAI env vars are set', () => {
+    it('should return USE_OPENAI when OPENAI_API_KEY is set', () => {
+      process.env['OPENAI_API_KEY'] = 'test-key';
+
+      expect(getAuthTypeFromEnv()).toBe(AuthType.USE_OPENAI);
+    });
+
+    it('should return USE_OPENAI when OPENAI_API_KEY is set with model and base URL', () => {
       process.env['OPENAI_API_KEY'] = 'test-key';
       process.env['OPENAI_MODEL'] = 'gpt-4';
       process.env['OPENAI_BASE_URL'] = 'https://api.openai.com';
@@ -55,43 +61,58 @@ describe('modelConfigUtils', () => {
       expect(getAuthTypeFromEnv()).toBe(AuthType.USE_OPENAI);
     });
 
-    it('should return undefined when OpenAI env vars are incomplete', () => {
-      process.env['OPENAI_API_KEY'] = 'test-key';
+    it('should return undefined when OPENAI_API_KEY is missing', () => {
       process.env['OPENAI_MODEL'] = 'gpt-4';
-      // Missing OPENAI_BASE_URL
+      process.env['OPENAI_BASE_URL'] = 'https://api.openai.com';
 
       expect(getAuthTypeFromEnv()).toBeUndefined();
     });
 
-    it('should return USE_GEMINI when Gemini env vars are set', () => {
+    it('should return USE_GEMINI when GEMINI_API_KEY is set', () => {
+      process.env['GEMINI_API_KEY'] = 'test-key';
+
+      expect(getAuthTypeFromEnv()).toBe(AuthType.USE_GEMINI);
+    });
+
+    it('should return USE_GEMINI when GEMINI_API_KEY is set with model', () => {
       process.env['GEMINI_API_KEY'] = 'test-key';
       process.env['GEMINI_MODEL'] = 'gemini-pro';
 
       expect(getAuthTypeFromEnv()).toBe(AuthType.USE_GEMINI);
     });
 
-    it('should return undefined when Gemini env vars are incomplete', () => {
-      process.env['GEMINI_API_KEY'] = 'test-key';
-      // Missing GEMINI_MODEL
+    it('should return undefined when GEMINI_API_KEY is missing', () => {
+      process.env['GEMINI_MODEL'] = 'gemini-pro';
 
       expect(getAuthTypeFromEnv()).toBeUndefined();
     });
 
-    it('should return USE_VERTEX_AI when Google env vars are set', () => {
+    it('should return USE_VERTEX_AI when GOOGLE_API_KEY is set', () => {
+      process.env['GOOGLE_API_KEY'] = 'test-key';
+
+      expect(getAuthTypeFromEnv()).toBe(AuthType.USE_VERTEX_AI);
+    });
+
+    it('should return USE_VERTEX_AI when GOOGLE_API_KEY is set with model', () => {
       process.env['GOOGLE_API_KEY'] = 'test-key';
       process.env['GOOGLE_MODEL'] = 'vertex-model';
 
       expect(getAuthTypeFromEnv()).toBe(AuthType.USE_VERTEX_AI);
     });
 
-    it('should return undefined when Google env vars are incomplete', () => {
-      process.env['GOOGLE_API_KEY'] = 'test-key';
-      // Missing GOOGLE_MODEL
+    it('should return undefined when GOOGLE_API_KEY is missing', () => {
+      process.env['GOOGLE_MODEL'] = 'vertex-model';
 
       expect(getAuthTypeFromEnv()).toBeUndefined();
     });
 
-    it('should return USE_ANTHROPIC when Anthropic env vars are set', () => {
+    it('should return USE_ANTHROPIC when ANTHROPIC_API_KEY is set', () => {
+      process.env['ANTHROPIC_API_KEY'] = 'test-key';
+
+      expect(getAuthTypeFromEnv()).toBe(AuthType.USE_ANTHROPIC);
+    });
+
+    it('should return USE_ANTHROPIC when ANTHROPIC_API_KEY is set with model and base URL', () => {
       process.env['ANTHROPIC_API_KEY'] = 'test-key';
       process.env['ANTHROPIC_MODEL'] = 'claude-3';
       process.env['ANTHROPIC_BASE_URL'] = 'https://api.anthropic.com';
@@ -99,10 +120,9 @@ describe('modelConfigUtils', () => {
       expect(getAuthTypeFromEnv()).toBe(AuthType.USE_ANTHROPIC);
     });
 
-    it('should return undefined when Anthropic env vars are incomplete', () => {
-      process.env['ANTHROPIC_API_KEY'] = 'test-key';
+    it('should return undefined when ANTHROPIC_API_KEY is missing', () => {
       process.env['ANTHROPIC_MODEL'] = 'claude-3';
-      // Missing ANTHROPIC_BASE_URL
+      process.env['ANTHROPIC_BASE_URL'] = 'https://api.anthropic.com';
 
       expect(getAuthTypeFromEnv()).toBeUndefined();
     });
