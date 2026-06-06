@@ -99,6 +99,26 @@ describe('modelConfigResolver', () => {
         expect(result.sources['model'].kind).toBe('default');
       });
 
+      it('uses default model when env provides key but settings model is from a different provider', () => {
+        // Regression: OPENAI_API_KEY set without OPENAI_MODEL, settings has
+        // an Anthropic model name ("haiku"). The default OpenAI model should
+        // be used instead of the incompatible settings model.
+        const result = resolveModelConfig({
+          authType: AuthType.USE_OPENAI,
+          cli: {},
+          settings: {
+            model: 'haiku', // Anthropic model, incompatible with OpenAI
+          },
+          env: {
+            OPENAI_API_KEY: 'env-key',
+          },
+        });
+
+        expect(result.config.model).toBe(MAINLINE_CODER_MODEL);
+        expect(result.sources['model'].kind).toBe('default');
+        expect(result.config.apiKey).toBe('env-key');
+      });
+
       it('prioritizes modelProvider over CLI', () => {
         const result = resolveModelConfig({
           authType: AuthType.USE_OPENAI,
