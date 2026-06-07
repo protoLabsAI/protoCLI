@@ -1,24 +1,7 @@
-# SQLite databases (per-developer; rebuild from issues.jsonl via `br sync --import-only`)
-*.db
-*.db?*
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Daemon runtime files
-daemon.lock
-daemon.log
-daemon.pid
-bd.sock
-sync-state.json
-last-touched
-
-# Local version tracking (prevents upgrade notification spam after git ops)
-.local_version
-
-# Legacy database files
-db.sqlite
-
-# Lock + temp files
-*.lock
-*.tmp
+# Allowlist form: ignore everything in .beads/, then re-include the shared
+# source-of-truth files. New volatile files br adds are ignored automatically.
+*
+!issues.jsonl
+!config.yaml
+!routes.jsonl
+!.gitignore
