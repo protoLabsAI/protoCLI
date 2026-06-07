@@ -599,6 +599,43 @@ describe('ContentGenerationPipeline', () => {
       );
     });
 
+    it('passes a safe non-zero streaming timeout (regression: #355 timeout:0 aborted every stream)', async () => {
+      const request: GenerateContentParameters = {
+        model: 'test-model',
+        contents: [{ parts: [{ text: 'Hello' }], role: 'user' }],
+        config: {},
+      };
+
+      const mockStream = {
+        async *[Symbol.asyncIterator]() {
+          yield {
+            id: 'chunk-1',
+            choices: [{ delta: { content: 'Hello' }, finish_reason: 'stop' }],
+          };
+        },
+      };
+
+      (mockConverter.convertGeminiRequestToOpenAI as Mock).mockReturnValue([]);
+      (mockConverter.convertOpenAIChunkToGemini as Mock).mockReturnValue(
+        new GenerateContentResponse(),
+      );
+      (mockClient.chat.completions.create as Mock).mockResolvedValue(
+        mockStream,
+      );
+
+      const resultGenerator = await pipeline.executeStream(request, 'test-id');
+      for await (const _result of resultGenerator) {
+        // Consume stream
+      }
+
+      const [, options] = (mockClient.chat.completions.create as Mock).mock
+        .calls[0];
+      // Must NOT be 0 (OpenAI SDK reads 0 as a 0ms deadline -> instant abort)
+      // and must stay within setTimeout's 32-bit range (else it clamps to 1ms).
+      expect(options.timeout).toBeGreaterThan(0);
+      expect(options.timeout).toBeLessThanOrEqual(2 ** 31 - 1);
+    });
+
     it('should merge finishReason and usageMetadata from separate chunks', async () => {
       // Arrange
       const request: GenerateContentParameters = {

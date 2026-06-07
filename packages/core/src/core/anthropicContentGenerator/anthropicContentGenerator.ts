@@ -30,7 +30,10 @@ import { RequestTokenEstimator } from '../../utils/request-tokenizer/index.js';
 import { safeJsonParse } from '../../utils/safeJsonParse.js';
 import { AnthropicContentConverter } from './converter.js';
 import { buildRuntimeFetchOptions } from '../../utils/runtimeFetchOptions.js';
-import { DEFAULT_TIMEOUT } from '../openaiContentGenerator/constants.js';
+import {
+  DEFAULT_TIMEOUT,
+  DEFAULT_STREAMING_TIMEOUT,
+} from '../openaiContentGenerator/constants.js';
 import { createDebugLogger } from '../../utils/debugLogger.js';
 import {
   tokenLimit,
@@ -207,10 +210,11 @@ export class AnthropicContentGenerator implements ContentGenerator {
         streamingRequest as MessageCreateParamsStreaming,
         {
           signal: request.config?.abortSignal,
-          // Disable the client-level timeout for streaming requests. Same
-          // rationale as the OpenAI pipeline: long agent turns can exceed
-          // any fixed wall-clock timeout.
-          timeout: 0,
+          // Effectively unbounded (24h). NOT 0 — the Anthropic SDK treats
+          // `timeout: 0` as an instant 0ms deadline, which aborted every
+          // stream after ~3s (#355 regression). Long agent turns are bounded
+          // by the per-chunk stall watchdog and the user abortSignal instead.
+          timeout: DEFAULT_STREAMING_TIMEOUT,
         },
       )) as AsyncIterable<RawMessageStreamEvent>;
 
