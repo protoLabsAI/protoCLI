@@ -163,9 +163,19 @@ export interface HookCallbackResult {
 
 /**
  * Claude-shaped hook callback signature.
+ *
+ * Mirrors `@anthropic-ai/claude-agent-sdk`'s three-argument shape
+ * `(input, toolUseId, { signal })`. The compat layer always invokes callbacks
+ * with all three arguments: `toolUseId` is `undefined` for session-level events
+ * (Stop, Notification) and `signal` is the query's abort signal — a fresh
+ * non-aborting signal when no `abortController` was supplied in Options. A
+ * one- or two-argument callback remains assignable (extra params are optional
+ * to provide).
  */
 export type HookCallback = (
-  input: HookInput
+  input: HookInput,
+  toolUseId: string | undefined,
+  options: { signal: AbortSignal }
 ) => HookCallbackResult | void | Promise<HookCallbackResult | void>;
 
 /**
@@ -192,11 +202,69 @@ export type CanUseTool = (
 ) => Promise<PermissionResult>;
 
 /**
- * MCP server config. Loose `Record<string, unknown>` here so consumers can
- * pass through proto's structured shapes; the runtime translation passes
- * `mcpServers` through verbatim.
+ * MCP stdio server — spawns a local process speaking MCP over stdio.
  */
-export type McpServerConfig = Record<string, unknown>;
+export interface McpStdioServerConfig {
+  type?: 'stdio';
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+}
+
+/**
+ * MCP server reachable over HTTP / SSE.
+ */
+export interface McpHttpServerConfig {
+  type: 'http' | 'sse';
+  url: string;
+  headers?: Record<string, string>;
+}
+
+/**
+ * In-process SDK MCP server (created via `createSdkMcpServer`).
+ */
+export interface McpSdkServerConfig {
+  type: 'sdk';
+  name: string;
+  instance?: unknown;
+}
+
+/**
+ * MCP server config. A union of the structured Claude/Anthropic shapes plus a
+ * generic `Record<string, unknown>` fallback, so callers passing the typed
+ * `McpServerConfig` union from `@protolabsai/types` (whose members have no
+ * index signature) typecheck without per-callsite casts. The runtime passes
+ * `mcpServers` through to proto verbatim regardless of which member is used.
+ */
+export type McpServerConfig =
+  | McpStdioServerConfig
+  | McpHttpServerConfig
+  | McpSdkServerConfig
+  | Record<string, unknown>;
+
+/**
+ * System prompt config. Accepts a plain string or Claude's structured preset
+ * form. Only the appended text is consumed by proto at runtime (proto has no
+ * notion of the `claude_code` preset); a bare preset with no `append` is a
+ * no-op.
+ */
+export interface SystemPromptPreset {
+  type: 'preset';
+  preset: string;
+  append?: string;
+}
+export type SystemPromptConfig = string | SystemPromptPreset;
+
+/**
+ * Structured output format. Accepted at the type level for source
+ * compatibility; dropped at runtime (proto has no structured-output option).
+ */
+export interface OutputFormatJsonSchema {
+  type: 'json_schema';
+  schema: Record<string, unknown>;
+}
+export type OutputFormatConfig = string | OutputFormatJsonSchema;
 
 /**
  * Permission modes accepted by the compat layer. `bypassPermissions` is
@@ -236,7 +304,7 @@ type HookEventName =
 export interface Options {
   model?: string;
   cwd?: string;
-  systemPrompt?: string;
+  systemPrompt?: SystemPromptConfig;
   maxTurns?: number;
   allowedTools?: string[];
   disallowedTools?: string[];
@@ -253,7 +321,7 @@ export interface Options {
   resume?: string;
   agents?: Record<string, unknown>;
   maxThinkingTokens?: number;
-  outputFormat?: string;
+  outputFormat?: OutputFormatConfig;
 }
 
 /**
