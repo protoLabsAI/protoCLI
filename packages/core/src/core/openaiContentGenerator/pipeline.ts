@@ -15,6 +15,7 @@ import type { Config } from '../../config/config.js';
 import type { ContentGeneratorConfig } from '../contentGenerator.js';
 import type { OpenAICompatibleProvider } from './provider/index.js';
 import { OpenAIContentConverter } from './converter.js';
+import { DEFAULT_STREAMING_TIMEOUT } from './constants.js';
 import type { ErrorHandler, RequestContext } from './errorHandler.js';
 import { createDebugLogger } from '../../utils/debugLogger.js';
 
@@ -132,7 +133,11 @@ export class ContentGenerationPipeline {
           openaiRequest,
           {
             signal: request.config?.abortSignal,
-            timeout: 0,
+            // Effectively unbounded (24h). NOT 0 — the OpenAI SDK treats
+            // `timeout: 0` as an instant 0ms deadline, which aborted every
+            // stream after ~3s (#355 regression). Long streams are bounded by
+            // the per-chunk stall watchdog and the user abortSignal instead.
+            timeout: DEFAULT_STREAMING_TIMEOUT,
           },
         )) as AsyncIterable<OpenAI.Chat.ChatCompletionChunk>;
 
