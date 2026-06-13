@@ -20,8 +20,10 @@ import * as fs from 'node:fs';
 import {
   beginTurn,
   snapshotFileBeforeEdit,
+  markShellExecutionForTurn,
   checkpointStore,
   FILE_MUTATING_TOOLS,
+  SHELL_TOOLS,
 } from './agentCore.js';
 
 // Typed alias to the mock function.
@@ -54,6 +56,50 @@ describe('agentCore — FILE_MUTATING_TOOLS', () => {
 
   it('does NOT include run_shell_command', () => {
     expect(FILE_MUTATING_TOOLS.has('run_shell_command')).toBe(false);
+  });
+});
+
+describe('agentCore — SHELL_TOOLS', () => {
+  it('includes run_shell_command', () => {
+    expect(SHELL_TOOLS.has('run_shell_command')).toBe(true);
+  });
+
+  it('does NOT include write_file', () => {
+    expect(SHELL_TOOLS.has('write_file')).toBe(false);
+  });
+});
+
+describe('agentCore — markShellExecutionForTurn()', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('flags the turn when the tool is run_shell_command', () => {
+    const promptId = nextPromptId();
+    beginTurn(promptId, 'run the tests');
+    const result = markShellExecutionForTurn(promptId, 'run_shell_command');
+    expect(result).toBe(true);
+    expect(checkpointStore.getByPromptId(promptId)!.hasShellExecution).toBe(
+      true,
+    );
+  });
+
+  it('does not flag the turn for a non-shell tool', () => {
+    const promptId = nextPromptId();
+    beginTurn(promptId, 'edit a file');
+    const result = markShellExecutionForTurn(promptId, 'edit');
+    expect(result).toBe(false);
+    expect(checkpointStore.getByPromptId(promptId)!.hasShellExecution).toBe(
+      false,
+    );
+  });
+
+  it('returns false for an unknown turn', () => {
+    const result = markShellExecutionForTurn(
+      'unknown#turn#0',
+      'run_shell_command',
+    );
+    expect(result).toBe(false);
   });
 });
 

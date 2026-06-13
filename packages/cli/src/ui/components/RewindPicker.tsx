@@ -299,6 +299,9 @@ export function RewindPicker({
                     </Text>
                     <Text color={theme.text.secondary}>{' · '}</Text>
                     <Text color={theme.text.secondary}>{timeLabel}</Text>
+                    {cp.hasShellExecution && (
+                      <Text color={theme.status.warning}>{'  ⚠ shell'}</Text>
+                    )}
                   </Box>
                 );
               })
@@ -346,6 +349,13 @@ export function RewindPicker({
             {'  '}
             {previewText}
           </Text>
+          {selectedCheckpoint?.hasShellExecution && (
+            <Text color={theme.status.warning}>
+              {
+                '  ⚠ This turn ran a shell command — restoring files won’t undo shell side effects.'
+              }
+            </Text>
+          )}
         </Box>
 
         {/* Separator */}

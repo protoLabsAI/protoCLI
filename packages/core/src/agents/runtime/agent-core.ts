@@ -73,6 +73,7 @@ import {
   beginTurn,
   snapshotFileBeforeEdit,
   gitSnapshotBeforeEdit,
+  markShellExecutionForTurn,
 } from '../../core/agentCore.js';
 import {
   sessionScopeLock,
@@ -1130,6 +1131,9 @@ export class AgentCore {
       // ── Checkpoint: snapshot file content before any mutating tool ───────
       // In-memory snapshot (fast, always runs):
       snapshotFileBeforeEdit(promptId, toolName, args);
+      // Flag shell turns as not fully rewindable (shell side effects can't be
+      // restored from file snapshots):
+      markShellExecutionForTurn(promptId, toolName);
       // Git-backed snapshot (durable, fire-and-forget):
       void gitSnapshotBeforeEdit(this.runtimeContext, toolName, args);
       // ─────────────────────────────────────────────────────────────────────

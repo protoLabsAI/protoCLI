@@ -41,6 +41,15 @@ export interface Checkpoint {
    * files that were never touched are absent (to avoid spurious I/O).
    */
   readonly fileSnapshots: ReadonlyMap<string, string>;
+  /**
+   * Whether this turn ran a shell command (`run_shell_command`).
+   *
+   * Rewind can only restore tracked file snapshots; it cannot undo arbitrary
+   * shell side effects (e.g. `rm`, `git`, package installs, network calls).
+   * The UI uses this flag to warn that restoring files won't fully reverse the
+   * turn.
+   */
+  readonly hasShellExecution: boolean;
 }
 
 // ─── CheckpointStore ──────────────────────────────────────────────────────────
@@ -84,6 +93,7 @@ export class CheckpointStore {
       userPrompt,
       timestamp: Date.now(),
       fileSnapshots: new Map<string, string>(),
+      hasShellExecution: false,
     };
     const idx = this.checkpoints.push(checkpoint) - 1;
     this.index.set(promptId, idx);
@@ -124,6 +134,23 @@ export class CheckpointStore {
     }
 
     checkpoint.fileSnapshots.set(filePath, content);
+    return true;
+  }
+
+  /**
+   * Marks the given turn as having run a shell command.
+   *
+   * Should be called **before** a `run_shell_command` tool executes for the
+   * turn. Idempotent: repeated calls for the same turn leave the flag set.
+   *
+   * @param promptId - The turn identifier returned by `add()`.
+   * @returns `true` if the flag was set (turn is tracked), `false` if the
+   *          turn is unknown.
+   */
+  markShellExecution(promptId: string): boolean {
+    const checkpoint = this.getInternal(promptId);
+    if (!checkpoint) return false;
+    checkpoint.hasShellExecution = true;
     return true;
   }
 
@@ -280,6 +307,7 @@ interface InternalCheckpoint {
   userPrompt: string;
   timestamp: number;
   fileSnapshots: Map<string, string>;
+  hasShellExecution: boolean;
 }
 
 /** Projects an InternalCheckpoint to the read-only public Checkpoint shape. */
@@ -289,5 +317,6 @@ function toPublic(c: InternalCheckpoint): Checkpoint {
     userPrompt: c.userPrompt,
     timestamp: c.timestamp,
     fileSnapshots: c.fileSnapshots as ReadonlyMap<string, string>,
+    hasShellExecution: c.hasShellExecution,
   };
 }

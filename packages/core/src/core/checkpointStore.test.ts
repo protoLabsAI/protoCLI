@@ -74,6 +74,11 @@ describe('CheckpointStore', () => {
       expect(store.list()[0].fileSnapshots.size).toBe(0);
     });
 
+    it('starts with hasShellExecution = false', () => {
+      store.add(PROMPT_ID_0, PROMPT_TEXT_0);
+      expect(store.list()[0].hasShellExecution).toBe(false);
+    });
+
     it('is idempotent — calling add() twice with the same promptId is a no-op', () => {
       store.add(PROMPT_ID_0, PROMPT_TEXT_0);
       store.add(PROMPT_ID_0, 'different text should be ignored');
@@ -87,6 +92,38 @@ describe('CheckpointStore', () => {
       const [c0, c1] = store.list();
       expect(c0.promptId).toBe(PROMPT_ID_0);
       expect(c1.promptId).toBe(PROMPT_ID_1);
+    });
+  });
+
+  // ── markShellExecution() ────────────────────────────────────────────────────
+
+  describe('markShellExecution()', () => {
+    it('sets hasShellExecution to true for a tracked turn', () => {
+      store.add(PROMPT_ID_0, PROMPT_TEXT_0);
+      const result = store.markShellExecution(PROMPT_ID_0);
+      expect(result).toBe(true);
+      expect(store.list()[0].hasShellExecution).toBe(true);
+    });
+
+    it('returns false and is a no-op for an unknown turn', () => {
+      const result = store.markShellExecution('nonexistent#turn#0');
+      expect(result).toBe(false);
+    });
+
+    it('is idempotent — repeated calls keep the flag set', () => {
+      store.add(PROMPT_ID_0, PROMPT_TEXT_0);
+      store.markShellExecution(PROMPT_ID_0);
+      store.markShellExecution(PROMPT_ID_0);
+      expect(store.list()[0].hasShellExecution).toBe(true);
+    });
+
+    it('only flags the turn it was called for', () => {
+      store.add(PROMPT_ID_0, PROMPT_TEXT_0);
+      store.add(PROMPT_ID_1, PROMPT_TEXT_1);
+      store.markShellExecution(PROMPT_ID_1);
+      const [c0, c1] = store.list();
+      expect(c0.hasShellExecution).toBe(false);
+      expect(c1.hasShellExecution).toBe(true);
     });
   });
 
