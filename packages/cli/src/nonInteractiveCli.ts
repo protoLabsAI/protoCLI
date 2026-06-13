@@ -21,6 +21,7 @@ import {
   parseAndFormatApiError,
   createDebugLogger,
   SendMessageType,
+  firePostTurnBackground,
 } from '@qwen-code/qwen-code-core';
 import type { Content, Part, PartListUnion } from '@google/genai';
 import type { CLIUserMessage, PermissionMode } from './nonInteractive/types.js';
@@ -508,6 +509,17 @@ export async function runNonInteractive(
           }
           currentMessages = [{ role: 'user', parts: toolResponseParts }];
         } else {
+          // Turn complete (the model stopped requesting tools). Fire-and-forget the
+          // post-turn harness background (session-memory checkpoint, memory
+          // consolidation, skill evolution) — the same suite the interactive TUI
+          // runs, now also on the headless path so long agent-driven sessions get
+          // the durable .proto/session-notes.md checkpoint.
+          firePostTurnBackground(
+            config,
+            geminiClient.getHistory?.() ?? [],
+            uiTelemetryService.getLastPromptTokenCount(),
+          );
+
           // No more tool calls — check if cron jobs are keeping us alive
           const scheduler = !config.isCronEnabled()
             ? null

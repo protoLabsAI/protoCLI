@@ -42,6 +42,8 @@ import {
   injectPermissionRulesIfMissing,
   NotificationType,
   persistPermissionOutcome,
+  uiTelemetryService,
+  firePostTurnBackground,
 } from '@qwen-code/qwen-code-core';
 
 import { RequestError } from '@agentclientprotocol/sdk';
@@ -405,6 +407,16 @@ export class Session implements SessionContext {
             nextMessage = { role: 'user', parts: toolResponseParts };
           }
         }
+        // Turn complete. Fire-and-forget the post-turn harness background
+        // (session-memory checkpoint, memory consolidation, skill evolution) — the
+        // same suite the interactive TUI runs after each turn, now also on the ACP
+        // path so long agent-driven sessions get the durable session-notes.md
+        // checkpoint (previously interactive-only).
+        firePostTurnBackground(
+          this.config,
+          chat.getHistory?.() ?? [],
+          uiTelemetryService.getLastPromptTokenCount(),
+        );
         return { stopReason: 'end_turn' };
       },
     );
