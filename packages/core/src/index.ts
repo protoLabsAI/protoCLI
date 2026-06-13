@@ -122,6 +122,7 @@ export * from './tools/cron-delete.js';
 export * from './services/chatRecordingService.js';
 export * from './services/cronScheduler.js';
 export { runEvolvePass } from './services/evolveService.js';
+export { firePostTurnBackground } from './services/postTurnBackground.js';
 export * from './services/fileDiscoveryService.js';
 export * from './services/fileReadCache.js';
 export * from './services/fileSystemService.js';
