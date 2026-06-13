@@ -123,7 +123,6 @@ describe('Session', () => {
     it('sets model via config and returns current model', async () => {
       const requested = `qwen3-coder-plus(${AuthType.USE_OPENAI})`;
       await session.setModel({
-        sessionId: 'test-session-id',
         modelId: `  ${requested}  `,
       });
 
@@ -136,7 +135,6 @@ describe('Session', () => {
     it('rejects empty/whitespace model IDs', async () => {
       await expect(
         session.setModel({
-          sessionId: 'test-session-id',
           modelId: '   ',
         }),
       ).rejects.toThrow('Invalid params');
@@ -150,7 +148,6 @@ describe('Session', () => {
 
       await expect(
         session.setModel({
-          sessionId: 'test-session-id',
           modelId: `invalid-model(${AuthType.USE_OPENAI})`,
         }),
       ).rejects.toThrow('Invalid model');

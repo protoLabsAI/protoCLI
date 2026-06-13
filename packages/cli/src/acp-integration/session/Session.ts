@@ -57,8 +57,6 @@ import type {
   SessionUpdate,
   SetSessionModeRequest,
   SetSessionModeResponse,
-  SetSessionModelRequest,
-  SetSessionModelResponse,
   AgentSideConnection,
 } from '@agentclientprotocol/sdk';
 import type { LoadedSettings } from '../../config/settings.js';
@@ -645,10 +643,11 @@ export class Session implements SessionContext {
   /**
    * Sets the model for the current session.
    * Validates the model ID and switches the model via Config.
+   *
+   * Driven by the stable `session/set_config_option` path (configId `model`);
+   * ACP's dedicated unstable model-selection method was removed in SDK 0.25.
    */
-  async setModel(
-    params: SetSessionModelRequest,
-  ): Promise<SetSessionModelResponse | void> {
+  async setModel(params: { modelId: string }): Promise<void> {
     const rawModelId = params.modelId.trim();
 
     if (!rawModelId) {
