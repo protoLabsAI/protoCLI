@@ -55,11 +55,3 @@ export function filterAuthMethodsById(
 ): AuthMethod[] {
   return authMethods.filter((method) => method.id === authMethodId);
 }
-
-export function pickAuthMethodsForDetails(details?: string): AuthMethod[] {
-  const authMethods = buildAuthMethods();
-  if (!details) {
-    return authMethods;
-  }
-  return authMethods;
-}
