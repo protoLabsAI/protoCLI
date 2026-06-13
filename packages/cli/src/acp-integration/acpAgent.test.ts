@@ -11,6 +11,7 @@ import type {
 } from '@agentclientprotocol/sdk';
 import type { Config } from '@qwen-code/qwen-code-core';
 import type { LoadedSettings } from '../config/settings.js';
+import { SettingScope } from '../config/settings.js';
 import type { CliArgs } from '../config/config.js';
 
 // Mock the runtime-output-dir wrapper to just run the callback (no fs/context).
@@ -75,7 +76,7 @@ describe('QwenAgent — first-class session lifecycle (ACP 0.25)', () => {
       const result = await agent.logout({});
       expect(result).toEqual({});
       expect(setValue).toHaveBeenCalledWith(
-        expect.anything(),
+        SettingScope.User,
         'security.auth.selectedType',
         undefined,
       );
@@ -87,6 +88,24 @@ describe('QwenAgent — first-class session lifecycle (ACP 0.25)', () => {
       const { agent } = makeAgent();
       const result = await agent.closeSession({ sessionId: 'does-not-exist' });
       expect(result).toEqual({});
+    });
+
+    it('frees an idle session even though there is nothing to cancel', async () => {
+      const { agent } = makeAgent();
+      // An idle session's cancelPendingPrompt() throws "Not currently
+      // generating"; close must swallow that and still free the session.
+      const cancelPendingPrompt = vi
+        .fn()
+        .mockRejectedValue(new Error('Not currently generating'));
+      const sessions = (agent as unknown as { sessions: Map<string, unknown> })
+        .sessions;
+      sessions.set('idle-1', { cancelPendingPrompt });
+
+      const result = await agent.closeSession({ sessionId: 'idle-1' });
+
+      expect(result).toEqual({});
+      expect(cancelPendingPrompt).toHaveBeenCalled();
+      expect(sessions.has('idle-1')).toBe(false);
     });
   });
 
