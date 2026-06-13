@@ -401,7 +401,14 @@ export class QwenAgent implements Agent {
     // it).
     const session = this.sessions.get(params.sessionId);
     if (session) {
-      await session.cancelPendingPrompt();
+      // Best-effort cancel: an idle session has no active prompt/cron, and
+      // cancelPendingPrompt() throws "Not currently generating" in that case.
+      // That must not block freeing the session, so swallow it.
+      try {
+        await session.cancelPendingPrompt();
+      } catch {
+        // Nothing in flight to cancel.
+      }
       this.sessions.delete(params.sessionId);
     }
     return {};
