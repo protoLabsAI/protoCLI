@@ -21,9 +21,13 @@ import { runEvolvePass } from './evolveService.js';
  * Each pass is internally gated (token thresholds, intervals, enable flags), so
  * calling this every turn is cheap and safe. The interactive TUI runs the same
  * trio after each turn (`useGeminiStream`); this is the shared entry point so the
- * **ACP** (`agent-core`) and **headless** (`nonInteractiveCli`) turn loops get the
- * identical long-horizon harness — previously they did not, leaving long
- * agent-driven sessions without the durable checkpoint.
+ * top-level **ACP** (`acp-integration/Session`) and **headless**
+ * (`nonInteractiveCli`) turn loops get the identical long-horizon harness.
+ *
+ * Call this from **top-level** turn loops only. Each pass spawns an `AgentHeadless`
+ * subagent (which runs on `agent-core`), so wiring it into the subagent runtime
+ * itself would recurse — and the session-notes checkpoint is a single per-project
+ * file owned by the main session that a subagent must not overwrite.
  *
  * Never throws — each pass is independent and best-effort.
  */
