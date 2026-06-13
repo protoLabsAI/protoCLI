@@ -92,33 +92,80 @@ export async function runAcpAgent(
     stream,
   );
 
-  // Handle SIGTERM/SIGINT for graceful shutdown.
-  // Without this, signal handlers registered elsewhere in the CLI
-  // (e.g., stdin raw mode restoration) override the default exit behavior,
-  // causing the ACP process to ignore termination signals.
+  installAcpShutdown(connection);
+
+  await connection.closed;
+}
+
+/**
+ * Wire the ACP agent's process teardown so it actually exits when the client
+ * goes away.
+ *
+ * Two leaks this closes (each left an orphaned `proto --acp` process pinning a
+ * gateway keep-alive socket, one per dead client):
+ *
+ *   1. **SIGTERM was swallowed.** Registering a signal handler overrides Node's
+ *      default terminate-on-SIGTERM, but the old handler only *destroyed the
+ *      streams* — it never exited. The open gateway socket kept the event loop
+ *      alive, so the process hung and needed `kill -9`.
+ *   2. **Client death didn't exit.** The agent parked on `connection.closed`;
+ *      if the client died without cleanly EOF-ing stdin (e.g. a shared pipe held
+ *      open elsewhere), that promise never resolved and the orphan lived on.
+ *
+ * Fix: force an exit on ANY teardown signal — the ACP connection closing, stdin
+ * end/close (client gone), or SIGTERM/SIGINT (so a plain `kill` works, no `-9`).
+ * Streams are destroyed first so a final frame can flush; an unref'd timer
+ * hard-exits if `destroy()` wedges (the gateway socket is what keeps the loop
+ * alive, so the timer reliably fires).
+ *
+ * Exported (with injectable deps) so the teardown contract is unit-testable
+ * without spawning a real process.
+ */
+export function installAcpShutdown(
+  connection: Pick<AgentSideConnection, 'closed'>,
+  deps: {
+    onSignal?: (sig: NodeJS.Signals, fn: () => void) => void;
+    stdin?: Pick<NodeJS.ReadStream, 'on' | 'destroy'>;
+    stdout?: Pick<NodeJS.WriteStream, 'destroy'>;
+    exit?: (code?: number) => void;
+    setTimeoutFn?: typeof setTimeout;
+    log?: (msg: string) => void;
+  } = {},
+): void {
+  const onSignal = deps.onSignal ?? ((sig, fn) => void process.on(sig, fn));
+  const stdin = deps.stdin ?? process.stdin;
+  const stdout = deps.stdout ?? process.stdout;
+  const exit = deps.exit ?? ((code?: number) => process.exit(code));
+  const setTimeoutFn = deps.setTimeoutFn ?? setTimeout;
+  const log = deps.log ?? ((msg) => debugLogger.debug(msg));
+
   let shuttingDown = false;
-  const shutdownHandler = () => {
+  const shutdown = (reason: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    debugLogger.debug('[ACP] Shutdown signal received, closing streams');
+    log(`[ACP] shutting down: ${reason}`);
     try {
-      process.stdin.destroy();
+      stdin.destroy?.();
     } catch {
       // stdin may already be closed
     }
     try {
-      process.stdout.destroy();
+      stdout.destroy?.();
     } catch {
       // stdout may already be closed
     }
+    const timer = setTimeoutFn(() => exit(0), 1000);
+    (timer as { unref?: () => void }).unref?.();
   };
-  process.on('SIGTERM', shutdownHandler);
-  process.on('SIGINT', shutdownHandler);
 
-  await connection.closed;
-
-  process.off('SIGTERM', shutdownHandler);
-  process.off('SIGINT', shutdownHandler);
+  onSignal('SIGTERM', () => shutdown('SIGTERM'));
+  onSignal('SIGINT', () => shutdown('SIGINT'));
+  stdin.on('close', () => shutdown('stdin close'));
+  stdin.on('end', () => shutdown('stdin end'));
+  void Promise.resolve(connection.closed).then(
+    () => shutdown('connection closed'),
+    () => shutdown('connection closed (error)'),
+  );
 }
 
 export function toStdioServer(server: McpServer): McpServerStdio | undefined {
