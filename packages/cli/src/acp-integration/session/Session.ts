@@ -415,7 +415,7 @@ export class Session implements SessionContext {
         firePostTurnBackground(
           this.config,
           chat.getHistory?.() ?? [],
-          uiTelemetryService.getLastPromptTokenCount(),
+          uiTelemetryService.getLastPromptTokenCount?.() ?? 0,
         );
         return { stopReason: 'end_turn' };
       },

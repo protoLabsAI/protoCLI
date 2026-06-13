@@ -517,7 +517,7 @@ export async function runNonInteractive(
           firePostTurnBackground(
             config,
             geminiClient.getHistory?.() ?? [],
-            uiTelemetryService.getLastPromptTokenCount(),
+            uiTelemetryService.getLastPromptTokenCount?.() ?? 0,
           );
 
           // No more tool calls — check if cron jobs are keeping us alive
