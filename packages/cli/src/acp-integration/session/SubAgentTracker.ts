@@ -228,7 +228,10 @@ export class SubAgentTracker {
 
         // Respond to subagent with the outcome
         await event.respond(outcome, {
-          answers: 'answers' in output ? output.answers : undefined,
+          answers:
+            'answers' in output
+              ? (output.answers as Record<string, string> | undefined)
+              : undefined,
         });
       } catch (error) {
         // If permission request fails, cancel the tool call

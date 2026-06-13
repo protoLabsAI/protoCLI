@@ -12,7 +12,6 @@ import {
   MCPServerConfig,
   SessionService,
   SESSION_TITLE_MAX_LENGTH,
-  tokenLimit,
   type Config,
   type ConversationRecord,
 } from '@qwen-code/qwen-code-core';
@@ -28,12 +27,18 @@ import type {
   AuthMethod,
   CancelNotification,
   ClientCapabilities,
+  CloseSessionRequest,
+  CloseSessionResponse,
+  DeleteSessionRequest,
+  DeleteSessionResponse,
   InitializeRequest,
   InitializeResponse,
   ListSessionsRequest,
   ListSessionsResponse,
   LoadSessionRequest,
   LoadSessionResponse,
+  LogoutRequest,
+  LogoutResponse,
   McpServer,
   McpServerHttp,
   McpServerSse,
@@ -42,13 +47,13 @@ import type {
   NewSessionResponse,
   PromptRequest,
   PromptResponse,
+  ResumeSessionRequest,
+  ResumeSessionResponse,
   SessionConfigOption,
   SessionInfo,
   SessionModeState,
   SetSessionConfigOptionRequest,
   SetSessionConfigOptionResponse,
-  SetSessionModelRequest,
-  SetSessionModelResponse,
   SetSessionModeRequest,
   SetSessionModeResponse,
 } from '@agentclientprotocol/sdk';
@@ -141,7 +146,7 @@ export function toHttpServer(
   return undefined;
 }
 
-class QwenAgent implements Agent {
+export class QwenAgent implements Agent {
   private sessions: Map<string, Session> = new Map();
   private clientCapabilities: ClientCapabilities | undefined;
 
@@ -175,6 +180,11 @@ class QwenAgent implements Agent {
         sessionCapabilities: {
           list: {},
           resume: {},
+          close: {},
+          delete: {},
+        },
+        auth: {
+          logout: {},
         },
         mcpCapabilities: {
           sse: true,
@@ -204,13 +214,11 @@ class QwenAgent implements Agent {
     this.setupFileSystem(config);
 
     const session = await this.createAndStoreSession(config);
-    const availableModels = this.buildAvailableModels(config);
     const modesData = this.buildModesData(config);
     const configOptions = this.buildConfigOptions(config);
 
     return {
       sessionId: session.getId(),
-      models: availableModels,
       modes: modesData,
       configOptions,
     };
@@ -239,17 +247,48 @@ class QwenAgent implements Agent {
     await this.createAndStoreSession(config, sessionData?.conversation);
 
     const modesData = this.buildModesData(config);
-    const availableModels = this.buildAvailableModels(config);
     const configOptions = this.buildConfigOptions(config);
 
     return {
       modes: modesData,
-      models: availableModels,
       configOptions,
     };
   }
 
-  async unstable_listSessions(
+  async resumeSession(
+    params: ResumeSessionRequest,
+  ): Promise<ResumeSessionResponse> {
+    const exists = await runWithAcpRuntimeOutputDir(
+      this.settings,
+      params.cwd,
+      async () => {
+        const sessionService = new SessionService(params.cwd);
+        return sessionService.sessionExists(params.sessionId);
+      },
+    );
+
+    const config = await this.newSessionConfig(
+      params.cwd,
+      params.mcpServers ?? [],
+      params.sessionId,
+      exists,
+    );
+    await this.ensureAuthenticated(config);
+    this.setupFileSystem(config);
+
+    // Resume the session context WITHOUT replaying history back to the client
+    // (unlike loadSession). The model's chat history is rehydrated by
+    // geminiClient.initialize() from the resumed session data, so the
+    // conversation can continue; we simply skip re-streaming past turns.
+    await this.createAndStoreSession(config);
+
+    return {
+      modes: this.buildModesData(config),
+      configOptions: this.buildConfigOptions(config),
+    };
+  }
+
+  async listSessions(
     params: ListSessionsRequest,
   ): Promise<ListSessionsResponse> {
     const cwd = params.cwd || process.cwd();
@@ -300,19 +339,6 @@ class QwenAgent implements Agent {
     return session.setMode(params);
   }
 
-  async unstable_setSessionModel(
-    params: SetSessionModelRequest,
-  ): Promise<SetSessionModelResponse | void> {
-    const session = this.sessions.get(params.sessionId);
-    if (!session) {
-      throw RequestError.invalidParams(
-        undefined,
-        `Session not found for id: ${params.sessionId}`,
-      );
-    }
-    return await session.setModel(params);
-  }
-
   async setSessionConfigOption(
     params: SetSessionConfigOptionRequest,
   ): Promise<SetSessionConfigOptionResponse> {
@@ -335,10 +361,7 @@ class QwenAgent implements Agent {
         break;
       }
       case 'model': {
-        await this.unstable_setSessionModel({
-          sessionId,
-          modelId: value as string,
-        });
+        await session.setModel({ modelId: value as string });
         break;
       }
       default:
@@ -369,6 +392,44 @@ class QwenAgent implements Agent {
     await session.cancelPendingPrompt();
   }
 
+  async closeSession(
+    params: CloseSessionRequest,
+  ): Promise<CloseSessionResponse> {
+    // Cancel any in-flight prompt and drop the in-memory session to free
+    // resources. Lenient: closing an already-closed/unknown session is a no-op.
+    // The persisted session on disk is left intact (use deleteSession to remove
+    // it).
+    const session = this.sessions.get(params.sessionId);
+    if (session) {
+      await session.cancelPendingPrompt();
+      this.sessions.delete(params.sessionId);
+    }
+    return {};
+  }
+
+  async deleteSession(
+    params: DeleteSessionRequest,
+  ): Promise<DeleteSessionResponse> {
+    // DeleteSessionRequest carries no cwd; default to the process cwd (the
+    // session-storage root used elsewhere). Also drop any in-memory session so
+    // a deleted session can't keep running.
+    await this.removeStoredSession(process.cwd(), params.sessionId);
+    this.sessions.delete(params.sessionId);
+    return {};
+  }
+
+  async logout(_params: LogoutRequest): Promise<LogoutResponse> {
+    // Clear the persisted auth selection so the next session must
+    // re-authenticate. API keys live in the environment and aren't ours to
+    // unset, so this resets the selected auth type rather than revoking creds.
+    this.settings.setValue(
+      SettingScope.User,
+      'security.auth.selectedType',
+      undefined,
+    );
+    return {};
+  }
+
   async extMethod(
     method: string,
     params: Record<string, unknown>,
@@ -378,6 +439,7 @@ class QwenAgent implements Agent {
 
     switch (method) {
       case 'deleteSession': {
+        // Backwards-compatible alias for the stable `session/delete` method.
         const sessionId = params['sessionId'] as string;
         if (!sessionId || !SESSION_ID_RE.test(sessionId)) {
           throw RequestError.invalidParams(
@@ -385,14 +447,7 @@ class QwenAgent implements Agent {
             'Invalid or missing sessionId',
           );
         }
-        const success = await runWithAcpRuntimeOutputDir(
-          this.settings,
-          cwd,
-          async () => {
-            const sessionService = new SessionService(cwd);
-            return sessionService.removeSession(sessionId);
-          },
-        );
+        const success = await this.removeStoredSession(cwd, sessionId);
         return { success };
       }
       case 'renameSession': {
@@ -567,6 +622,16 @@ class QwenAgent implements Agent {
     config.setFileSystemService(acpFileSystemService);
   }
 
+  private async removeStoredSession(
+    cwd: string,
+    sessionId: string,
+  ): Promise<boolean> {
+    return runWithAcpRuntimeOutputDir(this.settings, cwd, async () => {
+      const sessionService = new SessionService(cwd);
+      return sessionService.removeSession(sessionId);
+    });
+  }
+
   private async createAndStoreSession(
     config: Config,
     conversation?: ConversationRecord,
@@ -598,45 +663,6 @@ class QwenAgent implements Agent {
     }
 
     return session;
-  }
-
-  private buildAvailableModels(config: Config): NewSessionResponse['models'] {
-    const rawCurrentModelId = (
-      config.getModel() ||
-      this.config.getModel() ||
-      ''
-    ).trim();
-    const currentAuthType = config.getAuthType();
-    const allConfiguredModels = config.getAllConfiguredModels();
-
-    const activeRuntimeSnapshot = config.getActiveRuntimeModelSnapshot?.();
-    const currentModelId = activeRuntimeSnapshot
-      ? formatAcpModelId(
-          activeRuntimeSnapshot.id,
-          activeRuntimeSnapshot.authType,
-        )
-      : this.formatCurrentModelId(rawCurrentModelId, currentAuthType);
-
-    const mappedAvailableModels = allConfiguredModels.map((model) => {
-      const effectiveModelId =
-        model.isRuntimeModel && model.runtimeSnapshotId
-          ? model.runtimeSnapshotId
-          : model.id;
-
-      return {
-        modelId: formatAcpModelId(effectiveModelId, model.authType),
-        name: model.label,
-        description: model.description ?? null,
-        _meta: {
-          contextLimit: model.contextWindowSize ?? tokenLimit(model.id),
-        },
-      };
-    });
-
-    return {
-      currentModelId,
-      availableModels: mappedAvailableModels,
-    };
   }
 
   private buildModesData(config: Config): SessionModeState {
