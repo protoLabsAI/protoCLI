@@ -200,6 +200,35 @@ describe('Session', () => {
   });
 
   describe('prompt', () => {
+    it('handles unsupported slash commands gracefully without throwing', async () => {
+      vi.mocked(nonInteractiveCliCommands.handleSlashCommand).mockResolvedValue(
+        {
+          type: 'unsupported',
+          reason: 'only available in the interactive CLI',
+          originalType: 'dialog',
+        },
+      );
+
+      const promptRequest: PromptRequest = {
+        sessionId: 'test-session-id',
+        prompt: [{ type: 'text', text: '/rewind' }],
+      };
+
+      const result = await session.prompt(promptRequest);
+
+      // Turn ends cleanly instead of rejecting with a JSON-RPC error.
+      expect(result).toEqual({ stopReason: 'end_turn' });
+      expect(mockClient.extNotification).toHaveBeenCalledWith(
+        '_qwencode/slash_command',
+        expect.objectContaining({
+          messageType: 'error',
+          message: expect.stringContaining('not supported'),
+        }),
+      );
+      // The model must not be invoked for an unsupported command.
+      expect(mockChat.sendMessageStream).not.toHaveBeenCalled();
+    });
+
     it('passes resolved paths to read_many_files tool', async () => {
       const tempDir = await fs.mkdtemp(
         path.join(os.tmpdir(), 'qwen-acp-session-'),
