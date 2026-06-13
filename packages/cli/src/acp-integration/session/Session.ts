@@ -1308,9 +1308,24 @@ export class Session implements SessionContext {
       }
 
       case 'unsupported': {
-        // Command returned an unsupported result type
-        const unsupportedError = `Slash command not supported in ACP integration: ${result.reason}`;
-        throw new Error(unsupportedError);
+        // Inform the client the command isn't available in the ACP integration,
+        // but don't throw — a raw rejection surfaces as a hard JSON-RPC error in
+        // the editor and aborts the turn. Emit a user-facing notification and
+        // end the turn gracefully instead.
+        const command = originalPrompt
+          .filter((block) => block.type === 'text')
+          .map((block) => (block.type === 'text' ? block.text : ''))
+          .join(' ');
+
+        await this.client.extNotification('_qwencode/slash_command', {
+          sessionId: this.sessionId,
+          command,
+          messageType: 'error',
+          message: `Slash command not supported in the ACP integration: ${result.reason}`,
+        });
+
+        // Command was handled (nothing to send to the model).
+        return null;
       }
 
       case 'no_command':
