@@ -87,6 +87,31 @@ export function snapshotFileBeforeEdit(
 }
 
 /**
+ * Record that the current turn ran a shell command, if the tool being
+ * scheduled is a shell tool.
+ *
+ * Rewind only restores tracked file snapshots, so it cannot undo arbitrary
+ * shell side effects. Flagging the turn lets the rewind UI warn the user.
+ *
+ * This is a no-op when:
+ * - The tool name is not a shell tool.
+ * - The turn is unknown (e.g. `beginTurn` was not called).
+ *
+ * Call this **before** the tool's `execute()` method runs.
+ *
+ * @param promptId - Turn identifier (same value passed to `beginTurn`).
+ * @param toolName - The tool's canonical name (from `ToolNames`).
+ * @returns `true` if the turn was flagged, `false` otherwise.
+ */
+export function markShellExecutionForTurn(
+  promptId: string,
+  toolName: string,
+): boolean {
+  if (!SHELL_TOOLS.has(toolName)) return false;
+  return checkpointStore.markShellExecution(promptId);
+}
+
+/**
  * Create a git snapshot in the shadow repo before a file-mutating tool runs.
  * Provides durable, named checkpoints that survive process crashes and enable
  * per-edit rollback via GitService.restoreProjectFromSnapshot().
@@ -135,6 +160,14 @@ export const FILE_MUTATING_TOOLS = new Set<string>([
   // Add the canonical name so external callers can extend this set.
   'notebook_edit',
 ]);
+
+/**
+ * The set of tool names whose execution can produce side effects that rewind
+ * cannot undo (shell commands).
+ *
+ * Calls to these tools flag the turn's checkpoint as not fully rewindable.
+ */
+export const SHELL_TOOLS = new Set<string>([ToolNames.SHELL]);
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
