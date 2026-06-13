@@ -13,6 +13,7 @@ export default {
   'use-lsp': 'Language Server Protocol',
   'use-sandbox': 'Sandboxing',
   'run-headless': 'Run Headless (Non-Interactive)',
+  'acp-coding-agent': 'ACP Coding Agent',
   'scheduled-tasks': 'Schedule Prompts',
   goal: 'Work Toward a Goal',
   // --- Workflow ---

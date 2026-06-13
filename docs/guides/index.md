@@ -16,6 +16,7 @@ Task-oriented how-tos for specific goals. Pick the guide that matches what you w
 - [Language Server Protocol](/guides/use-lsp) — Give the agent live diagnostics and go-to-definition
 - [Sandboxing](/guides/use-sandbox) — Isolate agent execution in a container
 - [Run Headless](/guides/run-headless) — Drive proto non-interactively from scripts and CI
+- [ACP Coding Agent](/guides/acp-coding-agent) — Drive proto as a coding agent from an editor or orchestrator over the Agent Client Protocol
 - [Schedule Prompts](/guides/scheduled-tasks) — Run prompts on a cron schedule
 
 ## Workflow
