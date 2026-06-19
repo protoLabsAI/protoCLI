@@ -18,6 +18,7 @@ import {
   DEFAULT_TRUNCATE_TOOL_OUTPUT_THRESHOLD,
 } from '@qwen-code/qwen-code-core';
 import type { CustomTheme } from '../ui/themes/theme.js';
+import type { A2aAgentConfig } from '../a2a-client/types.js';
 import { getLanguageSettingsOptions } from '../i18n/languages.js';
 
 export type SettingsType =
@@ -185,6 +186,20 @@ const SETTINGS_SCHEMA = {
     requiresRestart: true,
     default: {} as Record<string, MCPServerConfig>,
     description: 'Configuration for MCP servers.',
+    showInDialog: false,
+    mergeStrategy: MergeStrategy.SHALLOW_MERGE,
+  },
+
+  // Registered A2A agents — named shortcuts for `proto agent <name>` so you
+  // never have to type a URL. Managed via `proto agent add/remove/list`.
+  a2aAgents: {
+    type: 'object',
+    label: 'A2A Agents',
+    category: 'Advanced',
+    requiresRestart: false,
+    default: {} as Record<string, A2aAgentConfig>,
+    description:
+      'Registered A2A agents addressable by name via `proto agent <name>`.',
     showInDialog: false,
     mergeStrategy: MergeStrategy.SHALLOW_MERGE,
   },

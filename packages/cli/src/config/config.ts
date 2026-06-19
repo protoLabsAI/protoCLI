@@ -37,6 +37,7 @@ import type { Settings } from './settings.js';
 import { loadSettings, SettingScope } from './settings.js';
 import { authCommand } from '../commands/auth.js';
 import { setupCommand } from '../commands/setup.js';
+import { agentCommand, agentsCommand } from '../commands/agent.js';
 import {
   resolveCliGenerationConfig,
   getAuthTypeFromEnv,
@@ -624,7 +625,10 @@ export async function parseArguments(): Promise<CliArgs> {
     // Register Setup subcommand
     .command(setupCommand)
     // Register Hooks subcommands
-    .command(hooksCommand);
+    .command(hooksCommand)
+    // Register A2A agent subcommands (talk to / manage A2A agents)
+    .command(agentCommand)
+    .command(agentsCommand);
 
   yargsInstance
     .version(await getCliVersion()) // This will enable the --version flag based on package.json
@@ -645,9 +649,12 @@ export async function parseArguments(): Promise<CliArgs> {
     result._.length > 0 &&
     (result._[0] === 'mcp' ||
       result._[0] === 'extensions' ||
-      result._[0] === 'hooks')
+      result._[0] === 'hooks' ||
+      result._[0] === 'agent' ||
+      result._[0] === 'agents')
   ) {
-    // MCP/Extensions/Hooks commands handle their own execution and process exit
+    // These commands handle their own execution and process exit; don't fall
+    // through to the chat/launch path.
     process.exit(0);
   }
 
