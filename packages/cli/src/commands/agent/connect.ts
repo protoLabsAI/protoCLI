@@ -15,6 +15,7 @@ import { writeStdoutLine, writeStderrLine } from '../../utils/stdioHelpers.js';
 import { A2aClient } from '../../a2a-client/client.js';
 import { buildClient, resolveConfigured } from '../../a2a-client/registry.js';
 import { discover } from '../../a2a-client/discovery.js';
+import { runA2aChatUI } from '../../ui/components/a2a-view/runA2aChatUI.js';
 
 const DIM = '\x1b[2m';
 const CYAN = '\x1b[36m';
@@ -65,6 +66,14 @@ export async function connectAndChat(name: string): Promise<void> {
   if (skills.length)
     writeStdoutLine(`${DIM}skills: ${skills.join(', ')}${RESET}`);
   writeStdoutLine(`${DIM}Type a message. Ctrl-C or /exit to quit.${RESET}\n`);
+
+  // Rich Ink TUI when interactive; the readline loop below is the fallback for
+  // piped / non-TTY input (CI, scripts, `echo … | proto agent …`).
+  if (process.stdin.isTTY) {
+    await runA2aChatUI(client, agentName);
+    writeStdoutLine(`${DIM}Disconnected.${RESET}`);
+    return;
+  }
 
   // Pin one contextId for the whole session so the agent keeps memory across turns.
   const contextId = randomUUID();
