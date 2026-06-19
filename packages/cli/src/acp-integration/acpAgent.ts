@@ -16,12 +16,16 @@ import {
   type ConversationRecord,
 } from '@qwen-code/qwen-code-core';
 import {
-  AgentSideConnection,
+  agent as createAgentApp,
+  methods,
   RequestError,
   ndJsonStream,
   PROTOCOL_VERSION,
 } from '@agentclientprotocol/sdk';
 import type {
+  AcpConnection,
+  AgentApp,
+  AgentContext,
   Agent,
   AuthenticateRequest,
   AuthMethod,
@@ -58,6 +62,7 @@ import type {
   SetSessionModeResponse,
 } from '@agentclientprotocol/sdk';
 import { buildAuthMethods } from './authMethods.js';
+import { AgentContextChannel, type AcpClientChannel } from './clientChannel.js';
 import { AcpFileSystemService } from './service/filesystem.js';
 import { Readable, Writable } from 'node:stream';
 import type { LoadedSettings } from '../config/settings.js';
@@ -87,14 +92,104 @@ export async function runAcpAgent(
   console.debug = console.error;
 
   const stream = ndJsonStream(stdout, stdin);
-  const connection = new AgentSideConnection(
-    (conn) => new QwenAgent(config, settings, argv, conn),
-    stream,
-  );
+  const impl = new QwenAgent(config, settings, argv);
+  const app = buildAcpApp(impl);
+
+  const connection = app.connect(stream);
+  impl.attachConnection(connection);
 
   installAcpShutdown(connection);
 
   await connection.closed;
+}
+
+/** Custom methods that predate the stabilized lifecycle, routed to `extMethod`. */
+const EXT_METHODS = [
+  'deleteSession',
+  'renameSession',
+  'getAccountInfo',
+] as const;
+
+/**
+ * Register every ACP method handler onto a fresh app and return it. Exported so
+ * the full method→handler wiring is exercisable without spawning a process — a
+ * missing registration (e.g. a stabilized method the agent forgot to wire) is
+ * the principal regression risk of the app-API migration.
+ *
+ * Each handler captures the per-connection `AgentContext` as the agent's stable
+ * outbound channel before delegating. Capturing is idempotent (the context is
+ * the same shared object on every handler), so doing it everywhere — rather than
+ * only on `initialize` — is robust to non-conformant clients that skip it.
+ * Background work (the cron scheduler, the fire-and-forget post-turn harness)
+ * then emits `session/update` through that channel after its originating
+ * `session/prompt` handler has already returned.
+ */
+export function buildAcpApp(impl: QwenAgent): AgentApp {
+  const app = createAgentApp({ name: 'proto' })
+    .onRequest(methods.agent.initialize, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.initialize(ctx.params);
+    })
+    .onRequest(methods.agent.authenticate, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.authenticate(ctx.params);
+    })
+    .onRequest(methods.agent.session.new, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.newSession(ctx.params);
+    })
+    .onRequest(methods.agent.session.load, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.loadSession(ctx.params);
+    })
+    .onRequest(methods.agent.session.resume, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.resumeSession(ctx.params);
+    })
+    .onRequest(methods.agent.session.list, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.listSessions(ctx.params);
+    })
+    .onRequest(methods.agent.session.setMode, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.setSessionMode(ctx.params);
+    })
+    .onRequest(methods.agent.session.setConfigOption, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.setSessionConfigOption(ctx.params);
+    })
+    .onRequest(methods.agent.session.prompt, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.prompt(ctx.params);
+    })
+    .onRequest(methods.agent.session.close, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.closeSession(ctx.params);
+    })
+    .onRequest(methods.agent.session.delete, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.deleteSession(ctx.params);
+    })
+    .onRequest(methods.agent.logout, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.logout(ctx.params);
+    })
+    .onNotification(methods.agent.session.cancel, (ctx) =>
+      impl.cancel(ctx.params),
+    );
+
+  // The app API has no `extMethod` fallback, so register each custom method
+  // explicitly with a passthrough parser; `extMethod` does its own validation.
+  const passthrough = (params: unknown) =>
+    (params ?? {}) as Record<string, unknown>;
+  for (const method of EXT_METHODS) {
+    app.onRequest(method, passthrough, (ctx) => {
+      impl.captureChannel(ctx.client);
+      return impl.extMethod(method, ctx.params);
+    });
+  }
+
+  return app;
 }
 
 /**
@@ -122,7 +217,7 @@ export async function runAcpAgent(
  * without spawning a real process.
  */
 export function installAcpShutdown(
-  connection: Pick<AgentSideConnection, 'closed'>,
+  connection: Pick<AcpConnection, 'closed'>,
   deps: {
     onSignal?: (sig: NodeJS.Signals, fn: () => void) => void;
     stdin?: Pick<NodeJS.ReadStream, 'on' | 'destroy'>;
@@ -197,12 +292,45 @@ export class QwenAgent implements Agent {
   private sessions: Map<string, Session> = new Map();
   private clientCapabilities: ClientCapabilities | undefined;
 
+  /** Stable outbound channel, captured from the first handler's AgentContext. */
+  private channel: AcpClientChannel | undefined;
+  /** Resolves when the connection closes; threaded into the channel. */
+  private connClosed: Promise<void> = new Promise<void>(() => {});
+
   constructor(
     private config: Config,
     private settings: LoadedSettings,
     private argv: CliArgs,
-    private connection: AgentSideConnection,
   ) {}
+
+  /**
+   * Record the live connection so the outbound channel can expose its `closed`
+   * promise. Called once, immediately after `app.connect(...)`.
+   */
+  attachConnection(connection: Pick<AcpConnection, 'closed'>): void {
+    this.connClosed = connection.closed;
+  }
+
+  /**
+   * Capture the per-connection AgentContext as the agent's outbound channel.
+   * Idempotent: the context is the same shared object on every handler, so only
+   * the first call builds the channel.
+   */
+  captureChannel(client: AgentContext): AcpClientChannel {
+    if (!this.channel) {
+      this.channel = new AgentContextChannel(client, this.connClosed);
+    }
+    return this.channel;
+  }
+
+  /** The outbound channel, or throw if no handler has run yet (unreachable in
+   * normal ACP flow, where `initialize` precedes any session work). */
+  private requireChannel(): AcpClientChannel {
+    if (!this.channel) {
+      throw new Error('ACP outbound channel not yet available');
+    }
+    return this.channel;
+  }
 
   async initialize(args: InitializeRequest): Promise<InitializeResponse> {
     this.clientCapabilities = args.clientCapabilities;
@@ -668,7 +796,7 @@ export class QwenAgent implements Agent {
     if (!this.clientCapabilities?.fs) return;
 
     const acpFileSystemService = new AcpFileSystemService(
-      this.connection,
+      this.requireChannel(),
       config.getSessionId(),
       this.clientCapabilities.fs,
       config.getFileSystemService(),
@@ -703,7 +831,7 @@ export class QwenAgent implements Agent {
       sessionId,
       chat,
       config,
-      this.connection,
+      this.requireChannel(),
       this.settings,
     );
     this.sessions.set(sessionId, session);

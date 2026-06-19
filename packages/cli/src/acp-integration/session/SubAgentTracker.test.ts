@@ -22,7 +22,7 @@ import {
   AgentEventType,
   ToolConfirmationOutcome,
 } from '@qwen-code/qwen-code-core';
-import type { AgentSideConnection } from '@agentclientprotocol/sdk';
+import type { AcpClientChannel } from '../clientChannel.js';
 import { EventEmitter } from 'node:events';
 
 // Helper to create a mock AgentToolCallEvent with required fields
@@ -115,7 +115,7 @@ function createStreamTextEvent(
 
 describe('SubAgentTracker', () => {
   let mockContext: SessionContext;
-  let mockClient: AgentSideConnection;
+  let mockClient: AcpClientChannel;
   let sendUpdateSpy: ReturnType<typeof vi.fn>;
   let requestPermissionSpy: ReturnType<typeof vi.fn>;
   let tracker: SubAgentTracker;
@@ -142,7 +142,7 @@ describe('SubAgentTracker', () => {
 
     mockClient = {
       requestPermission: requestPermissionSpy,
-    } as unknown as AgentSideConnection;
+    } as unknown as AcpClientChannel;
 
     tracker = new SubAgentTracker(
       mockContext,

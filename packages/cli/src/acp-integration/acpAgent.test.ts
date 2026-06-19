@@ -5,10 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type {
-  AgentSideConnection,
-  InitializeRequest,
-} from '@agentclientprotocol/sdk';
+import type { InitializeRequest } from '@agentclientprotocol/sdk';
 import type { Config } from '@qwen-code/qwen-code-core';
 import type { LoadedSettings } from '../config/settings.js';
 import { SettingScope } from '../config/settings.js';
@@ -40,8 +37,7 @@ function makeAgent(overrides?: { setValue?: ReturnType<typeof vi.fn> }) {
   const settings = { merged: {}, setValue } as unknown as LoadedSettings;
   const config = {} as unknown as Config;
   const argv = {} as unknown as CliArgs;
-  const connection = {} as unknown as AgentSideConnection;
-  return { agent: new QwenAgent(config, settings, argv, connection), setValue };
+  return { agent: new QwenAgent(config, settings, argv), setValue };
 }
 
 describe('QwenAgent — first-class session lifecycle (ACP 0.25)', () => {
