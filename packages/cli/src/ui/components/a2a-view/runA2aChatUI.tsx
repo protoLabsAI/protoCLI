@@ -13,8 +13,9 @@
  * no local tool loop here; tool activity is surfaced as dim info lines.
  */
 
-import { useCallback, useRef, useState } from 'react';
-import { render, Box, Text, Static, useStdin } from 'ink';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { render, Box, Text, Static, useStdin, useStdout } from 'ink';
+import ansiEscapes from 'ansi-escapes';
 import Spinner from 'ink-spinner';
 import { randomUUID } from 'node:crypto';
 import { KeypressProvider } from '../../contexts/KeypressContext.js';
@@ -51,7 +52,11 @@ function A2aChat({
 }) {
   const { columns: terminalWidth } = useTerminalSize();
   const { stdin, setRawMode } = useStdin();
+  const { stdout } = useStdout();
 
+  // Bumping this remounts <Static> so the committed history re-emits at the
+  // current width. Ink's <Static> is append-only and never reflows on resize.
+  const [staticKey, setStaticKey] = useState(0);
   const [committed, setCommitted] = useState<HistoryItem[]>([]);
   const [pendingText, setPendingText] = useState('');
   const [pendingThought, setPendingThought] = useState('');
@@ -65,6 +70,7 @@ function A2aChat({
   const nextId = () => idRef.current++;
   const abortRef = useRef<AbortController | null>(null);
   const taskIdRef = useRef('');
+  const didMount = useRef(false);
 
   const buffer = useTextBuffer({
     initialText: '',
@@ -73,6 +79,28 @@ function A2aChat({
     setRawMode,
     isValidPath: () => false,
   });
+
+  // Reflow committed history on terminal resize. Ink's <Static> writes each item
+  // to stdout once and never re-wraps it, so on resize the history keeps its old
+  // wrapping while the live region reflows — visually broken. Mirror the main
+  // TUI's refreshStatic: synchronized-output clear + remount <Static> at the new
+  // width. Trailing-debounced (~120ms) so a resize *drag* redraws once, not per
+  // SIGWINCH (which flickers/duplicates). Caveat: only the visible frame can be
+  // reflowed — content already scrolled into the terminal's scrollback is
+  // immutable cell data and stays as-wrapped (inherent terminal limitation).
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return; // skip the initial mount — nothing to reflow yet
+    }
+    const t = setTimeout(() => {
+      stdout.write('\x1b[?2026h'); // begin synchronized update (atomic frame swap)
+      stdout.write(ansiEscapes.clearTerminal);
+      stdout.write('\x1b[?2026l'); // end synchronized update
+      setStaticKey((k) => k + 1);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [terminalWidth, stdout]);
 
   const stopInflight = useCallback(() => {
     abortRef.current?.abort();
@@ -215,7 +243,7 @@ function A2aChat({
 
   return (
     <Box flexDirection="column">
-      <Static items={committed}>
+      <Static key={staticKey} items={committed}>
         {(item) => (
           <HistoryItemDisplay
             key={item.id}
