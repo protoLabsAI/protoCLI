@@ -105,7 +105,9 @@ export async function connectAndChat(name: string): Promise<void> {
       awaitingTaskId = null;
       inflight = new AbortController();
       let wroteText = false;
-      let lastTaskId = '';
+      // Seed with the resume id so an early abort (before any `task` frame) can
+      // still cancel the parked task.
+      let lastTaskId = resumeTaskId ?? '';
       try {
         for await (const ev of client.streamMessage(line, {
           contextId,
@@ -153,6 +155,9 @@ export async function connectAndChat(name: string): Promise<void> {
           if (lastTaskId) await client.cancel(lastTaskId);
           stdout.write(`${DIM} (cancelled)${RESET}\n`);
         } else {
+          // A failed send must not drop a parked input-required task — restore
+          // the handle so the next line still resumes it.
+          if (!awaitingTaskId && resumeTaskId) awaitingTaskId = resumeTaskId;
           writeStderrLine(`\nerror: ${(e as Error).message}`);
         }
       } finally {

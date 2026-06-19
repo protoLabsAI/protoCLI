@@ -109,7 +109,9 @@ function A2aChat({
       setRunning(true);
       const ctrl = new AbortController();
       abortRef.current = ctrl;
-      taskIdRef.current = '';
+      // Seed cancel with the resume id so an early abort (before any `task`
+      // frame) can still cancel the parked task.
+      taskIdRef.current = resumeTaskId ?? '';
       let assistant = '';
       let thought = '';
 
@@ -196,6 +198,9 @@ function A2aChat({
             ...h,
             { type: 'error', text: (e as Error).message, id: nextId() },
           ]);
+          // A failed send must not drop a parked input-required task — restore
+          // the handle (unless a new pause already set one) so it can be retried.
+          setAwaitingTaskId((cur) => cur ?? resumeTaskId);
         }
         setPendingText('');
         setPendingThought('');
