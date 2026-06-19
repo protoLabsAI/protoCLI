@@ -84,6 +84,33 @@ describe('A2aClient.streamMessage', () => {
     expect(sent.params.message.contextId).toBe('ctx-1'); // contextId lives INSIDE the message
   });
 
+  it('locks the mandatory A2A-Version header against user-config override', async () => {
+    let captured: RequestInit | null = null;
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
+      captured = init;
+      return Promise.resolve(
+        sseResponse([
+          {
+            result: {
+              statusUpdate: {
+                status: { state: 'TASK_STATE_COMPLETED' },
+                final: true,
+              },
+            },
+          },
+        ]),
+      );
+    });
+    // A stray A2A-Version in user headers must NOT clobber the mandatory 1.0.
+    const client = new A2aClient('http://h:1', {
+      headers: { 'A2A-Version': '0.3', 'X-Custom': 'y' },
+    });
+    await collect(client.streamMessage('hi'));
+    const headers = captured!.headers as Record<string, string>;
+    expect(headers['A2A-Version']).toBe('1.0'); // locked
+    expect(headers['X-Custom']).toBe('y'); // other custom headers still pass through
+  });
+
   it('maps SSE oneof frames to normalized events (text, tool, usage, terminal)', async () => {
     vi.stubGlobal('fetch', () =>
       Promise.resolve(

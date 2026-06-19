@@ -59,11 +59,13 @@ export class A2aClient {
 
   constructor(baseUrl: string, opts: A2aClientOptions = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
-    // A2A-Version: 1.0 is mandatory (see class docstring).
+    // `A2A-Version: 1.0` is mandatory (see class docstring) and is applied AFTER
+    // the user headers so a stray `A2A-Version` in config can't clobber it and
+    // silently break the client (server would then reject the 1.0 methods).
     this.headers = {
       'Content-Type': 'application/json',
-      'A2A-Version': '1.0',
       ...(opts.headers ?? {}),
+      'A2A-Version': '1.0',
     };
     if (opts.bearer) this.headers['Authorization'] = `Bearer ${opts.bearer}`;
     if (opts.apiKey) this.headers['X-API-Key'] = opts.apiKey;
@@ -154,96 +156,103 @@ export class A2aClient {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buf = '';
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-      let nl: number;
-      while ((nl = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (!line || line.startsWith(':') || !line.startsWith('data:'))
-          continue;
-        let data: Record<string, unknown>;
-        try {
-          data = JSON.parse(line.slice(5).trim());
-        } catch {
-          continue;
-        }
-        if (data['error']) {
-          yield { kind: 'error', message: JSON.stringify(data['error']) };
-          return;
-        }
-        const result = (data['result'] ?? {}) as Record<string, unknown>;
-        const kind = Object.keys(result)[0];
-        if (!kind) continue;
-        const p = (result[kind] ?? {}) as Record<string, unknown>;
+    // Release the underlying response stream on early break (terminal frame),
+    // abort, or consumer abandonment — otherwise the reader/connection leaks.
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line || line.startsWith(':') || !line.startsWith('data:'))
+            continue;
+          let data: Record<string, unknown>;
+          try {
+            data = JSON.parse(line.slice(5).trim());
+          } catch {
+            continue;
+          }
+          if (data['error']) {
+            yield { kind: 'error', message: JSON.stringify(data['error']) };
+            return;
+          }
+          const result = (data['result'] ?? {}) as Record<string, unknown>;
+          const kind = Object.keys(result)[0];
+          if (!kind) continue;
+          const p = (result[kind] ?? {}) as Record<string, unknown>;
 
-        if (kind === 'task') {
-          taskId = (p['id'] as string) || taskId;
-          yield { kind: 'task', taskId };
-        } else if (kind === 'artifactUpdate') {
-          taskId = (p['taskId'] as string) || taskId;
-          const artifact = (p['artifact'] ?? {}) as Record<string, unknown>;
-          for (const part of (artifact['parts'] as Array<
-            Record<string, unknown>
-          >) ?? []) {
-            if (typeof part['text'] === 'string' && part['text']) {
-              yield { kind: 'text', delta: part['text'] as string };
-            } else if (isUsagePart(part)) {
-              usage = part.data.usage;
-            } else if (
-              typeof (part['data'] as Record<string, unknown>)?.[
-                'confidence'
-              ] === 'number'
-            ) {
-              confidence = (part['data'] as Record<string, number>)[
-                'confidence'
-              ];
+          if (kind === 'task') {
+            taskId = (p['id'] as string) || taskId;
+            yield { kind: 'task', taskId };
+          } else if (kind === 'artifactUpdate') {
+            taskId = (p['taskId'] as string) || taskId;
+            const artifact = (p['artifact'] ?? {}) as Record<string, unknown>;
+            for (const part of (artifact['parts'] as Array<
+              Record<string, unknown>
+            >) ?? []) {
+              if (typeof part['text'] === 'string' && part['text']) {
+                yield { kind: 'text', delta: part['text'] as string };
+              } else if (isUsagePart(part)) {
+                usage = part.data.usage;
+              } else if (
+                typeof (part['data'] as Record<string, unknown>)?.[
+                  'confidence'
+                ] === 'number'
+              ) {
+                confidence = (part['data'] as Record<string, number>)[
+                  'confidence'
+                ];
+              }
             }
-          }
-        } else if (kind === 'statusUpdate') {
-          taskId = (p['taskId'] as string) || taskId;
-          const status = (p['status'] ?? {}) as Record<string, unknown>;
-          const state = normState(status['state'] as string);
-          // tool-call-v1 / reasoning-v1 / hitl-v1 ride on the status message parts.
-          const msg = (status['message'] ?? {}) as Record<string, unknown>;
-          for (const part of (msg['parts'] as Array<Record<string, unknown>>) ??
-            []) {
-            const d = part['data'] as Record<string, unknown> | undefined;
-            if (d?.['toolCallId'] && d?.['name']) {
+          } else if (kind === 'statusUpdate') {
+            taskId = (p['taskId'] as string) || taskId;
+            const status = (p['status'] ?? {}) as Record<string, unknown>;
+            const state = normState(status['state'] as string);
+            // tool-call-v1 / reasoning-v1 / hitl-v1 ride on the status message parts.
+            const msg = (status['message'] ?? {}) as Record<string, unknown>;
+            for (const part of (msg['parts'] as Array<
+              Record<string, unknown>
+            >) ?? []) {
+              const d = part['data'] as Record<string, unknown> | undefined;
+              if (d?.['toolCallId'] && d?.['name']) {
+                yield {
+                  kind: 'tool',
+                  phase:
+                    (d['phase'] as 'started' | 'completed' | 'failed') ??
+                    'started',
+                  name: String(d['name']),
+                  toolCallId: String(d['toolCallId']),
+                };
+              } else if (
+                typeof d?.['text'] === 'string' &&
+                'reasoning' in (d ?? {})
+              ) {
+                yield { kind: 'thought', delta: String(d['text']) };
+              }
+            }
+            if (state === 'input_required') {
+              const promptPart = (
+                (msg['parts'] as Array<Record<string, unknown>>) ?? []
+              ).find((x) => typeof x['text'] === 'string');
               yield {
-                kind: 'tool',
-                phase:
-                  (d['phase'] as 'started' | 'completed' | 'failed') ??
-                  'started',
-                name: String(d['name']),
-                toolCallId: String(d['toolCallId']),
+                kind: 'inputRequired',
+                taskId,
+                prompt: (promptPart?.['text'] as string) ?? 'Input required.',
               };
-            } else if (
-              typeof d?.['text'] === 'string' &&
-              'reasoning' in (d ?? {})
-            ) {
-              yield { kind: 'thought', delta: String(d['text']) };
             }
-          }
-          if (state === 'input_required') {
-            const promptPart = (
-              (msg['parts'] as Array<Record<string, unknown>>) ?? []
-            ).find((x) => typeof x['text'] === 'string');
-            yield {
-              kind: 'inputRequired',
-              taskId,
-              prompt: (promptPart?.['text'] as string) ?? 'Input required.',
-            };
-          }
-          yield { kind: 'status', state, final: Boolean(p['final']) };
-          if (p['final'] || isTerminal(state)) {
-            finalState = state;
+            yield { kind: 'status', state, final: Boolean(p['final']) };
+            if (p['final'] || isTerminal(state)) {
+              finalState = state;
+            }
           }
         }
+        if (finalState) break;
       }
-      if (finalState) break;
+    } finally {
+      void reader.cancel().catch(() => {});
     }
 
     yield {
