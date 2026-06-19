@@ -12,8 +12,8 @@
  * `/.well-known/agent-card.json`.
  *
  * Implemented here: the zero-dependency **localhost port-scan** (the common case:
- * a protoAgent on :7870). The **mDNS** channel (LAN broadcast) and the Tailscale
- * channel are the next adds — see `mdnsBrowse` below.
+ * a protoAgent on :7870). The **mDNS** (LAN broadcast) and Tailscale channels are
+ * deferred — see `mdnsBrowse` for why.
  */
 
 import { A2aClient } from './client.js';
@@ -58,9 +58,13 @@ export async function scanLocal(
 }
 
 /**
- * mDNS browse of `_protoagent._tcp.local.` — the LAN broadcast channel.
- * Stubbed: returns []. Implementing needs an mDNS lib (`multicast-dns` /
- * `bonjour-service`); planned as the next discovery add so LAN agents auto-appear.
+ * mDNS browse of `_protoagent._tcp.local.` — the LAN broadcast channel. Deferred,
+ * returns []. A `bonjour-service` implementation works fine from source (the local
+ * agent answers in ~30ms), but `multicast-dns` does not survive proto's esbuild
+ * bundle — which ships self-contained (`files: ["dist/"]`), so the dep can't just
+ * be externalized — and it silently no-ops in the published binary. Revisit via a
+ * `dgram`-based one-shot query (no bundling-hostile deps) when LAN auto-discovery
+ * is wanted; the localhost port-scan covers the common case today.
  */
 export async function mdnsBrowse(): Promise<AgentEntry[]> {
   return [];
