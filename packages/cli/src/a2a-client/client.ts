@@ -104,11 +104,14 @@ export class A2aClient {
 
   /**
    * Send one user turn and stream normalized events. Reuse the same `contextId`
-   * across calls for a continuous conversation/memory thread.
+   * across calls for a continuous conversation/memory thread. To answer a HITL
+   * `input-required` pause, pass `taskId` (the parked task's id, surfaced on the
+   * `inputRequired` event): the server loads that task as the request's
+   * current_task and resumes it instead of starting a fresh turn.
    */
   async *streamMessage(
     text: string,
-    opts: { contextId?: string; signal?: AbortSignal } = {},
+    opts: { contextId?: string; taskId?: string; signal?: AbortSignal } = {},
   ): AsyncGenerator<A2aStreamEvent> {
     const messageId = randomUUID();
     const message: Record<string, unknown> = {
@@ -117,6 +120,7 @@ export class A2aClient {
       messageId,
     };
     if (opts.contextId) message['contextId'] = opts.contextId;
+    if (opts.taskId) message['taskId'] = opts.taskId; // resume a parked input-required task
     const payload = {
       jsonrpc: '2.0',
       id: messageId,

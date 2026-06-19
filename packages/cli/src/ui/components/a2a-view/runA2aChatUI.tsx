@@ -56,6 +56,9 @@ function A2aChat({
   const [pendingText, setPendingText] = useState('');
   const [pendingThought, setPendingThought] = useState('');
   const [running, setRunning] = useState(false);
+  // When set, the agent paused for input (HITL) on this task; the next message
+  // answers it (resumes that task) rather than starting a fresh turn.
+  const [awaitingTaskId, setAwaitingTaskId] = useState<string | null>(null);
 
   const contextId = useRef(randomUUID()); // pin one memory thread for the session
   const idRef = useRef(0);
@@ -99,6 +102,9 @@ function A2aChat({
       }
       if (running) return;
 
+      // If the agent paused for input, this message resumes that parked task.
+      const resumeTaskId = awaitingTaskId;
+      setAwaitingTaskId(null);
       setCommitted((h) => [...h, { type: 'user', text: t, id: nextId() }]);
       setRunning(true);
       const ctrl = new AbortController();
@@ -110,6 +116,7 @@ function A2aChat({
       try {
         for await (const ev of client.streamMessage(t, {
           contextId: contextId.current,
+          taskId: resumeTaskId ?? undefined,
           signal: ctrl.signal,
         })) {
           switch (ev.kind) {
@@ -135,8 +142,9 @@ function A2aChat({
             case 'inputRequired':
               setCommitted((h) => [
                 ...h,
-                { type: 'info', text: ev.prompt, id: nextId() },
+                { type: 'info', text: `❓ ${ev.prompt}`, id: nextId() },
               ]);
+              setAwaitingTaskId(ev.taskId); // next message resumes this task
               break;
             case 'error':
               setCommitted((h) => [
@@ -197,7 +205,7 @@ function A2aChat({
         setRunning(false);
       }
     },
-    [client, running, onExit],
+    [client, running, onExit, awaitingTaskId],
   );
 
   return (
@@ -240,7 +248,11 @@ function A2aChat({
         buffer={buffer}
         onSubmit={submit}
         isActive={!running}
-        placeholder={`Message ${agentName}…  (/exit to quit)`}
+        placeholder={
+          awaitingTaskId
+            ? 'Answer the prompt above…'
+            : `Message ${agentName}…  (/exit to quit)`
+        }
       />
     </Box>
   );

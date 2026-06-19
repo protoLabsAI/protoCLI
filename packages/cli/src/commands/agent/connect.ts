@@ -86,6 +86,10 @@ export async function connectAndChat(name: string): Promise<void> {
     }
   });
 
+  // HITL: when set, the agent paused for input on this task; the next line
+  // answers it (resumes that task) instead of starting a new turn.
+  let awaitingTaskId: string | null = null;
+
   try {
     for (;;) {
       let line: string;
@@ -97,12 +101,15 @@ export async function connectAndChat(name: string): Promise<void> {
       if (!line) continue;
       if (line === '/exit' || line === '/quit') break;
 
+      const resumeTaskId: string | null = awaitingTaskId;
+      awaitingTaskId = null;
       inflight = new AbortController();
       let wroteText = false;
       let lastTaskId = '';
       try {
         for await (const ev of client.streamMessage(line, {
           contextId,
+          taskId: resumeTaskId ?? undefined,
           signal: inflight.signal,
         })) {
           switch (ev.kind) {
@@ -122,6 +129,7 @@ export async function connectAndChat(name: string): Promise<void> {
               break;
             case 'inputRequired':
               stdout.write(`\n${CYAN}[input requested]${RESET} ${ev.prompt}\n`);
+              awaitingTaskId = ev.taskId; // next line resumes this parked task
               break;
             case 'final': {
               if (wroteText) stdout.write('\n');

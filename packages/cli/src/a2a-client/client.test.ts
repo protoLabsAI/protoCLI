@@ -111,6 +111,35 @@ describe('A2aClient.streamMessage', () => {
     expect(headers['X-Custom']).toBe('y'); // other custom headers still pass through
   });
 
+  it('includes taskId in the message to resume a parked HITL input-required task', async () => {
+    let captured: { url: string; init: RequestInit } | null = null;
+    vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
+      captured = { url, init };
+      return Promise.resolve(
+        sseResponse([
+          {
+            result: {
+              statusUpdate: {
+                status: { state: 'TASK_STATE_COMPLETED' },
+                final: true,
+              },
+            },
+          },
+        ]),
+      );
+    });
+
+    await collect(
+      new A2aClient('http://h:1').streamMessage('the answer', {
+        contextId: 'c1',
+        taskId: 'task-parked',
+      }),
+    );
+    const sent = JSON.parse(captured!.init.body as string);
+    expect(sent.params.message.taskId).toBe('task-parked'); // resume handle
+    expect(sent.params.message.contextId).toBe('c1');
+  });
+
   it('maps SSE oneof frames to normalized events (text, tool, usage, terminal)', async () => {
     vi.stubGlobal('fetch', () =>
       Promise.resolve(
