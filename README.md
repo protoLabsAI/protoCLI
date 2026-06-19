@@ -11,25 +11,26 @@ proto is a fork of [Qwen Code](https://github.com/QwenLM/qwen-code) (itself fork
 
 At-a-glance overview vs. upstream Qwen Code. For the full architectural breakdown see [`docs/architecture/divergence-from-upstream.md`](./docs/architecture/divergence-from-upstream.md).
 
-| Category              | Qwen Code                 | proto                                                                                                                                                    |
-| --------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Default model         | Qwen3-Coder               | Any (LiteLLM / OpenAI-compat / Anthropic / Gemini)                                                                                                       |
-| Agent harness         | —                         | Sprint contracts + scope lock, behavior-verify gate, multi-sample selector, doom-loop reminders, session memory + evolve, checkpoint/rewind, speculation |
-| Bundled skills        | 0 (use external)          | 4 utility skills (browser-automation, review, proto-helper, harness-reference); workflow skills are user-pluggable, not baked in                         |
-| Subagent execution    | Sequential                | Concurrent batched — Agent calls run in parallel; tool ordering preserved                                                                                |
-| Tool-call streaming   | Per-converter parser      | Per-stream parser context (no cross-stream corruption); malformed JSON → UI-hidden recovery note                                                         |
-| Reasoning models      | Basic `reasoning_content` | Inline `<think>`-tag extraction (Minimax/QwQ); reasoning-only `content: ""` fix; preserved on session resume                                             |
-| Truncation handling   | Best-effort               | MAX_TOKENS cascade detection + tool-response trimming; rejected truncated edits                                                                          |
-| Task management       | In-memory JSON            | [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (SQLite + JSONL)                                                                           |
-| Memory                | Single append-only file   | File-per-memory with YAML frontmatter, 4-type taxonomy, auto-extraction                                                                                  |
-| MCP servers           | None                      | Configurable via `~/.proto/settings.json`; SSE/HTTP/stdio in ACP mode                                                                                    |
-| Plugin discovery      | Qwen only                 | Auto-discovers Claude Code plugins from `~/.claude/plugins/`                                                                                             |
-| Ignore files          | `.qwenignore`             | `.protoignore` + inherits `.claudeignore` patterns                                                                                                       |
-| ACP / Zed integration | Stock                     | Cron-in-Session, concurrent Agent calls, SSE/HTTP MCP, internal-part filtering                                                                           |
-| Extra built-in tools  | Standard set              | + browser automation, repo-map (PageRank), task tools, mailbox, LSP, voice/STT                                                                           |
-| Observability         | Console                   | OTLP/HTTP to LGTM stack + Langfuse, opt-in, with `gen_ai.response.thinking` and harness-intervention spans (SFT-ready)                                   |
-| Release pipeline      | Manual                    | Conventional-commit auto-release (`feat:` → minor, `fix:` → patch)                                                                                       |
-| VS Code companion     | Included                  | Removed (focus on TUI + ACP/Zed)                                                                                                                         |
+| Category              | Qwen Code                 | proto                                                                                                                                                                                |
+| --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default model         | Qwen3-Coder               | Any (LiteLLM / OpenAI-compat / Anthropic / Gemini)                                                                                                                                   |
+| Agent harness         | —                         | Sprint contracts + scope lock, behavior-verify gate, multi-sample selector, doom-loop reminders, session memory + evolve, checkpoint/rewind, speculation                             |
+| Bundled skills        | 0 (use external)          | 4 utility skills (browser-automation, review, proto-helper, harness-reference); workflow skills are user-pluggable, not baked in                                                     |
+| Subagent execution    | Sequential                | Concurrent batched — Agent calls run in parallel; tool ordering preserved                                                                                                            |
+| Tool-call streaming   | Per-converter parser      | Per-stream parser context (no cross-stream corruption); malformed JSON → UI-hidden recovery note                                                                                     |
+| Reasoning models      | Basic `reasoning_content` | Inline `<think>`-tag extraction (Minimax/QwQ); reasoning-only `content: ""` fix; preserved on session resume                                                                         |
+| Truncation handling   | Best-effort               | MAX_TOKENS cascade detection + tool-response trimming; rejected truncated edits                                                                                                      |
+| Task management       | In-memory JSON            | [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (SQLite + JSONL)                                                                                                       |
+| Memory                | Single append-only file   | File-per-memory with YAML frontmatter, 4-type taxonomy, auto-extraction                                                                                                              |
+| MCP servers           | None                      | Configurable via `~/.proto/settings.json`; SSE/HTTP/stdio in ACP mode                                                                                                                |
+| Plugin discovery      | Qwen only                 | Auto-discovers Claude Code plugins from `~/.claude/plugins/`                                                                                                                         |
+| Ignore files          | `.qwenignore`             | `.protoignore` + inherits `.claudeignore` patterns                                                                                                                                   |
+| ACP / Zed integration | Stock                     | Cron-in-Session, concurrent Agent calls, SSE/HTTP MCP, internal-part filtering                                                                                                       |
+| A2A agents (fleet)    | —                         | First-class **A2A client**: `proto agent <name>` to chat with protoAgent (or any A2A 1.0 agent); register, auto-discover, stream over A2A — see [guide](./docs/guides/a2a-agents.md) |
+| Extra built-in tools  | Standard set              | + browser automation, repo-map (PageRank), task tools, mailbox, LSP, voice/STT                                                                                                       |
+| Observability         | Console                   | OTLP/HTTP to LGTM stack + Langfuse, opt-in, with `gen_ai.response.thinking` and harness-intervention spans (SFT-ready)                                                               |
+| Release pipeline      | Manual                    | Conventional-commit auto-release (`feat:` → minor, `fix:` → patch)                                                                                                                   |
+| VS Code companion     | Included                  | Removed (focus on TUI + ACP/Zed)                                                                                                                                                     |
 
 ## Installation
 
@@ -472,6 +473,18 @@ Agent IDs follow the pattern `<name>-<index>` (e.g. `lead-0`, `scout-1`). Use th
 | `plan`            | Design plans before implementation        |
 
 Any user-defined sub-agent from `.proto/agents/` can also be used as a member type.
+
+## Talk to A2A Agents
+
+proto is a first-class **terminal client for [A2A](https://a2a-protocol.org/) agents** — register an agent once, then chat with it by name. This is the client direction (proto reaches out to a remote agent); it mirrors [driving proto as an ACP coding agent](./docs/guides/acp-coding-agent.md), so proto and the protoLabs **[protoAgent](https://github.com/protoLabsAI/protoAgent)** fleet talk both ways (ACP one way, A2A the other).
+
+```bash
+proto agents                                  # list registered + auto-discovered agents, with status
+proto agent add roxy https://roxy:7870        # register a named shortcut
+proto agent roxy                              # connect → streaming chat (no URL to retype)
+```
+
+Discovery is built in (it scans localhost for agent cards, like protoAgent's own fleet broadcast/scan), so a protoAgent running locally shows up in `proto agents` with no setup. proto targets **A2A 1.0** (`SendStreamingMessage` over SSE, `contextId` continuity, `cost-v1`/`tool-call-v1` extensions, Bearer/API-key auth), so it works against any conformant A2A agent. See the [A2A agents guide](./docs/guides/a2a-agents.md).
 
 ## Commands
 

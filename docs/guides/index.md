@@ -17,6 +17,7 @@ Task-oriented how-tos for specific goals. Pick the guide that matches what you w
 - [Sandboxing](/guides/use-sandbox) — Isolate agent execution in a container
 - [Run Headless](/guides/run-headless) — Drive proto non-interactively from scripts and CI
 - [ACP Coding Agent](/guides/acp-coding-agent) — Drive proto as a coding agent from an editor or orchestrator over the Agent Client Protocol
+- [Talk to A2A Agents](/guides/a2a-agents) — Use proto as a terminal client for protoAgent (and any A2A 1.0 agent): register, discover, and chat
 - [Schedule Prompts](/guides/scheduled-tasks) — Run prompts on a cron schedule
 
 ## Workflow
