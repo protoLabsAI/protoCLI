@@ -142,6 +142,10 @@ function A2aChat({
       taskIdRef.current = resumeTaskId ?? '';
       let assistant = '';
       let thought = '';
+      // Render each tool once per turn. protoAgent emits a tool-call-v1 part on
+      // BOTH the started and the (sometimes repeated) status frame for the same
+      // toolCallId, so keying off `started` alone double-rendered the ⚙ line.
+      const seenTools = new Set<string>();
 
       try {
         for await (const ev of client.streamMessage(t, {
@@ -162,7 +166,8 @@ function A2aChat({
               setPendingThought(thought);
               break;
             case 'tool':
-              if (ev.phase === 'started') {
+              if (!seenTools.has(ev.toolCallId)) {
+                seenTools.add(ev.toolCallId);
                 setCommitted((h) => [
                   ...h,
                   { type: 'info', text: `⚙ ${ev.name}`, id: nextId() },
