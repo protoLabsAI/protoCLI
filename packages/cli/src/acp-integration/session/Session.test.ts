@@ -12,10 +12,8 @@ import { Session } from './Session.js';
 import type { Config, GeminiChat } from '@qwen-code/qwen-code-core';
 import { ApprovalMode, AuthType } from '@qwen-code/qwen-code-core';
 import * as core from '@qwen-code/qwen-code-core';
-import type {
-  AgentSideConnection,
-  PromptRequest,
-} from '@agentclientprotocol/sdk';
+import type { PromptRequest } from '@agentclientprotocol/sdk';
+import type { AcpClientChannel } from '../clientChannel.js';
 import type { LoadedSettings } from '../../config/settings.js';
 import * as nonInteractiveCliCommands from '../../nonInteractiveCliCommands.js';
 
@@ -27,7 +25,7 @@ vi.mock('../../nonInteractiveCliCommands.js', () => ({
 describe('Session', () => {
   let mockChat: GeminiChat;
   let mockConfig: Config;
-  let mockClient: AgentSideConnection;
+  let mockClient: AcpClientChannel;
   let mockSettings: LoadedSettings;
   let session: Session;
   let currentModel: string;
@@ -84,7 +82,7 @@ describe('Session', () => {
         outcome: { outcome: 'selected', optionId: 'proceed_once' },
       }),
       extNotification: vi.fn().mockResolvedValue(undefined),
-    } as unknown as AgentSideConnection;
+    } as unknown as AcpClientChannel;
 
     mockSettings = {
       merged: {},

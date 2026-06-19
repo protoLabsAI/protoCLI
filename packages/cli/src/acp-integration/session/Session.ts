@@ -59,8 +59,8 @@ import type {
   SessionUpdate,
   SetSessionModeRequest,
   SetSessionModeResponse,
-  AgentSideConnection,
 } from '@agentclientprotocol/sdk';
+import type { AcpClientChannel } from '../clientChannel.js';
 import type { LoadedSettings } from '../../config/settings.js';
 import { z } from 'zod';
 import { normalizePartList } from '../../utils/nonInteractiveHelpers.js';
@@ -130,7 +130,7 @@ export class Session implements SessionContext {
     id: string,
     private readonly chat: GeminiChat,
     readonly config: Config,
-    private readonly client: AgentSideConnection,
+    private readonly client: AcpClientChannel,
     private readonly settings: LoadedSettings,
   ) {
     this.sessionId = id;

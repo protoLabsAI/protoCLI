@@ -24,10 +24,8 @@ import { z } from 'zod';
 import type { SessionContext } from './types.js';
 import { ToolCallEmitter } from './emitters/ToolCallEmitter.js';
 import { MessageEmitter } from './emitters/MessageEmitter.js';
-import type {
-  AgentSideConnection,
-  RequestPermissionRequest,
-} from '@agentclientprotocol/sdk';
+import type { RequestPermissionRequest } from '@agentclientprotocol/sdk';
+import type { AcpClientChannel } from '../clientChannel.js';
 import {
   buildPermissionRequestContent,
   toPermissionOptions,
@@ -56,7 +54,7 @@ export class SubAgentTracker {
 
   constructor(
     private readonly ctx: SessionContext,
-    private readonly client: AgentSideConnection,
+    private readonly client: AcpClientChannel,
     private readonly parentToolCallId: string,
     private readonly subagentType: string,
   ) {

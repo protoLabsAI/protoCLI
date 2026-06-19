@@ -5,12 +5,12 @@
  */
 
 import type {
-  AgentSideConnection,
   FileSystemCapabilities,
   ReadTextFileRequest,
   WriteTextFileRequest,
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
+import type { AcpClientChannel } from '../clientChannel.js';
 import { RequestError } from '@agentclientprotocol/sdk';
 import type {
   FileSystemService,
@@ -41,7 +41,7 @@ function createEnoentError(filePath: string): NodeJS.ErrnoException {
 
 export class AcpFileSystemService implements FileSystemService {
   constructor(
-    private readonly connection: AgentSideConnection,
+    private readonly connection: AcpClientChannel,
     private readonly sessionId: string,
     private readonly capabilities: FileSystemCapabilities,
     private readonly fallback: FileSystemService,

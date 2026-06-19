@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FileSystemService } from '@qwen-code/qwen-code-core';
 import { AcpFileSystemService } from './filesystem.js';
-import type { AgentSideConnection } from '@agentclientprotocol/sdk';
+import type { AcpClientChannel } from '../clientChannel.js';
 
 const RESOURCE_NOT_FOUND_CODE = -32002;
 const INTERNAL_ERROR_CODE = -32603;
@@ -30,7 +30,7 @@ describe('AcpFileSystemService', () => {
       };
       const client = {
         readTextFile: vi.fn().mockResolvedValue(mockResponse),
-      } as unknown as AgentSideConnection;
+      } as unknown as AcpClientChannel;
 
       const svc = new AcpFileSystemService(
         client,
@@ -55,7 +55,7 @@ describe('AcpFileSystemService', () => {
       };
       const client = {
         readTextFile: vi.fn().mockRejectedValue(resourceNotFoundError),
-      } as unknown as AgentSideConnection;
+      } as unknown as AcpClientChannel;
 
       const svc = new AcpFileSystemService(
         client,
@@ -80,7 +80,7 @@ describe('AcpFileSystemService', () => {
       };
       const client = {
         readTextFile: vi.fn().mockRejectedValue(otherError),
-      } as unknown as AgentSideConnection;
+      } as unknown as AcpClientChannel;
 
       const svc = new AcpFileSystemService(
         client,
@@ -100,7 +100,7 @@ describe('AcpFileSystemService', () => {
     it('uses fallback when readTextFile capability is disabled', async () => {
       const client = {
         readTextFile: vi.fn(),
-      } as unknown as AgentSideConnection;
+      } as unknown as AcpClientChannel;
 
       const fallback = createFallback();
       const fallbackResponse = {
