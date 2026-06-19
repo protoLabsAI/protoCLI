@@ -108,6 +108,9 @@ export async function connectAndChat(name: string): Promise<void> {
       // Seed with the resume id so an early abort (before any `task` frame) can
       // still cancel the parked task.
       let lastTaskId = resumeTaskId ?? '';
+      // Render each tool once: protoAgent repeats the tool-call-v1 part across
+      // status frames for one toolCallId, so phase alone double-prints the ⚙ line.
+      const seenTools = new Set<string>();
       try {
         for await (const ev of client.streamMessage(line, {
           contextId,
@@ -126,8 +129,10 @@ export async function connectAndChat(name: string): Promise<void> {
               stdout.write(`${DIM}${ev.delta}${RESET}`);
               break;
             case 'tool':
-              if (ev.phase === 'started')
+              if (!seenTools.has(ev.toolCallId)) {
+                seenTools.add(ev.toolCallId);
                 stdout.write(`${DIM}\n  ⚙ ${ev.name}…${RESET}\n`);
+              }
               break;
             case 'inputRequired':
               stdout.write(`\n${CYAN}[input requested]${RESET} ${ev.prompt}\n`);
