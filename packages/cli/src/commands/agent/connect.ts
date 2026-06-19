@@ -15,6 +15,7 @@ import { writeStdoutLine, writeStderrLine } from '../../utils/stdioHelpers.js';
 import { A2aClient } from '../../a2a-client/client.js';
 import { buildClient, resolveConfigured } from '../../a2a-client/registry.js';
 import { discover } from '../../a2a-client/discovery.js';
+import { runA2aChatUI } from '../../ui/components/a2a-view/runA2aChatUI.js';
 
 const DIM = '\x1b[2m';
 const CYAN = '\x1b[36m';
@@ -66,6 +67,14 @@ export async function connectAndChat(name: string): Promise<void> {
     writeStdoutLine(`${DIM}skills: ${skills.join(', ')}${RESET}`);
   writeStdoutLine(`${DIM}Type a message. Ctrl-C or /exit to quit.${RESET}\n`);
 
+  // Rich Ink TUI when interactive; the readline loop below is the fallback for
+  // piped / non-TTY input (CI, scripts, `echo … | proto agent …`).
+  if (process.stdin.isTTY) {
+    await runA2aChatUI(client, agentName);
+    writeStdoutLine(`${DIM}Disconnected.${RESET}`);
+    return;
+  }
+
   // Pin one contextId for the whole session so the agent keeps memory across turns.
   const contextId = randomUUID();
   const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -76,6 +85,10 @@ export async function connectAndChat(name: string): Promise<void> {
       rl.close();
     }
   });
+
+  // HITL: when set, the agent paused for input on this task; the next line
+  // answers it (resumes that task) instead of starting a new turn.
+  let awaitingTaskId: string | null = null;
 
   try {
     for (;;) {
@@ -88,12 +101,17 @@ export async function connectAndChat(name: string): Promise<void> {
       if (!line) continue;
       if (line === '/exit' || line === '/quit') break;
 
+      const resumeTaskId: string | null = awaitingTaskId;
+      awaitingTaskId = null;
       inflight = new AbortController();
       let wroteText = false;
-      let lastTaskId = '';
+      // Seed with the resume id so an early abort (before any `task` frame) can
+      // still cancel the parked task.
+      let lastTaskId = resumeTaskId ?? '';
       try {
         for await (const ev of client.streamMessage(line, {
           contextId,
+          taskId: resumeTaskId ?? undefined,
           signal: inflight.signal,
         })) {
           switch (ev.kind) {
@@ -113,6 +131,7 @@ export async function connectAndChat(name: string): Promise<void> {
               break;
             case 'inputRequired':
               stdout.write(`\n${CYAN}[input requested]${RESET} ${ev.prompt}\n`);
+              awaitingTaskId = ev.taskId; // next line resumes this parked task
               break;
             case 'final': {
               if (wroteText) stdout.write('\n');
@@ -136,6 +155,9 @@ export async function connectAndChat(name: string): Promise<void> {
           if (lastTaskId) await client.cancel(lastTaskId);
           stdout.write(`${DIM} (cancelled)${RESET}\n`);
         } else {
+          // A failed send must not drop a parked input-required task — restore
+          // the handle so the next line still resumes it.
+          if (!awaitingTaskId && resumeTaskId) awaitingTaskId = resumeTaskId;
           writeStderrLine(`\nerror: ${(e as Error).message}`);
         }
       } finally {
