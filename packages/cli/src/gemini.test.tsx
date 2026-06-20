@@ -453,7 +453,7 @@ describe('gemini.tsx main function kitty protocol', () => {
       errors: [],
       merged: {
         advanced: {},
-        security: { auth: {} },
+        security: { auth: { selectedType: 'openai' } },
         ui: {},
       },
       setValue: vi.fn(),

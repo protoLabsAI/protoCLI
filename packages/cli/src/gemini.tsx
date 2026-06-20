@@ -58,7 +58,8 @@ import { start_sandbox } from './utils/sandbox.js';
 import { getStartupWarnings } from './utils/startupWarnings.js';
 import { getUserStartupWarnings } from './utils/userStartupWarnings.js';
 import { getCliVersion } from './utils/version.js';
-import { writeStderrLine } from './utils/stdioHelpers.js';
+import { writeStderrLine, writeStdoutLine } from './utils/stdioHelpers.js';
+import { runSetupWizard } from './commands/setup/handler.js';
 import { computeWindowTitle } from './utils/windowTitle.js';
 import { validateNonInteractiveAuth } from './validateNonInterActiveAuth.js';
 import { showResumeSessionPicker } from './ui/components/StandaloneSessionPicker.js';
@@ -507,6 +508,30 @@ export async function main() {
         ...config.getWarnings(),
       ]),
     ];
+
+    // Brand-new user with nothing configured (no model providers AND no auth
+    // type selected)? Route them straight into the `proto setup` wizard instead
+    // of dropping into an empty model picker. Deliberately conservative — both
+    // conditions must hold, so anyone with an existing config is never affected.
+    // TTY only (the wizard needs exclusive terminal access; by here any sandbox
+    // relaunch has already happened upstream).
+    const hasProviders =
+      !!settings.merged.modelProviders &&
+      Object.keys(settings.merged.modelProviders).length > 0;
+    const hasSelectedAuth = !!settings.merged.security?.auth?.selectedType;
+    if (
+      config.isInteractive() &&
+      process.stdin.isTTY &&
+      !hasProviders &&
+      !hasSelectedAuth
+    ) {
+      writeStdoutLine(
+        '\nNo model is configured yet — starting the proto setup wizard.\n',
+      );
+      await runSetupWizard();
+      writeStdoutLine('\n✓ Setup complete. Run `proto` to start a session.\n');
+      return;
+    }
 
     // Render UI, passing necessary config values. Check that there is no command line question.
     if (config.isInteractive()) {
