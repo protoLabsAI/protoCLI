@@ -1,11 +1,11 @@
 # proto
 
-A multi-model AI agent for the terminal. Part of the [protoLabs Studio](https://protolabs.studio) ecosystem.
+A local, privacy-first AI agent for the terminal. Part of the [protoLabs Studio](https://protolabs.studio) ecosystem.
 
 [![License](https://img.shields.io/github/license/QwenLM/qwen-code.svg)](./LICENSE)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
 
-proto is a fork of [Qwen Code](https://github.com/QwenLM/qwen-code) (itself forked from [Gemini CLI](https://github.com/google-gemini/gemini-cli)), rebuilt as a model-agnostic coding agent. It connects to any OpenAI-compatible, Anthropic, or Gemini API endpoint.
+proto is a fork of [Qwen Code](https://github.com/QwenLM/qwen-code) (itself forked from [Gemini CLI](https://github.com/google-gemini/gemini-cli)), rebuilt as a local, privacy-first coding agent. It runs in your terminal and works against the models you choose — local, self-hosted, or any OpenAI-compatible, Anthropic, or Gemini endpoint — so your code, keys, and context stay yours.
 
 ## What's Different
 
