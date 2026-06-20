@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@protolabsai/design": "^0.7.0",
-    "@protolabsai/vitepress-theme": "^0.3.5",
+    "@protolabsai/vitepress-theme": "^0.3.6",
     "vitepress": "^1.6.4"
   }
 }
