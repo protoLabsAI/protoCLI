@@ -10,7 +10,7 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@protolabsai/design": "^0.6.0",
+    "@protolabsai/design": "^0.7.0",
     "astro": "^5.7.0"
   }
 }

@@ -23,13 +23,8 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-a {
-  color: var(--pl-color-brand-lavender);
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
+/* Link styling now comes from @protolabsai/design (brand color + transparent
+   underline at rest, revealed on hover) — no local override needed. */
 
 h1,
 h2,
