@@ -16,7 +16,11 @@ jobs:
   attach:
     runs-on: ubuntu-latest
     env:
-      CF_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_API }}
+      # Prefer the purpose-built Pages token (Pages:Edit + Zone DNS:Edit); fall
+      # back to the deploy token (Pages:Edit) — that can attach the domain, but
+      # the DNS step needs Zone DNS:Edit, so add CLOUDFLARE_PAGES_API to GH
+      # Actions secrets for the CNAME to be created automatically.
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_API || secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PROJECT: protocli-marketing
       DOMAIN: ${{ inputs.domain }}
