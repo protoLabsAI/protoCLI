@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: proto
-  text: A multi-model AI agent for the terminal
-  tagline: Connect it to any OpenAI-compatible, Anthropic, or Gemini endpoint and let it read, write, and run code directly in your project.
+  text: A local, privacy-first AI agent for the terminal
+  tagline: Runs in your terminal against the models you choose — local, self-hosted, or any OpenAI-compatible, Anthropic, or Gemini endpoint. Your code and context stay yours.
   actions:
     - theme: brand
       text: Get Started
