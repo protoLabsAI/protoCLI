@@ -31,7 +31,7 @@ const esc = (s) =>
 const maxLen = Math.max(...art.map((l) => l.length));
 const artW = maxLen * CHARW;
 const x0 = Math.round((W - artW) / 2);
-const artTop = 180;
+const artTop = 130;
 
 const tspans = art
   .map(

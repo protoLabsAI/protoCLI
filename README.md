@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://cli.protolabs.studio"><img src="https://cli.protolabs.studio/og-protocli.png" alt="proto — a local, privacy-first AI agent for the terminal" width="100%" /></a>
+</p>
+
 # proto
 
 A multi-model AI agent for the terminal. Part of the [protoLabs Studio](https://protolabs.studio) ecosystem.
