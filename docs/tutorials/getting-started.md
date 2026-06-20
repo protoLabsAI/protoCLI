@@ -36,31 +36,41 @@ cargo install beads_rust
 
 See [Reference → Beads Task Tracker](../reference/beads) for full CLI documentation.
 
-## Step 2: Configure a model
+## Step 2: Run the setup wizard
 
-proto connects to any OpenAI-compatible, Anthropic, or Gemini API. Add your provider to `~/.proto/settings.json`:
+The fastest way to get connected is the interactive setup wizard. From your terminal:
+
+```bash
+proto setup
+```
+
+It walks you through choosing a provider (OpenAI, Anthropic, Gemini, or any OpenAI-compatible / local endpoint), entering an API key, discovering the available models, picking a default, and optionally configuring voice input — then writes everything to `~/.proto/settings.json` for you. Re-run `proto setup` any time to switch providers or change the default model.
+
+> [!tip]
+> proto is local- and privacy-first: point the wizard at a local or self-hosted OpenAI-compatible endpoint (e.g. a local vLLM or Ollama-compatible server) to keep your code, keys, and context entirely on your machine.
+
+If you start proto before configuring anything, it routes you straight into this wizard.
+
+<details>
+<summary>Prefer to configure by hand?</summary>
+
+Add your provider to `~/.proto/settings.json` and export the key in your shell (do **not** put secrets directly in settings.json):
 
 ```json
 {
   "modelProviders": {
-    "openai": [
-      {
-        "id": "gpt-4o",
-        "name": "GPT-4o",
-        "envKey": "OPENAI_API_KEY"
-      }
-    ]
+    "openai": [{ "id": "gpt-4o", "name": "GPT-4o", "envKey": "OPENAI_API_KEY" }]
   }
 }
 ```
-
-Then export your key in your shell (do **not** put secrets directly in settings.json):
 
 ```bash
 export OPENAI_API_KEY=sk-...
 ```
 
-For other providers — Anthropic, Gemini, or a local endpoint — see [Guides → Configure Models & Auth](../guides/configure-models).
+For other providers — Anthropic, Gemini, gateways, or a local endpoint — see [Guides → Configure Models & Auth](../guides/configure-models).
+
+</details>
 
 ## Step 3: Start your first session
 
@@ -71,7 +81,7 @@ cd /path/to/your/project
 proto
 ```
 
-On first launch you will be prompted to pick a model. Use `/model` at any time to switch.
+Since `proto setup` already picked your default model, you land straight in a session. Use `/model` at any time to switch.
 
 ## Step 4: Try your first prompts
 

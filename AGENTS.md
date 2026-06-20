@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-**proto** is a multi-model AI agent for the terminal. It connects to any OpenAI-compatible, Anthropic, or Gemini API endpoint. It's a fork of Qwen Code (which is based on Gemini CLI), rebuilt as a model-agnostic coding agent with features from the protoLabs Studio ecosystem.
+**proto** is a local, privacy-first AI agent for the terminal. It runs in your terminal and works against the models you choose — local, self-hosted, or any OpenAI-compatible, Anthropic, or Gemini endpoint — so your code, keys, and context stay yours. It's a fork of Qwen Code (which is based on Gemini CLI), rebuilt with features from the protoLabs Studio ecosystem.
 
 ### Key Features
 
-- **Multi-model**: Connect any OpenAI-compatible, Anthropic, or Gemini endpoint
+- **Local & privacy-first**: Runs against the models you host (local/self-hosted) or any OpenAI-compatible, Anthropic, or Gemini endpoint — your code and keys stay yours
 - **beads_rust task management**: SQLite-backed persistent tasks via `br` CLI with task claiming
 - **MCP support**: Configure MCP servers in settings for tool extensions
 - **Plugin discovery**: Auto-discovers Claude Code plugins from `~/.claude/plugins/`
