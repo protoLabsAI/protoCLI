@@ -1,36 +1,15 @@
+<p align="center">
+  <a href="https://cli.protolabs.studio"><img src="https://cli.protolabs.studio/og-protocli.png" alt="proto — a local, privacy-first AI agent for the terminal" width="100%" /></a>
+</p>
+
 # proto
 
 A local, privacy-first AI agent for the terminal. Part of the [protoLabs Studio](https://protolabs.studio) ecosystem.
 
-[![License](https://img.shields.io/github/license/QwenLM/qwen-code.svg)](./LICENSE)
+[![License](https://img.shields.io/github/license/protoLabsAI/protoCLI.svg)](./LICENSE)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org/)
 
 proto is a fork of [Qwen Code](https://github.com/QwenLM/qwen-code) (itself forked from [Gemini CLI](https://github.com/google-gemini/gemini-cli)), rebuilt as a local, privacy-first coding agent. It runs in your terminal and works against the models you choose — local, self-hosted, or any OpenAI-compatible, Anthropic, or Gemini endpoint — so your code, keys, and context stay yours.
-
-## What's Different
-
-At-a-glance overview vs. upstream Qwen Code. For the full architectural breakdown see [`docs/architecture/divergence-from-upstream.md`](./docs/architecture/divergence-from-upstream.md).
-
-| Category              | Qwen Code                 | proto                                                                                                                                                                                |
-| --------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Default model         | Qwen3-Coder               | Any (LiteLLM / OpenAI-compat / Anthropic / Gemini)                                                                                                                                   |
-| Agent harness         | —                         | Sprint contracts + scope lock, behavior-verify gate, multi-sample selector, doom-loop reminders, session memory + evolve, checkpoint/rewind, speculation                             |
-| Bundled skills        | 0 (use external)          | 4 utility skills (browser-automation, review, proto-helper, harness-reference); workflow skills are user-pluggable, not baked in                                                     |
-| Subagent execution    | Sequential                | Concurrent batched — Agent calls run in parallel; tool ordering preserved                                                                                                            |
-| Tool-call streaming   | Per-converter parser      | Per-stream parser context (no cross-stream corruption); malformed JSON → UI-hidden recovery note                                                                                     |
-| Reasoning models      | Basic `reasoning_content` | Inline `<think>`-tag extraction (Minimax/QwQ); reasoning-only `content: ""` fix; preserved on session resume                                                                         |
-| Truncation handling   | Best-effort               | MAX_TOKENS cascade detection + tool-response trimming; rejected truncated edits                                                                                                      |
-| Task management       | In-memory JSON            | [beads_rust](https://github.com/Dicklesworthstone/beads_rust) (SQLite + JSONL)                                                                                                       |
-| Memory                | Single append-only file   | File-per-memory with YAML frontmatter, 4-type taxonomy, auto-extraction                                                                                                              |
-| MCP servers           | None                      | Configurable via `~/.proto/settings.json`; SSE/HTTP/stdio in ACP mode                                                                                                                |
-| Plugin discovery      | Qwen only                 | Auto-discovers Claude Code plugins from `~/.claude/plugins/`                                                                                                                         |
-| Ignore files          | `.qwenignore`             | `.protoignore` + inherits `.claudeignore` patterns                                                                                                                                   |
-| ACP / Zed integration | Stock                     | Cron-in-Session, concurrent Agent calls, SSE/HTTP MCP, internal-part filtering                                                                                                       |
-| A2A agents (fleet)    | —                         | First-class **A2A client**: `proto agent <name>` to chat with protoAgent (or any A2A 1.0 agent); register, auto-discover, stream over A2A — see [guide](./docs/guides/a2a-agents.md) |
-| Extra built-in tools  | Standard set              | + browser automation, repo-map (PageRank), task tools, mailbox, LSP, voice/STT                                                                                                       |
-| Observability         | Console                   | OTLP/HTTP to LGTM stack + Langfuse, opt-in, with `gen_ai.response.thinking` and harness-intervention spans (SFT-ready)                                                               |
-| Release pipeline      | Manual                    | Conventional-commit auto-release (`feat:` → minor, `fix:` → patch)                                                                                                                   |
-| VS Code companion     | Included                  | Removed (focus on TUI + ACP/Zed)                                                                                                                                                     |
 
 ## Installation
 
