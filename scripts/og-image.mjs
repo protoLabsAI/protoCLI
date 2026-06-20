@@ -16,7 +16,7 @@ const FONT = 30; // ascii art font-size
 const LINE = 34; // line height
 const CHARW = FONT * 0.6; // monospace advance width
 
-const TAGLINE = "A multi-model AI agent for the terminal";
+const TAGLINE = "A local, privacy-first AI agent for the terminal";
 
 const art = readFileSync(
   new URL("../sites/marketing/src/proto-logo.txt", import.meta.url),
