@@ -1,0 +1,25 @@
+[
+  {
+    "version": "v0.62.1",
+    "date": "2026-06-19",
+    "changes": [
+      "A2A chat: tool-call lines no longer render twice for the same tool call."
+    ]
+  },
+  {
+    "version": "v0.62.0",
+    "date": "2026-06-19",
+    "changes": [
+      "A2A terminal client: rich Ink TUI with native markdown, streaming thoughts, and a cost footer.",
+      "Human-in-the-loop input-required resume for the agent chat.",
+      "Chat history reflows correctly on terminal resize."
+    ]
+  },
+  {
+    "version": "v0.61.0",
+    "date": "2026-06-18",
+    "changes": [
+      "New A2A terminal client: register, discover, and chat with protoAgent (and any A2A 1.0 agent) by name — `proto agent <name>`."
+    ]
+  }
+]

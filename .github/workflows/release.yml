@@ -183,6 +183,27 @@ jobs:
           esac
           exit 0
 
+      # Keep the marketing changelog (cli.protolabs.studio/changelog) in sync from
+      # the same git history release-tools uses. Pushing to main re-triggers
+      # marketing-deploy.yml, which publishes the updated /changelog. Best-effort:
+      # never block a release that has already published + tagged above.
+      - name: Update marketing changelog
+        if: steps.version.outputs.already_tagged != 'true'
+        continue-on-error: true
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          PREV="${{ steps.prev_tag.outputs.tag }}"
+          git checkout main
+          git pull --ff-only origin main
+          RELEASE_DATE="$(date -u +%Y-%m-%d)" node scripts/changelog-entry.mjs "$TAG" "$PREV"
+          git add sites/marketing/data/changelog.json
+          if git diff --cached --quiet; then
+            echo "No marketing-changelog change for $TAG."
+          else
+            git commit -m "chore(changelog): $TAG"
+            git push origin main
+          fi
+
       # An already-tagged version is an expected, benign outcome — e.g. two
       # auto-release runs raced and opened duplicate bump PRs for the same
       # version (now prevented in auto-release.yml, but a merged duplicate can
