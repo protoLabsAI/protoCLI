@@ -40,8 +40,7 @@
 │   ├── webui/            # Web UI components
 │   └── zed-extension/    # Zed editor extension
 ├── scripts/              # Build and utility scripts
-├── docs/                 # Documentation source
-├── docs-site/            # Documentation website (Next.js)
+├── docs/                 # Documentation source + VitePress site (.vitepress/)
 ├── integration-tests/    # End-to-end integration tests
 └── eslint-rules/         # Custom ESLint rules
 ```

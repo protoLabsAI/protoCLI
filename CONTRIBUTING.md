@@ -215,12 +215,15 @@ This section describes how to develop and preview the documentation locally.
 
 ### Setup Documentation Site Locally
 
-To work on the documentation and preview changes locally:
+The docs are a [VitePress](https://vitepress.dev) site that lives in `docs/`,
+styled with the shared [`@protolabsai/vitepress-theme`](https://github.com/protoLabsAI/protoContent/tree/main/packages/vitepress-theme)
+(which maps VitePress to the `@protolabsai/design` brand tokens — one source, no
+per-repo color drift). To preview changes locally:
 
-1. Navigate to the `docs-site` directory:
+1. Navigate to the `docs` directory:
 
    ```bash
-   cd docs-site
+   cd docs
    ```
 
 2. Install dependencies:
@@ -229,23 +232,15 @@ To work on the documentation and preview changes locally:
    npm install
    ```
 
-3. Link the documentation content from the main `docs` directory:
+3. Start the development server:
 
    ```bash
-   npm run link
+   npm run docs:dev
    ```
 
-   This creates a symbolic link from `../docs` to `content` in the docs-site project, allowing the documentation content to be served by the Next.js site.
+4. Open the printed local URL (default [http://localhost:5173](http://localhost:5173)) in your browser to see the site with live updates as you edit.
 
-4. Start the development server:
-
-   ```bash
-   npm run dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the documentation site with live updates as you make changes.
-
-Any changes made to the documentation files in the main `docs` directory will be reflected immediately in the documentation site.
+To build the static site (output in `docs/.vitepress/dist`), run `npm run docs:build`; preview the production build with `npm run docs:preview`.
 
 ## Debugging
 

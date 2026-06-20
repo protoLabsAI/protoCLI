@@ -22,7 +22,7 @@ jobs/
 node_modules
 bower_components
 package-lock.json
-!docs-site/package-lock.json
+!docs/package-lock.json
 pnpm-lock.yaml
 
 # Editors
@@ -73,11 +73,9 @@ gha-creds-*.json
 # Log files
 patch_output.log
 
-# docs build
-docs-site/.next
-docs-site/out
-# content is a symlink to ../docs
-docs-site/content
+# docs build (VitePress)
+docs/.vitepress/dist
+docs/.vitepress/cache
 
 # python cache
 __pycache__/

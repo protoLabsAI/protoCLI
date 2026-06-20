@@ -29,7 +29,7 @@ Use the project location for this tutorial so you can commit and share it.
 
 Create `.proto/skills/commit-message/SKILL.md`:
 
-```markdown
+````markdown
 ---
 name: commit-message
 description: Writes conventional commit messages. Use when committing changes, writing a commit, or asked to summarise what changed.
@@ -38,6 +38,7 @@ description: Writes conventional commit messages. Use when committing changes, w
 # Commit Message Skill
 
 Write commit messages using the Conventional Commits format:
+
 ```
 
 <type>(<scope>): <short summary>
@@ -50,14 +51,14 @@ Write commit messages using the Conventional Commits format:
 
 ## Types
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
+| Type       | When to use                                             |
+| ---------- | ------------------------------------------------------- |
+| `feat`     | New feature                                             |
+| `fix`      | Bug fix                                                 |
+| `docs`     | Documentation only                                      |
 | `refactor` | Code change that neither fixes a bug nor adds a feature |
-| `test` | Adding or correcting tests |
-| `chore` | Build, tooling, or config changes |
+| `test`     | Adding or correcting tests                              |
+| `chore`    | Build, tooling, or config changes                       |
 
 ## Rules
 
@@ -78,8 +79,7 @@ The PKCE verifier is generated per-session and never persisted.
 Closes #456
 
 ```
-
-```
+````
 
 The `description` field is what proto uses to decide when to invoke this skill — make it specific.
 

@@ -39,14 +39,6 @@ Commands in proto fall into three categories based on their prefix.
 | `/terminal-setup`                    | Configure terminal keybindings for multiline input                  |
 | `/trust`                             | Manage folder trust settings                                        |
 
-### Language
-
-| Command                   | Description                                         |
-| ------------------------- | --------------------------------------------------- |
-| `/language`               | Show current language settings                      |
-| `/language ui [lang]`     | Set UI language (e.g. `zh-CN`, `en-US`, `de-DE`)    |
-| `/language output <lang>` | Set LLM output language (e.g. `Chinese`, `English`) |
-
 ### Tools & models
 
 | Command                                                | Description                                                   |
@@ -102,6 +94,21 @@ Commands in proto fall into three categories based on their prefix.
 | `proto setup` | Interactive wizard — configure a model provider, API key, default model |
 
 See [Guides → Run the Setup Wizard](../guides/setup-wizard) for a full walkthrough.
+
+### Agent CLI subcommands — A2A chat (terminal, outside session)
+
+Talk to remote [A2A](../guides/a2a-agents) agents (such as protoAgent) from the terminal. Agents are registered under a shortcut name so you never retype URLs.
+
+| Command                        | Description                                                    |
+| ------------------------------ | -------------------------------------------------------------- |
+| `proto agents`                 | List registered and discovered A2A agents (with reachability)  |
+| `proto agent <name>`           | Open an interactive chat with a registered or discovered agent |
+| `proto agent add <name> <url>` | Register an agent under a shortcut name                        |
+| `proto agent remove <name>`    | Unregister an agent                                            |
+| `proto agent list`             | Same as `proto agents`                                         |
+| `proto agent connect <name>`   | Same as `proto agent <name>`                                   |
+
+`proto agents` / `proto agent list` accept `--no-scan` to skip network discovery and show only registered agents. `proto agent add` accepts `--scope user|project`, repeatable `-H, --header`, `--bearer-env`, `--api-key-env`, and `--description`. See [Guides → A2A Agents](../guides/a2a-agents) for the full walkthrough.
 
 ## `@` commands — inject files
 

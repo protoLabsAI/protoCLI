@@ -60,7 +60,6 @@ In addition to `settings.json`, the `.proto/` directory can contain:
 | `general.outputLanguage`                   | string  | `auto`  | LLM output language (`auto` or a language name like `Chinese`, `English`) |
 | `general.defaultFileEncoding`              | string  | `utf-8` | Encoding for new files (`utf-8` or `utf-8-bom`)                           |
 | `general.lsp`                              | boolean | —       | Enable LSP support globally (auto-enabled when `.lsp.json` exists)        |
-| `general.language`                         | string  | auto    | UI language code (e.g. `en-US`, `zh-CN`)                                  |
 
 ### `output`
 
@@ -178,6 +177,20 @@ Lock down or hide slash commands in multi-tenant deployments.
 ### `mcpServers`
 
 Map of MCP server configurations. See [Guides → Connect via MCP](../guides/use-mcp) for the full schema.
+
+### `a2aAgents`
+
+Map of registered [A2A](../guides/a2a-agents) agents, keyed by shortcut name, so you can connect with `proto agent <name>` without retyping a URL. Normally managed via `proto agent add` / `proto agent remove`, but editable directly. Each entry:
+
+| Field         | Type   | Description                                                                                   |
+| ------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `url`         | string | Agent base URL (e.g. `http://host:7870`); the `/a2a` and agent-card paths are derived from it |
+| `headers`     | object | Extra HTTP headers sent on every request (e.g. a static `Authorization`)                      |
+| `bearerEnv`   | string | Env var holding a Bearer token, sent as `Authorization: Bearer <value>`                       |
+| `apiKeyEnv`   | string | Env var holding an `X-API-Key` value                                                          |
+| `description` | string | Human description shown in `proto agents`                                                     |
+
+See [Guides → A2A Agents](../guides/a2a-agents) for the full walkthrough.
 
 ### `mcp`
 

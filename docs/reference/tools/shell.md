@@ -42,7 +42,7 @@ For **background** commands on non-Windows, the tool returns:
 - `Output file` — absolute path where stdout+stderr is captured (writes continue after the wrapper exits)
 - `PID` — actual subprocess PID
 
-Read the output file at any time with the [`read_file`](./read-file) tool to inspect progress or final results — there is no need to poll. When the process exits, the **next user prompt** is prefixed with a `<task_notification>` block carrying `task_id`, `output_file`, `status` (`completed`/`failed`/`killed`), `exit_code`, and a human summary.
+Read the output file at any time with the [`read_file`](./file-system) tool to inspect progress or final results — there is no need to poll. When the process exits, the **next user prompt** is prefixed with a `<task_notification>` block carrying `task_id`, `output_file`, `status` (`completed`/`failed`/`killed`), `exit_code`, and a human summary.
 
 ## Background tasks
 

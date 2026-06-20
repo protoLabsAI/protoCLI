@@ -98,7 +98,7 @@ Pass a `settings.json` via environment or a file before running proto:
 
 ### Update `.gitignore`
 
-```gitignore
+```text
 .proto/settings.json   # if it contains secrets
 ```
 

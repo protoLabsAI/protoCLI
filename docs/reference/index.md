@@ -9,7 +9,7 @@ Complete, exact reference material. Use this when you know what you're looking f
 - [Keyboard Shortcuts](/reference/keyboard-shortcuts) — Hotkeys for navigation and control
 - [Memory](/reference/memory) — How proto stores and retrieves context
 - [Beads Task Tracker](/reference/beads) — CLI for managing structured task lists
-- [Tools](/reference/tools) — Every built-in tool: signature, inputs, and behavior
+- [Tools](/reference/tools/introduction) — Every built-in tool: signature, inputs, and behavior
 - [SDK API](/reference/sdk-api) — Full `@protolabsai/sdk` API reference
 - [Troubleshooting](/reference/troubleshooting) — Common errors and fixes
 - [Uninstall](/reference/uninstall) — Clean removal instructions
