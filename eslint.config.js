@@ -26,8 +26,8 @@ export default tseslint.config(
       '.integration-tests/**',
       'packages/**/.integration-test/**',
       'dist/**',
-      'docs-site/.next/**',
-      'docs-site/out/**',
+      'docs/.vitepress/cache/**',
+      'docs/.vitepress/dist/**',
     ],
   },
   eslint.configs.recommended,
@@ -292,25 +292,18 @@ export default tseslint.config(
       ],
     },
   },
-  // Settings for docs-site directory
+  // Settings for the VitePress docs site config/theme
   {
-    files: ['docs-site/**/*.{js,jsx,mjs,cjs}'],
+    files: ['docs/.vitepress/**/*.{ts,mts,js,mjs,cjs}'],
     languageOptions: {
       globals: {
         ...globals.browser,
         ...globals.node,
       },
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
     },
     rules: {
       // Allow relaxed rules for documentation site
       '@typescript-eslint/no-unused-vars': 'off',
-      'react/prop-types': 'off',
-      'react/react-in-jsx-scope': 'off',
     },
   },
   storybook.configs['flat/recommended'],

@@ -18,7 +18,6 @@ proto's built-in tools are the functions the model calls to interact with your l
 | [Multi-File Read](./multi-file)    | `read_many_files`                                                                               |
 | [Shell](./shell)                   | `run_shell_command`                                                                             |
 | [Task management](./task)          | `task_create`, `task_update`, `task_list`, `task_get`, `task_ready`, `task_output`, `task_stop` |
-| [Todo](./todo-write)               | `todo_write`                                                                                    |
 | [Exit Plan Mode](./exit-plan-mode) | `exit_plan_mode`                                                                                |
 | [Web Fetch](./web-fetch)           | `web_fetch`                                                                                     |
 | [Web Search](./web-search)         | `web_search`                                                                                    |
