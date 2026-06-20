@@ -13,6 +13,12 @@ export default defineConfig({
   description:
     "A local, privacy-first AI agent for the terminal — read, write, and run code against the models you choose.",
 
+  head: [
+    // Favicon — served from docs/public/ at the configured base (works under
+    // both the /protoCLI/ GitHub Pages base and the /docs/ Cloudflare fold).
+    ["link", { rel: "icon", type: "image/svg+xml", href: `${base}favicon.svg` }],
+  ],
+
   // Docs are dark-first, like the marketing site. The brand accent flows live
   // from the @protolabsai/design tokens via @protolabsai/vitepress-theme.
   appearance: "force-dark",
