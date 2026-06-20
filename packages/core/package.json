@@ -4,7 +4,7 @@
   "description": "proto core",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/QwenLM/qwen-code.git"
+    "url": "git+https://github.com/protoLabsAI/protoCLI.git"
   },
   "type": "module",
   "main": "dist/index.js",
