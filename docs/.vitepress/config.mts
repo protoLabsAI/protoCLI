@@ -1,8 +1,10 @@
 import { defineConfig } from "vitepress";
 
-// Deployed to GitHub Pages at https://protoLabsAI.github.io/protoCLI/.
-// Override BASE_PATH (e.g. to "/") when serving from a custom domain root.
-const base = process.env.BASE_PATH ?? "/protoCLI/";
+// Two deploys coexist:
+//  - GitHub Pages (docs-deploy.yml) serves at /protoCLI/ (the fallback).
+//  - The Cloudflare marketing build folds these docs in at /docs/ via DOCS_BASE.
+// DOCS_BASE wins, then legacy BASE_PATH, then the GitHub Pages default.
+const base = process.env.DOCS_BASE ?? process.env.BASE_PATH ?? "/protoCLI/";
 
 export default defineConfig({
   base,

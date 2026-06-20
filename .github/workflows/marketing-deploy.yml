@@ -1,0 +1,64 @@
+name: Deploy Marketing Site to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sites/marketing/**'
+      - 'docs/**'
+      - '.github/workflows/marketing-deploy.yml'
+  workflow_dispatch:
+
+# One marketing deploy at a time; cancel in-progress on a new push.
+concurrency:
+  group: marketing-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 1. Marketing site (Astro) → sites/marketing/dist
+      - name: Build marketing site
+        working-directory: sites/marketing
+        run: |
+          npm ci
+          npm run build
+
+      # 2. Docs (VitePress) with base /docs/ → docs/.vitepress/dist
+      - name: Build docs (base /docs/)
+        working-directory: docs
+        run: |
+          npm ci
+          DOCS_BASE=/docs/ npm run docs:build
+
+      # 3. Fold the docs into the marketing bundle at /docs
+      - name: Fold docs into marketing bundle
+        run: |
+          rm -rf sites/marketing/dist/docs
+          mkdir -p sites/marketing/dist/docs
+          cp -R docs/.vitepress/dist/. sites/marketing/dist/docs/
+
+      # 4. Deploy the combined bundle to Cloudflare Pages.
+      # Skipped (with a warning) until the secrets + Pages project exist, so the
+      # build above still validates the site on every push without a red ❌.
+      - name: Deploy to Cloudflare Pages
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: sites/marketing
+        run: npx wrangler@3 pages deploy dist --project-name=protocli-marketing --branch=main
+
+      - name: Note missing Cloudflare secrets
+        if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
+        run: echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set — built the bundle but skipped deploy. Create the 'protocli-marketing' Cloudflare Pages project, add the secrets, and point cli.protolabs.studio at it to enable deploys."

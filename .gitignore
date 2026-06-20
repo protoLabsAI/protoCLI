@@ -23,6 +23,7 @@ node_modules
 bower_components
 package-lock.json
 !docs/package-lock.json
+!sites/marketing/package-lock.json
 pnpm-lock.yaml
 
 # Editors
@@ -76,6 +77,10 @@ patch_output.log
 # docs build (VitePress)
 docs/.vitepress/dist
 docs/.vitepress/cache
+
+# marketing site (Astro)
+sites/marketing/dist
+sites/marketing/.astro
 
 # python cache
 __pycache__/
