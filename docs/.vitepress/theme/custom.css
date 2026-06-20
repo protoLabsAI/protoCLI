@@ -1,0 +1,7 @@
+/* Repo-specific tweaks layered after the shared studio theme. */
+
+/* Ditch the underline on doc content links — they're already brand-colored,
+   so they read as links without a line (rest or hover). */
+.vp-doc a {
+  text-decoration: none;
+}
