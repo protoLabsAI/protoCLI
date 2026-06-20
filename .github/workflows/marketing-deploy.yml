@@ -51,9 +51,25 @@ jobs:
           mkdir -p sites/marketing/dist/docs
           cp -R docs/.vitepress/dist/. sites/marketing/dist/docs/
 
-      # 4. Deploy the combined bundle to Cloudflare Pages.
-      # Skipped (with a warning) until the secrets + Pages project exist, so the
-      # build above still validates the site on every push without a red ❌.
+      # 4. Ensure the Pages project exists (wrangler does NOT auto-create on
+      # deploy). Idempotent: a no-op once created. Tolerates "already exists".
+      - name: Ensure Cloudflare Pages project
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: sites/marketing
+        run: |
+          npx wrangler@3 pages project create protocli-marketing \
+            --production-branch=main 2>err.log || {
+              if grep -qiE 'already exists|8000007.*exists|with the name' err.log; then
+                echo "Project already exists — continuing.";
+              else
+                echo "::warning::Could not create the Pages project (the deploy step will surface the real error if it's a permissions issue):";
+                cat err.log;
+              fi
+            }
+
+      # 5. Deploy the combined bundle to Cloudflare Pages.
+      # Skipped (with a warning) until the secrets exist, so the build above
+      # still validates the site on every push without a red ❌.
       - name: Deploy to Cloudflare Pages
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         working-directory: sites/marketing
