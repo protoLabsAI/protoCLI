@@ -11,7 +11,7 @@ export default defineConfig({
   lang: "en-US",
   title: "proto",
   description:
-    "A multi-model AI agent for the terminal — read, write, and run code in your project.",
+    "A local, privacy-first AI agent for the terminal — read, write, and run code against the models you choose.",
 
   // Docs are dark-first, like the marketing site. The brand accent flows live
   // from the @protolabsai/design tokens via @protolabsai/vitepress-theme.
