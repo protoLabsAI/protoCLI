@@ -2,10 +2,10 @@
 
 ## npm global install
 
-If you installed proto with `npm install -g proto`:
+If you installed proto with `npm install -g @protolabsai/proto`:
 
 ```bash
-npm uninstall -g proto
+npm uninstall -g @protolabsai/proto
 ```
 
 ## npx cache

@@ -86,10 +86,10 @@ To trigger a manual release:
 ### Install release types
 
 ```bash
-npm install -g proto              # latest stable
-npm install -g proto@preview      # preview
-npm install -g proto@nightly      # nightly
-npm install -g proto@0.5.0        # specific version
+npm install -g @protolabsai/proto              # latest stable
+npm install -g @protolabsai/proto@preview      # preview
+npm install -g @protolabsai/proto@nightly      # nightly
+npm install -g @protolabsai/proto@0.5.0        # specific version
 ```
 
 ## Deployment notes
