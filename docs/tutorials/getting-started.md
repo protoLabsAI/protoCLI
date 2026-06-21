@@ -13,8 +13,16 @@ You need:
 
 ## Step 1: Install proto
 
+One line — ensures Node, installs proto, and launches the setup wizard:
+
 ```bash
-npm install -g proto
+curl -fsSL https://cli.protolabs.studio/install.sh | sh
+```
+
+Prefer npm? (needs Node 20+)
+
+```bash
+npm install -g @protolabsai/proto
 ```
 
 Verify the installation:

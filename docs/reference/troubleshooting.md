@@ -25,7 +25,7 @@ proto may persist `security.auth.selectedType` in `settings.json` after a failed
 **`Command not found: proto`**
 
 - Check that your npm global bin directory is in `$PATH`: `npm config get prefix`
-- Reinstall: `npm install -g proto`
+- Reinstall: `npm install -g @protolabsai/proto`
 
 **`MODULE_NOT_FOUND` or import errors**
 
@@ -58,7 +58,7 @@ env -u CI_TOKEN proto
 **How do I update proto?**
 
 ```bash
-npm install -g proto@latest
+npm install -g @protolabsai/proto@latest
 ```
 
 **Where are settings stored?**

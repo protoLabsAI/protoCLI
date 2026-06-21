@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: '20'
       - name: Install proto
-        run: npm install -g proto
+        run: npm install -g @protolabsai/proto
       - name: Run proto review
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -106,7 +106,7 @@ Pass a `settings.json` via environment or a file before running proto:
 
 - **Never commit API keys** — always use GitHub Secrets.
 - **Use `--yolo`** in CI to auto-approve file edits (proto has no interactive terminal to confirm).
-- **Pin the proto version** with `npm install -g proto@<version>` for reproducible CI.
+- **Pin the proto version** with `npm install -g @protolabsai/proto@<version>` for reproducible CI.
 - **Monitor costs** — set `runConfig.max_turns` limits or use a smaller model for routine CI tasks.
 - **Review action logs** regularly and enable observability (see [Contributing → Telemetry](../contributing/telemetry)).
 
