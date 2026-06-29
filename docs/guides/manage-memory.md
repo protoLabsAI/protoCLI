@@ -89,3 +89,10 @@ Project memories under `.proto/memory/` can be committed to share context with t
 git add .proto/memory/
 git commit -m "chore: add project memory for proto"
 ```
+
+## Session Notes
+
+In addition to the persistent memory system above, proto maintains a
+per-session summary in `.proto/session-notes.md` — a structured, sectioned
+record that a background agent updates after each turn and compaction reuses
+as its summary seed. See [Session Notes](./session-notes) for details.
