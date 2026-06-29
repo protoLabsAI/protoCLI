@@ -22,6 +22,7 @@ import { AgentTabBar } from '../components/agent-view/AgentTabBar.js';
 import { AgentChatView } from '../components/agent-view/AgentChatView.js';
 import { AgentComposer } from '../components/agent-view/AgentComposer.js';
 import { StatusBar } from '../components/StatusBar.js';
+import { BackgroundAgentsPanel } from '../components/BackgroundAgentsPanel.js';
 import {
   TranscriptOverlay,
   clampScroll,
@@ -298,6 +299,8 @@ export const FullScreenAppLayout: React.FC = () => {
       )}
 
       {hasAgents && !uiState.dialogsVisible && <AgentTabBar />}
+
+      <BackgroundAgentsPanel />
 
       <StatusBar
         cwd={config.getTargetDir()}

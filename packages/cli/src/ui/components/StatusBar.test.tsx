@@ -17,20 +17,11 @@ vi.mock('../hooks/useGitDiffStat.js', () => ({
   useGitDiffStat: vi.fn(() => null),
 }));
 
-vi.mock('../hooks/useBackgroundAgentProgress.js', () => ({
-  useBackgroundAgentProgress: vi.fn(() => ({
-    activeAgents: [],
-    lastFinished: null,
-  })),
-}));
-
 import { useGitBranchName } from '../hooks/useGitBranchName.js';
 import { useGitDiffStat } from '../hooks/useGitDiffStat.js';
-import { useBackgroundAgentProgress } from '../hooks/useBackgroundAgentProgress.js';
 
 const mockBranch = vi.mocked(useGitBranchName);
 const mockDiff = vi.mocked(useGitDiffStat);
-const mockAgents = vi.mocked(useBackgroundAgentProgress);
 
 const render$ = (props: Partial<React.ComponentProps<typeof StatusBar>> = {}) =>
   render(<StatusBar cwd="/home/user/project" terminalWidth={120} {...props} />);
@@ -39,7 +30,6 @@ describe('<StatusBar />', () => {
   beforeEach(() => {
     mockBranch.mockReturnValue(undefined);
     mockDiff.mockReturnValue(null);
-    mockAgents.mockReturnValue({ activeAgents: [], lastFinished: null });
   });
 
   it('renders the ⟡ logo mark', () => {
@@ -101,23 +91,6 @@ describe('<StatusBar />', () => {
     });
     const { lastFrame } = render$();
     expect(lastFrame()).not.toContain('files');
-  });
-
-  it('shows background agent indicator', () => {
-    mockAgents.mockReturnValue({
-      activeAgents: [
-        {
-          agentId: 'a1',
-          agentName: 'test-agent',
-          round: 2,
-          toolName: undefined,
-          startedAt: Date.now(),
-        },
-      ],
-      lastFinished: null,
-    });
-    const { lastFrame } = render$();
-    expect(lastFrame()).toContain('⟳ test-agent: turn 2');
   });
 
   it('shows bg session badge when bgSessionActive is true', () => {

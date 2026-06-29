@@ -16,6 +16,7 @@ import { AgentTabBar } from '../components/agent-view/AgentTabBar.js';
 import { AgentChatView } from '../components/agent-view/AgentChatView.js';
 import { AgentComposer } from '../components/agent-view/AgentComposer.js';
 import { StatusBar } from '../components/StatusBar.js';
+import { BackgroundAgentsPanel } from '../components/BackgroundAgentsPanel.js';
 import { TranscriptOverlay } from '../components/TranscriptOverlay.js';
 import { StreamingState } from '../types.js';
 import { useUIState } from '../contexts/UIStateContext.js';
@@ -103,6 +104,9 @@ export const DefaultAppLayout: React.FC = () => {
 
       {/* Tab bar: visible whenever in-process agents exist and input is active */}
       {hasAgents && !uiState.dialogsVisible && <AgentTabBar />}
+
+      {/* Live background-agent activity, as cards above the status bar */}
+      <BackgroundAgentsPanel />
 
       {/* Status bar: CWD · git branch · uncommitted diff */}
       <StatusBar
