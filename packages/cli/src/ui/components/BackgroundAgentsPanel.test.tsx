@@ -58,7 +58,7 @@ describe('<BackgroundAgentsPanel />', () => {
     expect(lastFrame()).toContain('⟳ general-purpose: web_fetch');
   });
 
-  it('frames the session-memory writer as notes', () => {
+  it('excludes the session-memory note writer (routine housekeeping = noise)', () => {
     mockAgents.mockReturnValue({
       activeAgents: [
         agent({ agentId: 'm', agentName: 'session-memory', toolName: 'write' }),
@@ -66,7 +66,27 @@ describe('<BackgroundAgentsPanel />', () => {
       lastFinished: null,
     });
     const { lastFrame } = render(<BackgroundAgentsPanel />);
-    expect(lastFrame()).toContain('↺ notes: writing');
+    // Only session-memory is active → the panel renders nothing.
+    expect((lastFrame() ?? '').trim()).toBe('');
+    expect(lastFrame() ?? '').not.toContain('notes');
+  });
+
+  it('shows real subagents while filtering session-memory out of a mixed list', () => {
+    mockAgents.mockReturnValue({
+      activeAgents: [
+        agent({ agentId: 'm', agentName: 'session-memory', toolName: 'write' }),
+        agent({
+          agentId: 'g',
+          agentName: 'general-purpose',
+          toolName: 'web_fetch',
+        }),
+      ],
+      lastFinished: null,
+    });
+    const { lastFrame } = render(<BackgroundAgentsPanel />);
+    const frame = lastFrame() ?? '';
+    expect(frame).toContain('⟳ general-purpose: web_fetch');
+    expect(frame).not.toContain('notes');
   });
 
   it('renders a card per active agent', () => {
