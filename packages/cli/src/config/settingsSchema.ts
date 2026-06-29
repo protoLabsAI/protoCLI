@@ -480,6 +480,20 @@ const SETTINGS_SCHEMA = {
         description: 'Hide the window title bar',
         showInDialog: false,
       },
+      fullScreen: {
+        type: 'boolean',
+        label: 'Full-screen mode',
+        category: 'UI',
+        requiresRestart: true,
+        default: false,
+        description:
+          "Draw proto on the terminal's alternate screen (like vim) with a " +
+          'pinned composer and a dedicated, flicker-free streaming region. ' +
+          'Trades native terminal scrollback/selection for a calmer layout; ' +
+          'press Esc-Esc … or run /tui default to return to inline mode. ' +
+          'Opt-in while we harden virtualization and copy support.',
+        showInDialog: true,
+      },
       showStatusInTitle: {
         type: 'boolean',
         label: 'Show Status in Title',

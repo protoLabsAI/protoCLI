@@ -4,15 +4,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import { EOL } from 'node:os';
-import { ToolConfirmationMessage } from './ToolConfirmationMessage.js';
+import {
+  ToolConfirmationMessage,
+  CONFIRMATION_ARMING_MS,
+} from './ToolConfirmationMessage.js';
 import type {
   ToolCallConfirmationDetails,
   Config,
 } from '@qwen-code/qwen-code-core';
+import { ToolConfirmationOutcome } from '@qwen-code/qwen-code-core';
 import { renderWithProviders } from '../../../test-utils/render.js';
 import type { LoadedSettings } from '../../../config/settings.js';
+
+const wait = (ms = 50) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('ToolConfirmationMessage', () => {
   const mockConfig = {
@@ -245,6 +251,119 @@ describe('ToolConfirmationMessage', () => {
       );
 
       expect(lastFrame()).not.toContain('Modify with external editor');
+    });
+  });
+
+  describe('arming window and single-key accelerators', () => {
+    const mockConfig = {
+      isTrustedFolder: () => true,
+      getIdeMode: () => false,
+    } as unknown as Config;
+
+    const editDetails = (onConfirm: Mock): ToolCallConfirmationDetails => ({
+      type: 'edit',
+      title: 'Confirm Edit',
+      fileName: 'test.txt',
+      filePath: '/test.txt',
+      fileDiff: '...diff...',
+      originalContent: 'a',
+      newContent: 'b',
+      onConfirm,
+    });
+
+    it('appends single-key hints to option labels', () => {
+      const { lastFrame } = renderWithProviders(
+        <ToolConfirmationMessage
+          confirmationDetails={editDetails(vi.fn())}
+          config={mockConfig}
+          availableTerminalHeight={30}
+          contentWidth={80}
+        />,
+      );
+
+      // Numbered by RadioButtonSelect, plus the letter accelerator.
+      expect(lastFrame()).toContain('Yes, allow once (y)');
+      expect(lastFrame()).toContain('Yes, allow always (a)');
+    });
+
+    it('ignores keypresses during the arming window, then accepts them', async () => {
+      const onConfirm = vi.fn();
+      const { stdin } = renderWithProviders(
+        <ToolConfirmationMessage
+          confirmationDetails={editDetails(onConfirm)}
+          config={mockConfig}
+          availableTerminalHeight={30}
+          contentWidth={80}
+        />,
+      );
+
+      // Still inside the 350ms window: an in-flight Enter must NOT confirm.
+      await wait(50);
+      stdin.write('\r');
+      await wait(50);
+      expect(onConfirm).not.toHaveBeenCalled();
+
+      // Past the window: the same key now confirms the default (ProceedOnce).
+      await wait(CONFIRMATION_ARMING_MS);
+      stdin.write('\r');
+      await wait(50);
+      expect(onConfirm).toHaveBeenCalledWith(
+        ToolConfirmationOutcome.ProceedOnce,
+      );
+    });
+
+    it('ignores a letter accelerator during the arming window', async () => {
+      const onConfirm = vi.fn();
+      const { stdin } = renderWithProviders(
+        <ToolConfirmationMessage
+          confirmationDetails={editDetails(onConfirm)}
+          config={mockConfig}
+          availableTerminalHeight={30}
+          contentWidth={80}
+        />,
+      );
+
+      // Still inside the 350ms window: a letter must NOT confirm.
+      await wait(50);
+      stdin.write('a');
+      await wait(50);
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('accepts a letter accelerator once armed', async () => {
+      const onConfirm = vi.fn();
+      const { stdin } = renderWithProviders(
+        <ToolConfirmationMessage
+          confirmationDetails={editDetails(onConfirm)}
+          config={mockConfig}
+          availableTerminalHeight={30}
+          contentWidth={80}
+        />,
+      );
+
+      await wait(CONFIRMATION_ARMING_MS + 50);
+      stdin.write('a'); // ProceedAlways
+      await wait(50);
+      expect(onConfirm).toHaveBeenCalledWith(
+        ToolConfirmationOutcome.ProceedAlways,
+      );
+    });
+
+    it('cancels on Esc once armed', async () => {
+      const onConfirm = vi.fn();
+      const { stdin } = renderWithProviders(
+        <ToolConfirmationMessage
+          confirmationDetails={editDetails(onConfirm)}
+          config={mockConfig}
+          availableTerminalHeight={30}
+          contentWidth={80}
+        />,
+      );
+
+      await wait(CONFIRMATION_ARMING_MS + 50);
+      stdin.write(''); // Escape
+      await wait(50);
+      expect(onConfirm).toHaveBeenCalledWith(ToolConfirmationOutcome.Cancel);
     });
   });
 });
