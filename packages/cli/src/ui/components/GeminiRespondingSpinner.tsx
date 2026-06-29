@@ -15,6 +15,7 @@ import {
   SCREEN_READER_RESPONDING,
 } from '../textConstants.js';
 import { theme } from '../semantic-colors.js';
+import { ThinkingSpinner } from './ThinkingSpinner.js';
 
 interface GeminiRespondingSpinnerProps {
   /**
@@ -23,15 +24,23 @@ interface GeminiRespondingSpinnerProps {
    */
   nonRespondingDisplay?: string;
   spinnerType?: SpinnerName;
+  /**
+   * When true, render the gradient "thinking" wave instead of the plain dots
+   * spinner. Used for the primary agent-is-working indicators (the loading line
+   * and the agent-tab thinking line), not for per-tool spinners.
+   */
+  thinking?: boolean;
 }
 
 export const GeminiRespondingSpinner: React.FC<
   GeminiRespondingSpinnerProps
-> = ({ nonRespondingDisplay, spinnerType = 'dots' }) => {
+> = ({ nonRespondingDisplay, spinnerType = 'dots', thinking = false }) => {
   const streamingState = useStreamingContext();
   const isScreenReaderEnabled = useIsScreenReaderEnabled();
   if (streamingState === StreamingState.Responding) {
-    return (
+    return thinking ? (
+      <ThinkingSpinner altText={SCREEN_READER_RESPONDING} />
+    ) : (
       <GeminiSpinner
         spinnerType={spinnerType}
         altText={SCREEN_READER_RESPONDING}
