@@ -65,20 +65,20 @@ Commands in proto fall into three categories based on their prefix.
 
 ### Information & settings
 
-| Command                                  | Description                                                      |
-| ---------------------------------------- | ---------------------------------------------------------------- |
-| `/help` or `/?`                          | Display help                                                     |
-| `/about` or `/status`                    | Display version information                                      |
-| `/stats`                                 | Show session statistics (tokens, costs, cached tokens)           |
-| `/notes` / `notes --view`                | View or refresh session notes (`.proto/session-notes.md`)        |
-| `/insight status` / `enable` / `disable` | Show or toggle programming insights generation                   |
-| `/settings`                              | Open settings editor                                             |
-| `/setup`                                 | Reminder to run `proto setup` (wizard requires a fresh terminal) |
-| `/auth`                                  | Change authentication method                                     |
-| `/permissions`                           | Manage folder trust                                              |
-| `/bug <description>`                     | Submit a bug report                                              |
-| `/copy`                                  | Copy last output to clipboard                                    |
-| `/quit` or `/exit`                       | Exit proto                                                       |
+| Command                                  | Description                                                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `/help` or `/?`                          | Display help                                                                                           |
+| `/about` or `/status`                    | Display version information                                                                            |
+| `/stats`                                 | Show session statistics (tokens, costs, cached tokens)                                                 |
+| `/notes` / `notes --view`                | View or refresh session notes (`.proto/session-notes.md`) — [see Session Notes](/guides/session-notes) |
+| `/insight status` / `enable` / `disable` | Show or toggle programming insights generation                                                         |
+| `/settings`                              | Open settings editor                                                                                   |
+| `/setup`                                 | Reminder to run `proto setup` (wizard requires a fresh terminal)                                       |
+| `/auth`                                  | Change authentication method                                                                           |
+| `/permissions`                           | Manage folder trust                                                                                    |
+| `/bug <description>`                     | Submit a bug report                                                                                    |
+| `/copy`                                  | Copy last output to clipboard                                                                          |
+| `/quit` or `/exit`                       | Exit proto                                                                                             |
 
 ### Auth CLI subcommands (terminal, outside session)
 
