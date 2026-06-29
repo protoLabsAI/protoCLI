@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { t, ta } from '../../i18n/index.js';
 
-export const WITTY_LOADING_PHRASES: string[] = ["I'm Feeling Lucky"];
+export const WITTY_LOADING_PHRASES: string[] = ['Working…'];
 
 export const PHRASE_CHANGE_INTERVAL_MS = 15000;
 
