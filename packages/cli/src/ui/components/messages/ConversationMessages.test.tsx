@@ -63,22 +63,36 @@ describe('ThinkMessage', () => {
     expect(output).not.toContain('thinking (');
   });
 
-  it('renders compact "thinking (N chars)" summary once stream finalizes', () => {
+  it('renders the full thought in place once the stream finalizes (default)', () => {
     const text = 'reasoning '.repeat(10).trim(); // 99 chars
     const { lastFrame } = render(
       <ThinkMessage text={text} isPending={false} contentWidth={80} />,
     );
     const output = lastFrame() ?? '';
+    // Reasoning stays visible inline; no collapse to the summary.
+    expect(output).toContain('reasoning reasoning');
+    expect(output).not.toContain('thinking (');
+  });
+
+  it('collapses to "thinking (N chars)" only when expansion is disabled', () => {
+    const text = 'reasoning '.repeat(10).trim(); // 99 chars
+    const { lastFrame } = render(
+      <ThoughtExpansionContext.Provider value={false}>
+        <ThinkMessage text={text} isPending={false} contentWidth={80} />
+      </ThoughtExpansionContext.Provider>,
+    );
+    const output = lastFrame() ?? '';
     expect(output).toContain('▸');
     expect(output).toContain(`thinking (${text.length} chars)`);
-    // Underlying reasoning text is not rendered inline post-stream.
     expect(output).not.toContain('reasoning reasoning');
   });
 
-  it('formats large char counts with thousands separator', () => {
+  it('formats large char counts with thousands separator when collapsed', () => {
     const text = 'x'.repeat(12_345);
     const { lastFrame } = render(
-      <ThinkMessage text={text} isPending={false} contentWidth={80} />,
+      <ThoughtExpansionContext.Provider value={false}>
+        <ThinkMessage text={text} isPending={false} contentWidth={80} />
+      </ThoughtExpansionContext.Provider>,
     );
     const output = lastFrame() ?? '';
     expect(output).toContain('thinking (12,345 chars)');
@@ -113,7 +127,7 @@ describe('ThinkMessageContent', () => {
     expect(output).toContain('continued reasoning text');
   });
 
-  it('renders nothing once stream finalizes (the parent ThinkMessage owns the summary)', () => {
+  it('renders the continuation in place once finalized (default)', () => {
     const { lastFrame } = render(
       <ThinkMessageContent
         text="continued reasoning text"
@@ -121,8 +135,20 @@ describe('ThinkMessageContent', () => {
         contentWidth={80}
       />,
     );
-    const output = lastFrame() ?? '';
-    expect(output.trim()).toBe('');
+    expect(lastFrame() ?? '').toContain('continued reasoning text');
+  });
+
+  it('renders nothing once finalized only when expansion is disabled', () => {
+    const { lastFrame } = render(
+      <ThoughtExpansionContext.Provider value={false}>
+        <ThinkMessageContent
+          text="continued reasoning text"
+          isPending={false}
+          contentWidth={80}
+        />
+      </ThoughtExpansionContext.Provider>,
+    );
+    expect((lastFrame() ?? '').trim()).toBe('');
   });
 
   it('renders the finalized continuation inside an expanded context', () => {

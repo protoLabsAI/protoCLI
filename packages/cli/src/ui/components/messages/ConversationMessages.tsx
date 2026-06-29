@@ -82,11 +82,13 @@ interface ContinuationMarkdownMessageProps {
 }
 
 /**
- * When true, finalized thoughts render their full text instead of collapsing
- * to the "▸ thinking (N chars)" summary. The transcript overlay (Ctrl+O) flips
- * this on so the scrollback stays compact while the overlay shows everything.
+ * Whether finalized thoughts render their full text in place (the default) or
+ * collapse to the "▸ thinking (N chars)" summary. Defaults to expanded so the
+ * agent's reasoning stays visible inline in the transcript; a provider can set
+ * `false` to collapse it (reserved for a future per-user toggle, see #162). The
+ * transcript overlay (Ctrl+O) also forces it on.
  */
-export const ThoughtExpansionContext = createContext<boolean>(false);
+export const ThoughtExpansionContext = createContext<boolean>(true);
 
 function getPrefixWidth(prefix: string): number {
   // Reserve one extra column so text never touches the prefix glyph.
