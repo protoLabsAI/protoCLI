@@ -5,8 +5,10 @@
  */
 
 import type React from 'react';
+import { useMemo } from 'react';
 import { Box, Text, useIsScreenReaderEnabled } from 'ink';
 import crypto from 'node:crypto';
+import { diffWords } from 'diff';
 import { colorizeCode, colorizeLine } from '../../utils/CodeColorizer.js';
 import { MaxSizedBox } from '../shared/MaxSizedBox.js';
 import { theme as semanticTheme } from '../../semantic-colors.js';
@@ -18,6 +20,76 @@ interface DiffLine {
   oldLine?: number;
   newLine?: number;
   content: string;
+}
+
+/** A run of text within a changed line, flagged if it is the part that changed. */
+export interface DiffWordSegment {
+  text: string;
+  emphasized: boolean;
+}
+
+/**
+ * Word-level diff between a deleted line and the added line that replaced it.
+ * Returns the segments for each side so the renderer can emphasize the words
+ * that actually changed and dim the words that stayed the same (delta's most
+ * loved behavior). `del` reconstructs `oldText`, `add` reconstructs `newText`.
+ */
+export function computeLineDiffSegments(
+  oldText: string,
+  newText: string,
+): { del: DiffWordSegment[]; add: DiffWordSegment[] } {
+  const parts = diffWords(oldText, newText);
+  const del: DiffWordSegment[] = [];
+  const add: DiffWordSegment[] = [];
+  for (const part of parts) {
+    // Removed/common parts belong to the old (deleted) line; added/common parts
+    // belong to the new (added) line. A part is emphasized on the side where it
+    // is the change.
+    if (!part.added) del.push({ text: part.value, emphasized: !!part.removed });
+    if (!part.removed) add.push({ text: part.value, emphasized: !!part.added });
+  }
+  return { del, add };
+}
+
+/**
+ * Pair each deleted line with the added line that replaced it (a "modified"
+ * line) and compute the word-level segments for both. Pairs are formed within a
+ * run of consecutive deletions immediately followed by a run of additions,
+ * matched positionally (del[k] ↔ add[k]); leftover unpaired add/del lines get no
+ * word emphasis. Keyed by index into `displayableLines`.
+ */
+function buildPairedSegments(
+  displayableLines: DiffLine[],
+  baseIndentation: number,
+): Map<number, DiffWordSegment[]> {
+  const map = new Map<number, DiffWordSegment[]>();
+  let i = 0;
+  while (i < displayableLines.length) {
+    if (displayableLines[i].type !== 'del') {
+      i++;
+      continue;
+    }
+    let d = i;
+    while (d < displayableLines.length && displayableLines[d].type === 'del')
+      d++;
+    let a = d;
+    while (a < displayableLines.length && displayableLines[a].type === 'add')
+      a++;
+    const pairs = Math.min(d - i, a - d);
+    for (let k = 0; k < pairs; k++) {
+      const delIdx = i + k;
+      const addIdx = d + k;
+      const oldText =
+        displayableLines[delIdx].content.substring(baseIndentation);
+      const newText =
+        displayableLines[addIdx].content.substring(baseIndentation);
+      const { del, add } = computeLineDiffSegments(oldText, newText);
+      map.set(delIdx, del);
+      map.set(addIdx, add);
+    }
+    i = a;
+  }
+  return map;
 }
 
 function parseDiffWithLineNumbers(diffContent: string): DiffLine[] {
@@ -102,69 +174,74 @@ export const DiffRenderer: React.FC<DiffRendererProps> = ({
   settings,
 }) => {
   const screenReaderEnabled = useIsScreenReaderEnabled();
-  if (!diffContent || typeof diffContent !== 'string') {
-    return <Text color={semanticTheme.status.warning}>No diff content.</Text>;
-  }
 
-  const parsedLines = parseDiffWithLineNumbers(diffContent);
+  // Memoize the whole render by its inputs: parsing the patch and (especially)
+  // syntax-colorizing every line is wasteful to repeat on each parent re-render
+  // (e.g. while a tool result streams). All branches are computed inside so the
+  // hook runs unconditionally.
+  return useMemo(() => {
+    if (!diffContent || typeof diffContent !== 'string') {
+      return <Text color={semanticTheme.status.warning}>No diff content.</Text>;
+    }
 
-  if (parsedLines.length === 0) {
-    return (
-      <Box
-        borderStyle="round"
-        borderColor={semanticTheme.border.default}
-        padding={1}
-      >
-        <Text dimColor>No changes detected.</Text>
-      </Box>
+    const parsedLines = parseDiffWithLineNumbers(diffContent);
+
+    if (parsedLines.length === 0) {
+      return (
+        <Box
+          borderStyle="round"
+          borderColor={semanticTheme.border.default}
+          padding={1}
+        >
+          <Text dimColor>No changes detected.</Text>
+        </Box>
+      );
+    }
+    if (screenReaderEnabled) {
+      return (
+        <Box flexDirection="column">
+          {parsedLines.map((line, index) => (
+            <Text key={index}>
+              {line.type}: {line.content}
+            </Text>
+          ))}
+        </Box>
+      );
+    }
+
+    // Check if the diff represents a new file (only additions and header lines)
+    const isNewFile = parsedLines.every(
+      (line) =>
+        line.type === 'add' ||
+        line.type === 'hunk' ||
+        line.type === 'other' ||
+        line.content.startsWith('diff --git') ||
+        line.content.startsWith('new file mode'),
     );
-  }
-  if (screenReaderEnabled) {
-    return (
-      <Box flexDirection="column">
-        {parsedLines.map((line, index) => (
-          <Text key={index}>
-            {line.type}: {line.content}
-          </Text>
-        ))}
-      </Box>
-    );
-  }
 
-  // Check if the diff represents a new file (only additions and header lines)
-  const isNewFile = parsedLines.every(
-    (line) =>
-      line.type === 'add' ||
-      line.type === 'hunk' ||
-      line.type === 'other' ||
-      line.content.startsWith('diff --git') ||
-      line.content.startsWith('new file mode'),
-  );
+    if (isNewFile) {
+      // Extract only the added lines' content
+      const addedContent = parsedLines
+        .filter((line) => line.type === 'add')
+        .map((line) => line.content)
+        .join('\n');
+      // Attempt to infer language from filename, default to plain text if no filename
+      const fileExtension = filename?.split('.').pop() || null;
+      const language = fileExtension
+        ? getLanguageFromExtension(fileExtension)
+        : null;
+      return colorizeCode(
+        addedContent,
+        language,
+        availableTerminalHeight,
+        contentWidth,
+        theme,
+        settings,
+        tabWidth,
+      );
+    }
 
-  let renderedOutput;
-
-  if (isNewFile) {
-    // Extract only the added lines' content
-    const addedContent = parsedLines
-      .filter((line) => line.type === 'add')
-      .map((line) => line.content)
-      .join('\n');
-    // Attempt to infer language from filename, default to plain text if no filename
-    const fileExtension = filename?.split('.').pop() || null;
-    const language = fileExtension
-      ? getLanguageFromExtension(fileExtension)
-      : null;
-    renderedOutput = colorizeCode(
-      addedContent,
-      language,
-      availableTerminalHeight,
-      contentWidth,
-      theme,
-      settings,
-      tabWidth,
-    );
-  } else {
-    renderedOutput = renderDiffContent(
+    return renderDiffContent(
       parsedLines,
       filename,
       tabWidth,
@@ -172,10 +249,34 @@ export const DiffRenderer: React.FC<DiffRendererProps> = ({
       contentWidth,
       settings,
     );
-  }
-
-  return renderedOutput;
+  }, [
+    diffContent,
+    screenReaderEnabled,
+    filename,
+    tabWidth,
+    availableTerminalHeight,
+    contentWidth,
+    theme,
+    settings,
+  ]);
 };
+
+/** Render the word-emphasis segments of a modified line on the diff background. */
+function renderLineSegments(
+  segments: DiffWordSegment[],
+  color: string,
+): React.ReactNode {
+  return segments.map((seg, i) => (
+    <Text
+      key={i}
+      color={color}
+      bold={seg.emphasized}
+      dimColor={!seg.emphasized}
+    >
+      {seg.text}
+    </Text>
+  ));
+}
 
 const renderDiffContent = (
   parsedLines: DiffLine[],
@@ -236,6 +337,10 @@ const renderDiffContent = (
   if (!isFinite(baseIndentation)) {
     baseIndentation = 0;
   }
+
+  // Word-level segments for each modified (paired del→add) line, so we can
+  // emphasize the words that actually changed and dim the rest.
+  const pairedSegments = buildPairedSegments(displayableLines, baseIndentation);
 
   const key = filename
     ? `diff-box-${filename}`
@@ -305,6 +410,7 @@ const renderDiffContent = (
         }
 
         const displayContent = line.content.substring(baseIndentation);
+        const segments = pairedSegments.get(index);
 
         acc.push(
           <Box key={lineKey} flexDirection="row">
@@ -347,7 +453,14 @@ const renderDiffContent = (
                 >
                   {prefixSymbol}
                 </Text>{' '}
-                {colorizeLine(displayContent, language)}
+                {segments
+                  ? renderLineSegments(
+                      segments,
+                      line.type === 'add'
+                        ? semanticTheme.status.success
+                        : semanticTheme.status.error,
+                    )
+                  : colorizeLine(displayContent, language)}
               </Text>
             )}
           </Box>,
