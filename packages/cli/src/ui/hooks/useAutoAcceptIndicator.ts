@@ -49,8 +49,11 @@ export function useAutoAcceptIndicator({
         key.name === 'tab' &&
         !key.ctrl &&
         !key.meta;
+      // Alt+M is the fallback gesture for terminals that intercept Shift+Tab
+      // (some multiplexers / remaps swallow it). Same cycle, different key.
+      const isAltM = key.meta && !key.ctrl && key.name === 'm';
 
-      if (isShiftTab || isWindowsTab) {
+      if (isShiftTab || isWindowsTab || isAltM) {
         // On Windows, check if we should block Tab key when autocomplete is active
         if (isWindowsTab && shouldBlockTab?.()) {
           // Don't cycle approval mode when autocomplete is showing

@@ -44,6 +44,11 @@ export const AutoAcceptIndicator: React.FC<AutoAcceptIndicatorProps> = ({
       break;
     case ApprovalMode.DEFAULT:
     default:
+      // Always show a chip for the current autonomy mode (the cycle hint is
+      // carried by the surrounding footer for the default case to keep it
+      // compact).
+      textColor = theme.text.secondary;
+      textContent = t('default');
       break;
   }
 
