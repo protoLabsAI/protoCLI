@@ -30,8 +30,9 @@ export const AgentFooter: React.FC<AgentFooterProps> = ({
   contextWindowSize,
   terminalWidth,
 }) => {
-  const showApproval =
-    approvalMode !== undefined && approvalMode !== ApprovalMode.DEFAULT;
+  // Keep the autonomy chip visible for every mode (including default) so the
+  // current mode is always shown, matching the main footer.
+  const showApproval = approvalMode !== undefined;
   const showContext = promptTokenCount > 0 && contextWindowSize !== undefined;
 
   if (!showApproval && !showContext) {
@@ -47,7 +48,9 @@ export const AgentFooter: React.FC<AgentFooterProps> = ({
     >
       <Box marginLeft={2}>
         {showApproval ? (
-          <AutoAcceptIndicator approvalMode={approvalMode} />
+          <AutoAcceptIndicator
+            approvalMode={approvalMode ?? ApprovalMode.DEFAULT}
+          />
         ) : null}
       </Box>
       <Box marginRight={2}>

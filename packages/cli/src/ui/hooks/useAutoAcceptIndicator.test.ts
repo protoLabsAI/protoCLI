@@ -225,6 +225,25 @@ describe('useAutoAcceptIndicator', () => {
     expect(result.current).toBe(ApprovalMode.DEFAULT);
   });
 
+  it('should cycle approval modes when Alt+M is pressed (Shift+Tab fallback)', () => {
+    mockConfigInstance.getApprovalMode.mockReturnValue(ApprovalMode.DEFAULT);
+    const { result } = renderHook(() =>
+      useAutoAcceptIndicator({
+        config: mockConfigInstance as unknown as ActualConfigType,
+        addItem: vi.fn(),
+      }),
+    );
+    expect(result.current).toBe(ApprovalMode.DEFAULT);
+
+    act(() => {
+      capturedUseKeypressHandler({ name: 'm', meta: true } as Key);
+    });
+    expect(mockConfigInstance.setApprovalMode).toHaveBeenCalledWith(
+      ApprovalMode.AUTO_EDIT,
+    );
+    expect(result.current).toBe(ApprovalMode.AUTO_EDIT);
+  });
+
   it('should not toggle if only one key or other keys combinations are pressed', () => {
     mockConfigInstance.getApprovalMode.mockReturnValue(ApprovalMode.DEFAULT);
     renderHook(() =>

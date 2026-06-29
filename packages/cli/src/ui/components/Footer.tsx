@@ -78,11 +78,17 @@ export const Footer: React.FC = () => {
       showAutoAcceptIndicator !== ApprovalMode.DEFAULT ? (
       <AutoAcceptIndicator approvalMode={showAutoAcceptIndicator} />
     ) : (
-      <Text color={theme.text.secondary}>
-        {t('? for shortcuts')}
-        {'  ·  '}
-        {t('Esc×2: rewind')}
-      </Text>
+      // Default mode: the autonomy chip stays visible (so the current mode is
+      // always shown) next to the shortcut hints.
+      <Box>
+        <AutoAcceptIndicator approvalMode={ApprovalMode.DEFAULT} />
+        <Text color={theme.text.secondary}>
+          {'  ·  '}
+          {t('? for shortcuts')}
+          {'  ·  '}
+          {t('Esc×2: rewind')}
+        </Text>
+      </Box>
     );
 
   const rightItems: Array<{ key: string; node: React.ReactNode }> = [
