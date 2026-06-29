@@ -15,6 +15,8 @@ import {
 } from './contexts/UIActionsContext.js';
 import { AgentViewProvider } from './contexts/AgentViewContext.js';
 import { ConfigContext } from './contexts/ConfigContext.js';
+import { SettingsContext } from './contexts/SettingsContext.js';
+import type { LoadedSettings } from '../config/settings.js';
 import { StreamingState } from './types.js';
 
 vi.mock('ink', async (importOriginal) => {
@@ -80,17 +82,22 @@ describe('App', () => {
     getTargetDir: () => '/mock/cwd',
   } as unknown as import('@qwen-code/qwen-code-core').Config;
 
+  // Minimal settings: full-screen unset → App selects the inline layout.
+  const mockSettings = { merged: {} } as unknown as LoadedSettings;
+
   const renderWithProviders = (uiState: UIState) =>
     render(
-      <ConfigContext.Provider value={mockConfig}>
-        <UIActionsContext.Provider value={mockUIActions}>
-          <AgentViewProvider>
-            <UIStateContext.Provider value={uiState}>
-              <App />
-            </UIStateContext.Provider>
-          </AgentViewProvider>
-        </UIActionsContext.Provider>
-      </ConfigContext.Provider>,
+      <SettingsContext.Provider value={mockSettings}>
+        <ConfigContext.Provider value={mockConfig}>
+          <UIActionsContext.Provider value={mockUIActions}>
+            <AgentViewProvider>
+              <UIStateContext.Provider value={uiState}>
+                <App />
+              </UIStateContext.Provider>
+            </AgentViewProvider>
+          </UIActionsContext.Provider>
+        </ConfigContext.Provider>
+      </SettingsContext.Provider>,
     );
 
   it('should render main content and composer when not quitting', () => {

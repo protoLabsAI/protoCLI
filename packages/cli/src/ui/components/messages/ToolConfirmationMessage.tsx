@@ -5,7 +5,7 @@
  */
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Box, Text } from 'ink';
 import { DiffRenderer } from './DiffRenderer.js';
 import { RenderInline } from '../../utils/InlineMarkdownRenderer.js';
@@ -30,6 +30,51 @@ import { useSettings } from '../../contexts/SettingsContext.js';
 import { theme } from '../../semantic-colors.js';
 import { t } from '../../../i18n/index.js';
 import { AskUserQuestionDialog } from './AskUserQuestionDialog.js';
+
+/**
+ * Window after the prompt appears during which keypresses are ignored, so a key
+ * the user was already pressing (or an in-flight Enter from the previous turn)
+ * can't auto-confirm a destructive action the instant the prompt shows up.
+ */
+export const CONFIRMATION_ARMING_MS = 350;
+
+/**
+ * Single-key letter accelerators per outcome. Shown appended to the option
+ * label (e.g. "Yes, allow once (y)") and accepted by the keypress handler.
+ */
+const OUTCOME_HOTKEYS: ReadonlyArray<[ToolConfirmationOutcome, string]> = [
+  [ToolConfirmationOutcome.ProceedOnce, 'y'],
+  [ToolConfirmationOutcome.ProceedAlways, 'a'],
+  [ToolConfirmationOutcome.ProceedAlwaysProject, 'p'],
+  [ToolConfirmationOutcome.ProceedAlwaysUser, 'u'],
+  [ToolConfirmationOutcome.ModifyWithEditor, 'm'],
+  [ToolConfirmationOutcome.Cancel, 'n'],
+];
+
+/**
+ * Appends a single-key hint to each option's label (e.g. "Yes, allow once (y)")
+ * and returns the letter→outcome map for the keypress handler. Labels that
+ * already carry a parenthetical hint (e.g. the "(esc)" on Cancel) are left
+ * untouched. Mutates the passed-in option objects, which are rebuilt per render.
+ */
+function applyHotkeys(
+  options: Array<RadioSelectItem<ToolConfirmationOutcome>>,
+): Map<string, ToolConfirmationOutcome> {
+  const map = new Map<string, ToolConfirmationOutcome>();
+  for (const option of options) {
+    const entry = OUTCOME_HOTKEYS.find(([outcome]) => outcome === option.value);
+    if (!entry) continue;
+    const [, letter] = entry;
+    map.set(letter, option.value);
+    // Cancel already carries an "(esc)" hint; every other label gets its letter.
+    // (Don't infer from the text — a friendly action label can contain '(', e.g.
+    // a command rule — which would wrongly suppress the hint.)
+    if (option.value !== ToolConfirmationOutcome.Cancel) {
+      option.label = `${option.label} (${letter})`;
+    }
+  }
+  return map;
+}
 
 export interface ToolConfirmationMessageProps {
   confirmationDetails: ToolCallConfirmationDetails;
@@ -59,6 +104,18 @@ export const ToolConfirmationMessage: React.FC<
 
   const [ideClient, setIdeClient] = useState<IdeClient | null>(null);
   const [isDiffingEnabled, setIsDiffingEnabled] = useState(false);
+
+  // The prompt ignores input for a brief window after it appears, so a key the
+  // user was already pressing can't auto-confirm a destructive action.
+  const [isArmed, setIsArmed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsArmed(true), CONFIRMATION_ARMING_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Populated each render (compact + main paths) with the active letter→outcome
+  // accelerators; read by the keypress handler below.
+  const hotkeyMapRef = useRef<Map<string, ToolConfirmationOutcome>>(new Map());
 
   useEffect(() => {
     let isMounted = true;
@@ -100,13 +157,28 @@ export const ToolConfirmationMessage: React.FC<
 
   useKeypress(
     (key) => {
-      if (!isFocused) return;
+      if (!isFocused || !isArmed) return;
       if (key.name === 'escape' || (key.ctrl && key.name === 'c')) {
         handleConfirm(ToolConfirmationOutcome.Cancel);
+        return;
+      }
+      // Single-key letter accelerators (no modifiers), e.g. y / a / p / n.
+      // Exclude pastes: a 1-char bracketed paste must never confirm an action.
+      if (!key.ctrl && !key.meta && !key.paste && key.sequence.length === 1) {
+        const outcome = hotkeyMapRef.current.get(key.sequence.toLowerCase());
+        if (outcome !== undefined) {
+          handleConfirm(outcome);
+        }
       }
     },
-    { isActive: isFocused },
+    { isActive: isFocused && isArmed },
   );
+
+  // Reset accelerators each render; the paths that show options (compact + main)
+  // repopulate via applyHotkeys below. No-options paths (isModifying, and the
+  // ask_user_question delegate) therefore can't keep a stale map live, which
+  // would otherwise let a stray letter confirm on a screen with no choices.
+  hotkeyMapRef.current = new Map();
 
   const handleSelect = (item: ToolConfirmationOutcome) => handleConfirm(item);
 
@@ -130,6 +202,8 @@ export const ToolConfirmationMessage: React.FC<
       },
     ];
 
+    hotkeyMapRef.current = applyHotkeys(compactOptions);
+
     return (
       <Box flexDirection="column">
         <Box>
@@ -139,7 +213,7 @@ export const ToolConfirmationMessage: React.FC<
           <RadioButtonSelect
             items={compactOptions}
             onSelect={handleSelect}
-            isFocused={isFocused}
+            isFocused={isFocused && isArmed}
           />
         </Box>
       </Box>
@@ -455,6 +529,8 @@ export const ToolConfirmationMessage: React.FC<
     });
   }
 
+  hotkeyMapRef.current = applyHotkeys(options);
+
   return (
     <Box flexDirection="column" padding={1} width={contentWidth}>
       {/* Body Content (Diff Renderer or Command Info) */}
@@ -475,7 +551,7 @@ export const ToolConfirmationMessage: React.FC<
         <RadioButtonSelect
           items={options}
           onSelect={handleSelect}
-          isFocused={isFocused}
+          isFocused={isFocused && isArmed}
         />
       </Box>
     </Box>

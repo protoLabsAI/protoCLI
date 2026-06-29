@@ -101,9 +101,23 @@ export interface Key {
 
 export type KeypressHandler = (key: Key) => void;
 
+/**
+ * A decoded mouse drag event for text selection. Coordinates are 0-based screen
+ * cells (top-left origin). Wheel events are delivered as synthetic keys, not
+ * here. Shift+drag is intentionally NOT reported (left to native selection).
+ */
+export interface MouseEvent {
+  type: 'down' | 'drag' | 'up';
+  row: number;
+  col: number;
+}
+export type MouseHandler = (event: MouseEvent) => void;
+
 interface KeypressContextValue {
   subscribe: (handler: KeypressHandler) => void;
   unsubscribe: (handler: KeypressHandler) => void;
+  subscribeMouse: (handler: MouseHandler) => void;
+  unsubscribeMouse: (handler: MouseHandler) => void;
   pasteWorkaround: boolean;
 }
 
@@ -120,6 +134,19 @@ export function useKeypressContext() {
     );
   }
   return context;
+}
+
+/** Subscribe to mouse drag events (down/drag/up) while `isActive`. */
+export function useMouse(
+  onMouse: MouseHandler,
+  { isActive }: { isActive: boolean },
+) {
+  const { subscribeMouse, unsubscribeMouse } = useKeypressContext();
+  useEffect(() => {
+    if (!isActive) return;
+    subscribeMouse(onMouse);
+    return () => unsubscribeMouse(onMouse);
+  }, [isActive, onMouse, subscribeMouse, unsubscribeMouse]);
 }
 
 export function KeypressProvider({
@@ -153,6 +180,20 @@ export function KeypressProvider({
       subscribers.delete(handler);
     },
     [subscribers],
+  );
+
+  const mouseSubscribers = useRef<Set<MouseHandler>>(new Set()).current;
+  const subscribeMouse = useCallback(
+    (handler: MouseHandler) => {
+      mouseSubscribers.add(handler);
+    },
+    [mouseSubscribers],
+  );
+  const unsubscribeMouse = useCallback(
+    (handler: MouseHandler) => {
+      mouseSubscribers.delete(handler);
+    },
+    [mouseSubscribers],
   );
 
   useEffect(() => {
@@ -599,6 +640,51 @@ export function KeypressProvider({
     // eslint-disable-next-line no-control-regex
     const TERMINAL_RESPONSE_RE = /^\x1b\[[?>][\d;]*[uc]$/;
 
+    // SGR mouse report at the START of a buffer: ESC [ < button ; col ; row M|m.
+    // readline SHATTERS private-CSI sequences (the `<` marker) into one-byte
+    // keypresses, so mouse can't be recognized on a single key.sequence — it is
+    // matched against the reassembled kitty buffer in the peel loop below.
+    // eslint-disable-next-line no-control-regex
+    const SGR_MOUSE_PREFIX_RE = /^\x1b\[<(\d+);(\d+);(\d+)([Mm])/;
+
+    // Translate an SGR mouse report into action. Wheel (bit 6) becomes a
+    // synthetic wheelup/wheeldown key with an EMPTY sequence (so a handler that
+    // echoes key.sequence inserts nothing). Left-button press/motion/release
+    // become down/drag/up mouse events for selection. Shift+drag is left to the
+    // terminal's native selection (terminals bypass capture when Shift is held),
+    // so shift-held events are ignored here.
+    const dispatchMouse = (
+      button: number,
+      col: number,
+      row: number,
+      pressed: boolean,
+    ) => {
+      if (button & 64) {
+        broadcast({
+          name: button & 1 ? 'wheeldown' : 'wheelup',
+          ctrl: (button & 16) !== 0,
+          meta: (button & 8) !== 0,
+          shift: (button & 4) !== 0,
+          paste: false,
+          sequence: '',
+        });
+        return;
+      }
+      if ((button & 3) === 0 && (button & 4) === 0) {
+        const motion = (button & 32) !== 0;
+        const type: MouseEvent['type'] = !pressed
+          ? 'up'
+          : motion
+            ? 'drag'
+            : 'down';
+        // SGR coords are 1-based; convert to 0-based screen cells.
+        const event: MouseEvent = { type, row: row - 1, col: col - 1 };
+        for (const handler of mouseSubscribers) {
+          handler(event);
+        }
+      }
+    };
+
     const handleKeypress = async (_: unknown, key: Key) => {
       if (TERMINAL_RESPONSE_RE.test(key.sequence)) {
         return;
@@ -789,6 +875,30 @@ export function KeypressProvider({
                 clearKittyTimeout();
               }
               broadcast(parsed.key);
+              bufferedInputHandled = true;
+              continue;
+            }
+
+            // SGR mouse report: recognize it HERE, where the full sequence has
+            // finally reassembled, before the "unsupported CSI" branch below
+            // drops it. (This is the only place the whole sequence exists, since
+            // readline shattered it byte-by-byte into this buffer.)
+            const mouseMatch = SGR_MOUSE_PREFIX_RE.exec(
+              kittySequenceBufferRef.current,
+            );
+            if (mouseMatch) {
+              updateKittyBuffer(
+                kittySequenceBufferRef.current.slice(mouseMatch[0].length),
+              );
+              if (!kittySequenceBufferRef.current) {
+                clearKittyTimeout();
+              }
+              dispatchMouse(
+                Number.parseInt(mouseMatch[1]!, 10),
+                Number.parseInt(mouseMatch[2]!, 10),
+                Number.parseInt(mouseMatch[3]!, 10),
+                mouseMatch[4] === 'M',
+              );
               bufferedInputHandled = true;
               continue;
             }
@@ -1093,11 +1203,18 @@ export function KeypressProvider({
     pasteWorkaround,
     config,
     subscribers,
+    mouseSubscribers,
   ]);
 
   return (
     <KeypressContext.Provider
-      value={{ subscribe, unsubscribe, pasteWorkaround }}
+      value={{
+        subscribe,
+        unsubscribe,
+        subscribeMouse,
+        unsubscribeMouse,
+        pasteWorkaround,
+      }}
     >
       {children}
     </KeypressContext.Provider>
