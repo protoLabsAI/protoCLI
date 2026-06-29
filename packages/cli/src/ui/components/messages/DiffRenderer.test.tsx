@@ -6,10 +6,54 @@
 
 import { OverflowProvider } from '../../contexts/OverflowContext.js';
 import { render } from 'ink-testing-library';
-import { DiffRenderer } from './DiffRenderer.js';
+import { DiffRenderer, computeLineDiffSegments } from './DiffRenderer.js';
 import * as CodeColorizer from '../../utils/CodeColorizer.js';
-import { vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { LoadedSettings } from '../../../config/settings.js';
+
+describe('computeLineDiffSegments', () => {
+  it('emphasizes only the changed words and reconstructs each side', () => {
+    const { del, add } = computeLineDiffSegments(
+      'const token = req.headers.authorization',
+      "const token = req.headers.authorization?.replace(/^Bearer /, '')",
+    );
+    // Each side's segments concatenate back to the original line.
+    expect(del.map((s) => s.text).join('')).toBe(
+      'const token = req.headers.authorization',
+    );
+    expect(add.map((s) => s.text).join('')).toBe(
+      "const token = req.headers.authorization?.replace(/^Bearer /, '')",
+    );
+    // The unchanged prefix is not emphasized on either side.
+    expect(del[0].emphasized).toBe(false);
+    expect(del.every((s) => !s.emphasized)).toBe(true); // pure addition: nothing removed
+    // The added tail is emphasized on the add side.
+    expect(add.some((s) => s.emphasized)).toBe(true);
+    expect(
+      add
+        .filter((s) => s.emphasized)
+        .map((s) => s.text)
+        .join(''),
+    ).toContain("?.replace(/^Bearer /, '')");
+  });
+
+  it('emphasizes a swapped identifier on both sides', () => {
+    const { del, add } = computeLineDiffSegments(
+      'const oldVar = 1;',
+      'const newVar = 1;',
+    );
+    expect(del.find((s) => s.emphasized)?.text).toBe('oldVar');
+    expect(add.find((s) => s.emphasized)?.text).toBe('newVar');
+    expect(del.map((s) => s.text).join('')).toBe('const oldVar = 1;');
+    expect(add.map((s) => s.text).join('')).toBe('const newVar = 1;');
+  });
+
+  it('emphasizes nothing when the lines are identical', () => {
+    const { del, add } = computeLineDiffSegments('same', 'same');
+    expect(del.every((s) => !s.emphasized)).toBe(true);
+    expect(add.every((s) => !s.emphasized)).toBe(true);
+  });
+});
 
 const mockSettings: LoadedSettings = {
   merged: {
@@ -305,10 +349,13 @@ index 123..789 100644
       {
         contentWidth: 30,
         height: 6,
+        // Word-level emphasis splits the changed line at word boundaries, so
+        // the narrow-width wrap falls after "=" rather than after "'test'"
+        // (same text, just a different wrap column).
         expected: `... first 10 lines hidden ...
-   ;
-21 + const anotherNew = 'test'
-   ;
+   'test';
+21 + const anotherNew =
+   'test';
 22   console.log('end of
      second hunk');`,
       },
