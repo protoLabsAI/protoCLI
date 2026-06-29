@@ -70,6 +70,7 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
         <Box>
           <Box marginRight={1}>
             <GeminiRespondingSpinner
+              thinking
               nonRespondingDisplay={
                 streamingState === StreamingState.WaitingForConfirmation
                   ? '⠏'
