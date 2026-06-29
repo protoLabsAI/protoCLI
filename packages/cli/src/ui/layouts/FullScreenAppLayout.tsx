@@ -34,7 +34,6 @@ import { useAgentViewState } from '../contexts/AgentViewContext.js';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { useKeypress, type Key } from '../hooks/useKeypress.js';
-import { useSelection } from '../hooks/useSelection.js';
 
 /**
  * Most recent history items the full-screen transcript renders at once. Older
@@ -42,9 +41,6 @@ import { useSelection } from '../hooks/useSelection.js';
  * cover several screens of scroll-back while bounding the per-frame layout cost.
  */
 const MAX_WINDOW_ITEMS = 80;
-
-/** Lines scrolled per mouse-wheel notch. */
-const WHEEL_STEP = 3;
 
 /**
  * The scrolling transcript region for full-screen mode. Unlike the inline
@@ -167,15 +163,6 @@ const FullScreenTranscript: React.FC = () => {
           if (next >= max) setFollowing(true);
           return next;
         });
-      } else if (key.name === 'wheelup') {
-        setFollowing(false);
-        setScrollOffset((p) => clampScroll(p - WHEEL_STEP, max));
-      } else if (key.name === 'wheeldown') {
-        setScrollOffset((p) => {
-          const next = clampScroll(p + WHEEL_STEP, max);
-          if (next >= max) setFollowing(true);
-          return next;
-        });
       }
     },
     [pageStep],
@@ -257,18 +244,9 @@ export const FullScreenAppLayout: React.FC = () => {
   const hasAgents = agents.size > 0;
   const isAgentTab = activeView !== 'main' && agents.has(activeView);
 
-  // Drag-to-select + copy. A transient toast confirms each copy (the field's
-  // lesson: silent copy reads as broken, but never copy per-frame — only on
-  // release, which useSelection enforces).
-  const [copiedMsg, setCopiedMsg] = useState<string | null>(null);
-  const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const handleCopied = useCallback((text: string) => {
-    const n = text.length;
-    setCopiedMsg(`✔ copied ${n} char${n === 1 ? '' : 's'}`);
-    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
-    copiedTimerRef.current = setTimeout(() => setCopiedMsg(null), 2000);
-  }, []);
-  useSelection(true, handleCopied);
+  // Full-screen does not capture the mouse, so text selection + copy are the
+  // terminal's own (native) — nothing for proto to render. Scroll is PgUp/PgDn
+  // (see FullScreenTranscript). See useFullScreen for the rationale.
 
   if (uiState.isTranscriptOpen) {
     return <TranscriptOverlay onClose={closeTranscript} />;
@@ -320,12 +298,6 @@ export const FullScreenAppLayout: React.FC = () => {
       )}
 
       {hasAgents && !uiState.dialogsVisible && <AgentTabBar />}
-
-      {copiedMsg && (
-        <Box paddingX={1}>
-          <Text color={theme.status.success}>{copiedMsg}</Text>
-        </Box>
-      )}
 
       <StatusBar
         cwd={config.getTargetDir()}

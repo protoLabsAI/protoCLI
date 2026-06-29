@@ -6,11 +6,6 @@
 
 import { useEffect, useState } from 'react';
 import { enterAltScreen, leaveAltScreen } from '../../utils/altScreen.js';
-import { enableMouse, disableMouse } from '../../utils/mouse.js';
-import {
-  startShadowTerminal,
-  stopShadowTerminal,
-} from '../utils/shadowTerminal.js';
 import { registerCleanup } from '../../utils/cleanup.js';
 
 /**
@@ -23,27 +18,27 @@ import { registerCleanup } from '../../utils/cleanup.js';
  * decision is captured once on mount so toggling the setting mid-session does
  * not flip the renderer underneath a running turn — it takes effect on restart,
  * matching the `requiresRestart` flag on the setting.
+ *
+ * Full-screen deliberately does NOT capture the mouse. Capturing it (SGR mouse
+ * reporting) would let proto draw its own scroll/selection, but it disables the
+ * terminal's native text selection — and reproducing a native-feeling selection
+ * highlight on top of Ink proved intractable (Ink clears and rewrites the whole
+ * alt-screen every commit, so any overlay is stomped). Every TUI that captures
+ * the mouse also inherits a long bug tail: broken scrollback, terminal Find,
+ * tmux copy-mode, and screen-reader selection. So we leave the mouse to the
+ * terminal — native selection + copy just work — and scroll via PgUp/PgDn.
  */
 export function useFullScreen(enabled: boolean): boolean {
   const [active] = useState(enabled);
 
   useEffect(() => {
     if (!active) return;
-    // Start the shadow terminal BEFORE entering the alt-screen so it captures
-    // the ?1049h switch and mirrors the alternate buffer from the start.
-    startShadowTerminal();
     enterAltScreen();
-    enableMouse();
-    // Restore the screen + native selection as part of the normal cleanup chain
-    // (runs before Ink unmounts); each util's own `process.on('exit')` backstop
-    // covers hard exits.
-    registerCleanup(disableMouse);
+    // Restore the screen as part of the normal cleanup chain (runs before Ink
+    // unmounts); altScreen's own `process.on('exit')` backstop covers hard exits.
     registerCleanup(leaveAltScreen);
-    registerCleanup(stopShadowTerminal);
     return () => {
-      disableMouse();
       leaveAltScreen();
-      stopShadowTerminal();
     };
   }, [active]);
 
