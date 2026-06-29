@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import type React from 'react';
 import { Box, Text } from 'ink';
 import path from 'node:path';
 import os from 'node:os';
 import { useGitBranchName } from '../hooks/useGitBranchName.js';
 import { useGitDiffStat } from '../hooks/useGitDiffStat.js';
-import { useBackgroundAgentProgress } from '../hooks/useBackgroundAgentProgress.js';
 import { theme } from '../semantic-colors.js';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
@@ -69,7 +68,6 @@ export const StatusBar = ({
 }: StatusBarProps) => {
   const branch = useGitBranchName(cwd);
   const diff = useGitDiffStat(cwd);
-  const { activeAgents } = useBackgroundAgentProgress();
 
   const cwdDisplay = tildify(path.resolve(cwd));
 
@@ -102,25 +100,8 @@ export const StatusBar = ({
         <Text>{os.hostname()}</Text>
       </Badge>
 
-      {/* Background agent activity indicators */}
-      {activeAgents.map((agent) => {
-        const label =
-          agent.agentName === 'session-memory'
-            ? agent.toolName
-              ? '↺ notes: writing'
-              : `↺ notes: turn ${agent.round}`
-            : agent.toolName
-              ? `⟳ ${agent.agentName}: ${agent.toolName}`
-              : `⟳ ${agent.agentName}: turn ${agent.round}`;
-        return (
-          <React.Fragment key={agent.agentId}>
-            <Sep />
-            <Badge>
-              <Text color={theme.text.secondary}>{label}</Text>
-            </Badge>
-          </React.Fragment>
-        );
-      })}
+      {/* Active background agents render as cards in BackgroundAgentsPanel
+          (above the status bar), not as badges crammed in here. */}
 
       {bgSessionActive && (
         <>
