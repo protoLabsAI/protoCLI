@@ -19,9 +19,9 @@ jobs/
 # Note: .qwen-clipboard/ is NOT in gitignore so Gemini can access pasted images
 
 # Dependency directory
-node_modules
+**/node_modules
 bower_components
-package-lock.json
+!package-lock.json
 !docs/package-lock.json
 !sites/marketing/package-lock.json
 pnpm-lock.yaml
@@ -32,7 +32,6 @@ pnpm-lock.yaml
 .cursor
 .qoder
 .claude
-CLAUDE.md
 
 # OS metadata
 .DS_Store
