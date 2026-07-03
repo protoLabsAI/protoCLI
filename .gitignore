@@ -175,8 +175,10 @@ packages/*/src/**/__snapshots__/*.js.snap
 # metadata.json + .br_history/ get committed so other machines/agents see
 # the same queue.
 
-# proto agent memory (local state, not source)
-.proto/
+# proto agent per-session scratch (local state, not source)
+.proto/memory/
+.proto/session-notes.md
+.proto/repo-map-cache.json
 
 # git worktrees directory (local, not source)
 .worktrees/

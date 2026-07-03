@@ -2,3 +2,4 @@
 # issue_prefix: qwen-code
 # default_priority: 2
 # default_type: task
+local_gate_cmd: npm ci && npm run build && npm run test:ci
