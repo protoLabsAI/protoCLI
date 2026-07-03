@@ -37,6 +37,7 @@ describe('Telemetry SDK', () => {
     'LANGFUSE_BASE_URL',
   ] as const;
   const savedLangfuseEnv: Record<string, string | undefined> = {};
+  const savedOtelToken = process.env['OTEL_INGRESS_TOKEN'];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -45,6 +46,8 @@ describe('Telemetry SDK', () => {
       savedLangfuseEnv[key] = process.env[key];
       delete process.env[key];
     }
+    // Clear OTEL_INGRESS_TOKEN so tests don't pick up host bearer tokens
+    delete process.env['OTEL_INGRESS_TOKEN'];
     mockConfig = {
       getTelemetryEnabled: () => true,
       getTelemetryOtlpEndpoint: () => 'http://localhost:4317',
@@ -66,6 +69,12 @@ describe('Telemetry SDK', () => {
       } else {
         delete process.env[key];
       }
+    }
+    // Restore OTEL_INGRESS_TOKEN
+    if (savedOtelToken !== undefined) {
+      process.env['OTEL_INGRESS_TOKEN'] = savedOtelToken;
+    } else {
+      delete process.env['OTEL_INGRESS_TOKEN'];
     }
   });
 
