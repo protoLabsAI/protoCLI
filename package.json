@@ -20,7 +20,7 @@
     "url": "https://github.com/protoLabsAI/protoCLI/issues"
   },
   "config": {
-    "sandboxImageUri": "ghcr.io/qwenlm/qwen-code:0.71.2"
+    "sandboxImageUri": "ghcr.io/protolabsai/protocli:0.71.2"
   },
   "scripts": {
     "start": "cross-env node scripts/start.js",

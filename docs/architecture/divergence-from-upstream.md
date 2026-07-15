@@ -52,8 +52,10 @@ load-bearing because the binary name, NPM scope, and config dirs all track it.
   user-installed extensions that record their origin.
 - `DEFAULT_QWEN_MODEL` constant and the `QWEN_DIR` storage constant — same
   reasoning. Internal identifier, not user-visible.
-- `sandboxImageUri: ghcr.io/qwenlm/qwen-code:0.26.5` (`package.json:23`) —
-  we do not yet ship our own sandbox image.
+
+The sandbox no longer points at the upstream Qwen image: it now ships as our own
+image (`ghcr.io/protolabsai/protocli`, `package.json:23`), published per release
+by `.github/workflows/build-and-publish-image.yml`.
 
 **Honest take:** if you read `packages/core` source, you will still see
 `Qwen` in dozens of places. The user-visible surface is consistently `proto`.

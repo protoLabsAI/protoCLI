@@ -70,7 +70,7 @@ export SANDBOX_FLAGS="--security-opt label=disable"
 **Extend the default image** — create `.proto/sandbox.Dockerfile`:
 
 ```dockerfile
-FROM ghcr.io/proto-labs/proto:latest
+FROM ghcr.io/protolabsai/protocli:latest
 
 RUN apt-get update && apt-get install -y openjdk-17-jre && \
     apt-get clean && rm -rf /var/lib/apt/lists/*

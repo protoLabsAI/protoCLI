@@ -37,7 +37,7 @@
     "dist"
   ],
   "config": {
-    "sandboxImageUri": "ghcr.io/qwenlm/qwen-code:0.71.2"
+    "sandboxImageUri": "ghcr.io/protolabsai/protocli:0.71.2"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.0",
