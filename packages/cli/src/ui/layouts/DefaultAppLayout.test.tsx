@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from 'ink-testing-library';
 import { Text } from 'ink';
 import { DefaultAppLayout } from './DefaultAppLayout.js';
@@ -17,15 +17,13 @@ import { AgentViewProvider } from '../contexts/AgentViewContext.js';
 import { ConfigContext } from '../contexts/ConfigContext.js';
 import { StreamingState } from '../types.js';
 
-// Drive terminal size deterministically: the real useTerminalSize listens on
-// process.stdout and updates via React state, which doesn't flush predictably
-// under fake timers. Mocking it lets us change width via an explicit rerender.
-let mockSize = { columns: 100, rows: 40 };
+// Fixed size for layout; the resize handler under test reads process.stdout
+// directly, so we drive it via stdout events rather than this hook.
 vi.mock('../hooks/useTerminalSize.js', () => ({
-  useTerminalSize: () => mockSize,
+  useTerminalSize: () => ({ columns: 100, rows: 40 }),
 }));
 
-// Heavy children are irrelevant to the resize→reflow wiring under test; stub
+// Heavy children are irrelevant to the resize→repaint wiring under test; stub
 // them so the layout renders without pulling in their dependency graphs.
 vi.mock('../components/MainContent.js', () => ({
   MainContent: () => <Text>MainContent</Text>,
@@ -61,7 +59,7 @@ vi.mock('../components/TranscriptOverlay.js', () => ({
   TranscriptOverlay: () => null,
 }));
 
-describe('DefaultAppLayout resize reflow', () => {
+describe('DefaultAppLayout resize repaint', () => {
   const refreshStatic = vi.fn();
 
   const mockUIActions = {
@@ -90,9 +88,6 @@ describe('DefaultAppLayout resize reflow', () => {
     },
   };
 
-  // A fresh element per render: React bails out of re-rendering when handed the
-  // same element reference, which would stop the mocked width change from ever
-  // reaching the component.
   const makeTree = () => (
     <ConfigContext.Provider value={mockConfig}>
       <UIActionsContext.Provider value={mockUIActions}>
@@ -105,55 +100,92 @@ describe('DefaultAppLayout resize reflow', () => {
     </ConfigContext.Provider>
   );
 
-  // Real timers: Ink flushes passive effects through its own reconciler
-  // scheduler, which doesn't advance predictably under fake timers. A short
-  // wait lets an effect (and its debounce timer) run. FLUSH < 150ms debounce
-  // (effect scheduled, timer not yet fired); SETTLE > 150ms (timer fired).
-  const FLUSH_MS = 10;
-  const SETTLE_MS = 250;
+  // Each render attaches a resize listener to process.stdout; track instances
+  // so afterEach can unmount them and listeners don't leak across tests.
+  const instances: Array<ReturnType<typeof render>> = [];
+  const mount = () => {
+    const instance = render(makeTree());
+    instances.push(instance);
+    return instance;
+  };
+
+  // The resize listener attaches in a passive effect; a short real wait lets it
+  // run. SETTLE > RESIZE_THROTTLE_MS (80ms) so the trailing timer has fired.
+  const MOUNT_MS = 20;
+  const SETTLE_MS = 160;
   const wait = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
+  const originalColumns = process.stdout.columns;
+  const originalRows = process.stdout.rows;
+
+  const resize = (columns: number, rows = process.stdout.rows) => {
+    process.stdout.columns = columns;
+    process.stdout.rows = rows;
+    process.stdout.emit('resize');
+  };
+
   beforeEach(() => {
     refreshStatic.mockClear();
-    mockSize = { columns: 100, rows: 40 };
+    process.stdout.columns = 100;
+    process.stdout.rows = 40;
   });
 
-  it('does not refresh static on first mount', async () => {
-    render(makeTree());
-    await wait(SETTLE_MS);
-    expect(refreshStatic).not.toHaveBeenCalled();
-  });
-
-  it('refreshes static once after a width change settles', async () => {
-    const { rerender } = render(makeTree());
-    await wait(FLUSH_MS);
-    mockSize = { columns: 60, rows: 40 };
-    rerender(makeTree());
-    await wait(FLUSH_MS);
-    // Debounced: the effect scheduled the timer but it hasn't fired yet.
-    expect(refreshStatic).not.toHaveBeenCalled();
-    await wait(SETTLE_MS);
-    expect(refreshStatic).toHaveBeenCalledTimes(1);
-  });
-
-  it('debounces a burst of width changes into a single refresh', async () => {
-    const { rerender } = render(makeTree());
-    await wait(FLUSH_MS);
-    for (const columns of [90, 80, 70]) {
-      mockSize = { columns, rows: 40 };
-      rerender(makeTree());
-      await wait(FLUSH_MS); // < debounce, so each change resets the timer
+  afterEach(() => {
+    while (instances.length) {
+      instances.pop()?.unmount();
     }
+    process.stdout.columns = originalColumns;
+    process.stdout.rows = originalRows;
+  });
+
+  it('does not repaint on first mount', async () => {
+    mount();
     await wait(SETTLE_MS);
+    expect(refreshStatic).not.toHaveBeenCalled();
+  });
+
+  it('repaints immediately on a resize (leading edge)', async () => {
+    mount();
+    await wait(MOUNT_MS);
+    resize(60);
+    // Leading edge fires synchronously in the resize handler — no wait needed.
     expect(refreshStatic).toHaveBeenCalledTimes(1);
   });
 
-  it('does not refresh static when only the height changes', async () => {
-    const { rerender } = render(makeTree());
-    await wait(FLUSH_MS);
-    mockSize = { columns: 100, rows: 20 }; // width unchanged, height differs
-    rerender(makeTree());
+  it('throttles a burst of resizes into a leading + trailing repaint', async () => {
+    mount();
+    await wait(MOUNT_MS);
+    resize(90);
+    resize(85);
+    resize(80);
+    // Only the leading edge has fired so far; the rest coalesce.
+    expect(refreshStatic).toHaveBeenCalledTimes(1);
+    await wait(SETTLE_MS);
+    // ...plus a single trailing repaint at the throttle boundary.
+    expect(refreshStatic).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a resize event that does not change dimensions', async () => {
+    mount();
+    await wait(MOUNT_MS);
+    process.stdout.emit('resize'); // same 100x40 as mount
+    await wait(SETTLE_MS);
+    expect(refreshStatic).not.toHaveBeenCalled();
+  });
+
+  it('repaints on a height-only change', async () => {
+    mount();
+    await wait(MOUNT_MS);
+    resize(100, 20); // width unchanged, height differs
+    expect(refreshStatic).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes the resize listener on unmount', async () => {
+    const { unmount } = mount();
+    await wait(MOUNT_MS);
+    unmount();
+    resize(50);
     await wait(SETTLE_MS);
     expect(refreshStatic).not.toHaveBeenCalled();
   });

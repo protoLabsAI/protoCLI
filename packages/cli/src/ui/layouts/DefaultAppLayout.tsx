@@ -25,6 +25,13 @@ import { useAgentViewState } from '../contexts/AgentViewContext.js';
 import { useConfig } from '../contexts/ConfigContext.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 
+/**
+ * Max repaint cadence while the terminal is being resized. Small enough that a
+ * drag never accumulates more than a frame or two of stale output before it's
+ * cleared, large enough not to clear+reprint on every single resize event.
+ */
+const RESIZE_THROTTLE_MS = 80;
+
 export const DefaultAppLayout: React.FC = () => {
   const uiState = useUIState();
   const { refreshStatic, closeTranscript } = useUIActions();
@@ -59,26 +66,72 @@ export const DefaultAppLayout: React.FC = () => {
     }
   }, [isTranscriptOpen, refreshStatic]);
 
-  // Reflow committed <Static> output on terminal resize. Ink's <Static> is
-  // append-only and tracked by array index, so it never redraws already-emitted
-  // history when the width changes — the terminal re-wraps those stale lines
-  // into garbage. refreshStatic() clears the screen and bumps historyRemountKey
-  // so MainContent's <Static> remounts and reprints history at the new width.
-  // Width is the reflow driver (height changes don't mis-wrap committed lines).
-  // Debounced so a drag-resize doesn't thrash clear/redraw on every intermediate
-  // size — we only reflow once the drag settles. The initial width is captured
-  // by useRef so first mount never triggers a clear.
-  const prevWidthRef = useRef(terminalWidth);
+  // Clear + reprint the whole frame on terminal resize.
+  //
+  // Two things break on resize, both fixed by refreshStatic() (clear the
+  // screen + remount <Static> so history and the live region reprint cleanly
+  // at the new size):
+  //   1. <Static> history is append-only and index-tracked — it never redraws
+  //      already-committed lines, so the terminal re-wraps them into garbage.
+  //   2. Ink's live region (composer, sticky task list, status bar) is redrawn
+  //      by erasing the previous frame's *stored* line count. After a resize
+  //      the terminal has reflowed that frame to a different height, so the
+  //      erase misses lines and the stale frame is pushed into scrollback —
+  //      one duplicate per resize event, i.e. an avalanche during a drag.
+  //
+  // Throttled (leading + trailing), NOT debounced: a continuous drag emits
+  // resize events faster than it ever settles, so a trailing-only debounce
+  // would let the avalanche build until the drag stops. The throttle repaints
+  // at a bounded cadence *during* the drag and once more when it settles.
+  // Listens on stdout directly (not via useTerminalSize state) so the handler
+  // runs synchronously on the event and is immune to React batching.
   useEffect(() => {
-    if (prevWidthRef.current === terminalWidth) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      prevWidthRef.current = terminalWidth;
+    let lastRun = 0;
+    let trailing: ReturnType<typeof setTimeout> | undefined;
+    let lastCols = process.stdout.columns;
+    let lastRows = process.stdout.rows;
+
+    const fire = () => {
+      lastRun = Date.now();
       refreshStatic();
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [terminalWidth, refreshStatic]);
+    };
+
+    const onResize = () => {
+      const cols = process.stdout.columns;
+      const rows = process.stdout.rows;
+      // Some terminals emit 'resize' for non-size events; ignore no-ops.
+      if (cols === lastCols && rows === lastRows) {
+        return;
+      }
+      lastCols = cols;
+      lastRows = rows;
+
+      const sinceLast = Date.now() - lastRun;
+      if (sinceLast >= RESIZE_THROTTLE_MS) {
+        if (trailing) {
+          clearTimeout(trailing);
+          trailing = undefined;
+        }
+        fire(); // leading edge — repaint immediately
+      } else if (!trailing) {
+        // Coalesce the rest of this burst into one repaint at the throttle
+        // boundary; keep the pending timer rather than resetting it so a
+        // sustained drag still repaints every RESIZE_THROTTLE_MS.
+        trailing = setTimeout(() => {
+          trailing = undefined;
+          fire();
+        }, RESIZE_THROTTLE_MS - sinceLast);
+      }
+    };
+
+    process.stdout.on('resize', onResize);
+    return () => {
+      process.stdout.off('resize', onResize);
+      if (trailing) {
+        clearTimeout(trailing);
+      }
+    };
+  }, [refreshStatic]);
 
   if (isTranscriptOpen) {
     return <TranscriptOverlay onClose={closeTranscript} />;
