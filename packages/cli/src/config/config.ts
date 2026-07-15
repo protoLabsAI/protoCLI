@@ -203,7 +203,7 @@ export async function parseArguments(): Promise<CliArgs> {
 
   const yargsInstance = yargs(rawArgv)
     .locale('en')
-    .scriptName('qwen')
+    .scriptName('proto')
     .usage(
       'Usage: proto [options] [command]\n\nproto - Launch an interactive CLI, use -p/--prompt for non-interactive mode',
     )

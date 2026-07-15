@@ -1876,8 +1876,15 @@ export class Config {
   }
 
   isCronEnabled(): boolean {
-    // Cron is experimental and opt-in: enabled via settings or env var
-    if (process.env['QWEN_CODE_ENABLE_CRON'] === '1') return true;
+    // Cron is experimental and opt-in: enabled via settings or env var.
+    // PROTO_ENABLE_CRON is the documented name; QWEN_CODE_ENABLE_CRON is kept
+    // as a back-compat alias inherited from the fork.
+    if (
+      process.env['PROTO_ENABLE_CRON'] === '1' ||
+      process.env['QWEN_CODE_ENABLE_CRON'] === '1'
+    ) {
+      return true;
+    }
     return this.cronEnabled;
   }
 
