@@ -59,6 +59,27 @@ export const DefaultAppLayout: React.FC = () => {
     }
   }, [isTranscriptOpen, refreshStatic]);
 
+  // Reflow committed <Static> output on terminal resize. Ink's <Static> is
+  // append-only and tracked by array index, so it never redraws already-emitted
+  // history when the width changes — the terminal re-wraps those stale lines
+  // into garbage. refreshStatic() clears the screen and bumps historyRemountKey
+  // so MainContent's <Static> remounts and reprints history at the new width.
+  // Width is the reflow driver (height changes don't mis-wrap committed lines).
+  // Debounced so a drag-resize doesn't thrash clear/redraw on every intermediate
+  // size — we only reflow once the drag settles. The initial width is captured
+  // by useRef so first mount never triggers a clear.
+  const prevWidthRef = useRef(terminalWidth);
+  useEffect(() => {
+    if (prevWidthRef.current === terminalWidth) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      prevWidthRef.current = terminalWidth;
+      refreshStatic();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [terminalWidth, refreshStatic]);
+
   if (isTranscriptOpen) {
     return <TranscriptOverlay onClose={closeTranscript} />;
   }
