@@ -1,6 +1,6 @@
 {
   "name": "@protolabs/proto",
-  "version": "0.71.2",
+  "version": "0.71.3",
   "description": "proto",
   "repository": {
     "type": "git",
@@ -37,7 +37,7 @@
     "dist"
   ],
   "config": {
-    "sandboxImageUri": "ghcr.io/protolabsai/protocli:0.71.2"
+    "sandboxImageUri": "ghcr.io/protolabsai/protocli:0.71.3"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.0",
