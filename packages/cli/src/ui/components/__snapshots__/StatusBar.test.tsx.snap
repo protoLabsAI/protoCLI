@@ -1,0 +1,16 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`<StatusBar /> > status bar rendering (golden snapshots) > renders a diff with only additions > statusbar-additions-only 1`] = `
+"────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⟡ │  ⬡ test-host  │  1 file +7  │  ⌂ /home/user/project"
+`;
+
+exports[`<StatusBar /> > status bar rendering (golden snapshots) > renders every token at once > statusbar-all-tokens 1`] = `
+"────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⟡ │  ⬡ test-host  │  ⟳ bg session  │  3 files +10 −2  │  ⌂ /home/user/project  │  ⎇ main"
+`;
+
+exports[`<StatusBar /> > status bar rendering (golden snapshots) > renders the minimal bar (no branch, no diff) > statusbar-minimal 1`] = `
+"────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ ⟡ │  ⬡ test-host  │  ⌂ /home/user/project"
+`;
