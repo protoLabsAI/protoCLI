@@ -9,6 +9,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import os from 'node:os';
 import { StatusBar } from './StatusBar.js';
 
+// Pin the hostname so golden snapshots are machine-independent; homedir() is
+// left real because tildify() depends on it.
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof os>();
+  return {
+    ...actual,
+    default: { ...actual, hostname: () => 'test-host' },
+    hostname: () => 'test-host',
+  };
+});
+
 vi.mock('../hooks/useGitBranchName.js', () => ({
   useGitBranchName: vi.fn(() => undefined),
 }));
@@ -96,5 +107,35 @@ describe('<StatusBar />', () => {
   it('shows bg session badge when bgSessionActive is true', () => {
     const { lastFrame } = render$({ bgSessionActive: true });
     expect(lastFrame()).toContain('⟳ bg session');
+  });
+
+  // Pins separator placement and badge order, which is what a token-array
+  // refactor is most likely to disturb.
+  describe('status bar rendering (golden snapshots)', () => {
+    it('renders the minimal bar (no branch, no diff)', () => {
+      const { lastFrame } = render$();
+      expect(lastFrame()).toMatchSnapshot('statusbar-minimal');
+    });
+
+    it('renders every token at once', () => {
+      mockBranch.mockReturnValue('main');
+      mockDiff.mockReturnValue({
+        filesChanged: 3,
+        linesAdded: 10,
+        linesRemoved: 2,
+      });
+      const { lastFrame } = render$({ bgSessionActive: true });
+      expect(lastFrame()).toMatchSnapshot('statusbar-all-tokens');
+    });
+
+    it('renders a diff with only additions', () => {
+      mockDiff.mockReturnValue({
+        filesChanged: 1,
+        linesAdded: 7,
+        linesRemoved: 0,
+      });
+      const { lastFrame } = render$();
+      expect(lastFrame()).toMatchSnapshot('statusbar-additions-only');
+    });
   });
 });

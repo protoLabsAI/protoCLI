@@ -3,3 +3,23 @@
 exports[`<Footer /> > footer rendering (golden snapshots) > renders complete footer on narrow terminal > complete-footer-narrow 1`] = `"  default  ·  ? for shortcuts  ·  Esc×2: rewind                                        | 0.1% used"`;
 
 exports[`<Footer /> > footer rendering (golden snapshots) > renders complete footer on wide terminal > complete-footer-wide 1`] = `"  default  ·  ? for shortcuts  ·  Esc×2: rewind                                | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: auto-accept-mode > left-auto-accept-mode 1`] = `"  auto-accept edits (shift + tab to cycle)                                     | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: ctrl-c-pressed-once > left-ctrl-c-pressed-once 1`] = `"  Press Ctrl+C again to exit.                                                  | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: ctrl-d-pressed-once > left-ctrl-d-pressed-once 1`] = `"  Press Ctrl+D again to exit.                                                  | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: default-mode > left-default-mode 1`] = `"  default  ·  ? for shortcuts  ·  Esc×2: rewind                                | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: escape-prompt > left-escape-prompt 1`] = `"  Press Esc again to clear.                                                    | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: shell-mode > left-shell-mode 1`] = `"  shell mode enabled (esc to disable)                                          | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: voice-recording > left-voice-recording 1`] = `"  ● Recording… (ctrl+space to stop)                                            | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: voice-transcribing > left-voice-transcribing 1`] = `"  ◌ Transcribing…                                                              | 0.1% context used"`;
+
+exports[`<Footer /> > left slot priority chain (golden snapshots) > renders left slot: yolo-mode > left-yolo-mode 1`] = `"  YOLO mode (shift + tab to cycle)                                             | 0.1% context used"`;
+
+exports[`<Footer /> > right slot token order (golden snapshots) > renders sandbox + debug + context together > right-sandbox-debug-context 1`] = `"  default  ·  ? for shortcuts  ·  Esc×2: rewind     | 🔒 seatbelt | Debug Mode | 0.1% context used"`;

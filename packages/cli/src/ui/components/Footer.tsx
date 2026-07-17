@@ -22,6 +22,8 @@ import { t } from '../../i18n/index.js';
 import { VoiceMicButton } from './VoiceMicButton.js';
 import { GoalPill } from './GoalPill.js';
 import { useGoalStatus } from '../hooks/useGoalStatus.js';
+import { TokenBar } from './status/TokenBar.js';
+import { firstToken, tokens } from './status/types.js';
 
 export const Footer: React.FC = () => {
   const uiState = useUIState();
@@ -54,80 +56,108 @@ export const Footer: React.FC = () => {
 
   const goalStatus = useGoalStatus(config);
 
-  // Left section should show exactly ONE thing at any time, in priority order.
-  const leftContent =
-    uiState.voiceState === 'recording' ? (
-      <Text color={theme.status.error}>● Recording… (ctrl+space to stop)</Text>
-    ) : uiState.voiceState === 'transcribing' ? (
-      <Text dimColor>◌ Transcribing…</Text>
-    ) : uiState.ctrlCPressedOnce ? (
-      <Text color={theme.status.warning}>
-        {t('Press Ctrl+C again to exit.')}
-      </Text>
-    ) : uiState.ctrlDPressedOnce ? (
-      <Text color={theme.status.warning}>
-        {t('Press Ctrl+D again to exit.')}
-      </Text>
-    ) : uiState.showEscapePrompt ? (
-      <Text color={theme.text.secondary}>{t('Press Esc again to clear.')}</Text>
-    ) : vimEnabled && vimMode === 'INSERT' ? (
-      <Text color={theme.text.secondary}>-- INSERT --</Text>
-    ) : uiState.shellModeActive ? (
-      <ShellModeIndicator />
-    ) : showAutoAcceptIndicator !== undefined &&
-      showAutoAcceptIndicator !== ApprovalMode.DEFAULT ? (
-      <AutoAcceptIndicator approvalMode={showAutoAcceptIndicator} />
-    ) : (
-      // Default mode: the autonomy chip stays visible (so the current mode is
-      // always shown) next to the shortcut hints.
-      <Box>
-        <AutoAcceptIndicator approvalMode={ApprovalMode.DEFAULT} />
-        <Text color={theme.text.secondary}>
-          {'  ·  '}
-          {t('? for shortcuts')}
-          {'  ·  '}
-          {t('Esc×2: rewind')}
-        </Text>
-      </Box>
-    );
-
-  const rightItems: Array<{ key: string; node: React.ReactNode }> = [
-    { key: 'voice', node: <VoiceMicButton /> },
-  ];
-  if (sandboxInfo) {
-    rightItems.push({
-      key: 'sandbox',
-      node: <Text color={theme.status.success}>🔒 {sandboxInfo}</Text>,
-    });
-  }
-  if (debugMode) {
-    rightItems.push({
-      key: 'debug',
-      node: <Text color={theme.status.warning}>Debug Mode</Text>,
-    });
-  }
-  if (promptTokenCount > 0 && contextWindowSize) {
-    rightItems.push({
-      key: 'context',
+  // Left slot shows exactly ONE thing: the first applicable token wins, so the
+  // order of this list IS the priority order.
+  const leftToken = firstToken(
+    uiState.voiceState === 'recording' && {
+      key: 'voice-recording',
       node: (
-        <Text color={theme.text.accent}>
-          <ContextUsageDisplay
-            promptTokenCount={promptTokenCount}
-            terminalWidth={terminalWidth}
-            contextWindowSize={contextWindowSize}
-          />
+        <Text color={theme.status.error}>
+          ● Recording… (ctrl+space to stop)
         </Text>
       ),
-    });
-  }
-  if (goalStatus) {
-    // Active /goal indicator -- pushed last so it lands rightmost (most
-    // visible) in the footer. Mirrors Codex CLI's status-line goal slot.
-    rightItems.push({
+    },
+    uiState.voiceState === 'transcribing' && {
+      key: 'voice-transcribing',
+      node: <Text dimColor>◌ Transcribing…</Text>,
+    },
+    uiState.ctrlCPressedOnce && {
+      key: 'ctrl-c',
+      node: (
+        <Text color={theme.status.warning}>
+          {t('Press Ctrl+C again to exit.')}
+        </Text>
+      ),
+    },
+    uiState.ctrlDPressedOnce && {
+      key: 'ctrl-d',
+      node: (
+        <Text color={theme.status.warning}>
+          {t('Press Ctrl+D again to exit.')}
+        </Text>
+      ),
+    },
+    uiState.showEscapePrompt && {
+      key: 'escape-prompt',
+      node: (
+        <Text color={theme.text.secondary}>
+          {t('Press Esc again to clear.')}
+        </Text>
+      ),
+    },
+    vimEnabled &&
+      vimMode === 'INSERT' && {
+        key: 'vim-insert',
+        node: <Text color={theme.text.secondary}>-- INSERT --</Text>,
+      },
+    uiState.shellModeActive && {
+      key: 'shell-mode',
+      node: <ShellModeIndicator />,
+    },
+    showAutoAcceptIndicator !== undefined &&
+      showAutoAcceptIndicator !== ApprovalMode.DEFAULT && {
+        key: 'approval-mode',
+        node: <AutoAcceptIndicator approvalMode={showAutoAcceptIndicator} />,
+      },
+    {
+      // Default mode: the autonomy chip stays visible (so the current mode is
+      // always shown) next to the shortcut hints.
+      key: 'default-hint',
+      node: (
+        <Box>
+          <AutoAcceptIndicator approvalMode={ApprovalMode.DEFAULT} />
+          <Text color={theme.text.secondary}>
+            {'  ·  '}
+            {t('? for shortcuts')}
+            {'  ·  '}
+            {t('Esc×2: rewind')}
+          </Text>
+        </Box>
+      ),
+    },
+  );
+
+  const rightTokens = tokens(
+    { key: 'voice', node: <VoiceMicButton /> },
+    sandboxInfo && {
+      key: 'sandbox',
+      node: <Text color={theme.status.success}>🔒 {sandboxInfo}</Text>,
+    },
+    debugMode && {
+      key: 'debug',
+      node: <Text color={theme.status.warning}>Debug Mode</Text>,
+    },
+    promptTokenCount > 0 &&
+      Boolean(contextWindowSize) && {
+        key: 'context',
+        node: (
+          <Text color={theme.text.accent}>
+            <ContextUsageDisplay
+              promptTokenCount={promptTokenCount}
+              terminalWidth={terminalWidth}
+              contextWindowSize={contextWindowSize as number}
+            />
+          </Text>
+        ),
+      },
+    goalStatus && {
+      // Active /goal indicator -- last so it lands rightmost (most visible) in
+      // the footer. Mirrors Codex CLI's status-line goal slot.
       key: 'goal',
       node: <GoalPill snapshot={goalStatus} />,
-    });
-  }
+    },
+  );
+
   return (
     <Box
       justifyContent="space-between"
@@ -142,18 +172,16 @@ export const Footer: React.FC = () => {
         flexDirection={isNarrow ? 'column' : 'row'}
         alignItems={isNarrow ? 'flex-start' : 'center'}
       >
-        {leftContent}
+        {leftToken?.node}
         <MCPHealthPill />
       </Box>
 
-      {/* Right Section: Sandbox Info, Debug Mode, Context Usage, and Console Summary */}
+      {/* Right Section: an ordered token array — voice · sandbox · debug · context · goal */}
       <Box alignItems="center" justifyContent="flex-end" marginRight={2}>
-        {rightItems.map(({ key, node }, index) => (
-          <Box key={key} alignItems="center">
-            {index > 0 && <Text color={theme.text.secondary}> | </Text>}
-            {node}
-          </Box>
-        ))}
+        <TokenBar
+          tokens={rightTokens}
+          separator={<Text color={theme.text.secondary}> | </Text>}
+        />
       </Box>
     </Box>
   );

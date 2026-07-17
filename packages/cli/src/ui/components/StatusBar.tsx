@@ -11,6 +11,8 @@ import os from 'node:os';
 import { useGitBranchName } from '../hooks/useGitBranchName.js';
 import { useGitDiffStat } from '../hooks/useGitDiffStat.js';
 import { theme } from '../semantic-colors.js';
+import { TokenBar } from './status/TokenBar.js';
+import { tokens } from './status/types.js';
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +76,71 @@ export const StatusBar = ({
   // Only render the diff badge when there are actual changes.
   const hasDiff = diff !== null && diff.filesChanged > 0;
 
+  // Ordered token array — <TokenBar /> owns the ⟡-to-branch separator chain.
+  // Active background agents render as cards in BackgroundAgentsPanel (above
+  // the status bar), not as badges crammed in here.
+  const barTokens = tokens(
+    {
+      key: 'logo',
+      node: (
+        <Text color={theme.text.accent} bold>
+          ⟡
+        </Text>
+      ),
+    },
+    {
+      key: 'hostname',
+      node: (
+        <Badge dim>
+          <Text>⬡ </Text>
+          <Text>{os.hostname()}</Text>
+        </Badge>
+      ),
+    },
+    bgSessionActive && {
+      key: 'bg-session',
+      node: (
+        <Badge>
+          <Text color={theme.text.secondary}>⟳ bg session</Text>
+        </Badge>
+      ),
+    },
+    hasDiff && {
+      key: 'diff',
+      node: (
+        <Badge>
+          <Text color={theme.text.secondary}>
+            {diff.filesChanged} file{diff.filesChanged !== 1 ? 's' : ''}
+          </Text>
+          {diff.linesAdded > 0 && (
+            <Text color={theme.status.success}> +{diff.linesAdded}</Text>
+          )}
+          {diff.linesRemoved > 0 && (
+            <Text color={theme.status.error}> −{diff.linesRemoved}</Text>
+          )}
+        </Badge>
+      ),
+    },
+    {
+      key: 'cwd',
+      node: (
+        <Badge dim>
+          <Text>⌂ </Text>
+          <Text>{cwdDisplay}</Text>
+        </Badge>
+      ),
+    },
+    branch && {
+      key: 'branch',
+      node: (
+        <Badge>
+          <Text color={theme.text.secondary}>⎇ </Text>
+          <Text color={theme.text.primary}>{branch}</Text>
+        </Badge>
+      ),
+    },
+  );
+
   return (
     <Box
       width={terminalWidth}
@@ -87,66 +154,7 @@ export const StatusBar = ({
       borderColor={theme.border.default}
       paddingX={1}
     >
-      {/* Logo mark */}
-      <Text color={theme.text.accent} bold>
-        ⟡
-      </Text>
-
-      <Sep />
-
-      {/* Hostname */}
-      <Badge dim>
-        <Text>⬡ </Text>
-        <Text>{os.hostname()}</Text>
-      </Badge>
-
-      {/* Active background agents render as cards in BackgroundAgentsPanel
-          (above the status bar), not as badges crammed in here. */}
-
-      {bgSessionActive && (
-        <>
-          <Sep />
-          <Badge>
-            <Text color={theme.text.secondary}>⟳ bg session</Text>
-          </Badge>
-        </>
-      )}
-
-      {hasDiff && (
-        <>
-          <Sep />
-          <Badge>
-            <Text color={theme.text.secondary}>
-              {diff.filesChanged} file{diff.filesChanged !== 1 ? 's' : ''}
-            </Text>
-            {diff.linesAdded > 0 && (
-              <Text color={theme.status.success}> +{diff.linesAdded}</Text>
-            )}
-            {diff.linesRemoved > 0 && (
-              <Text color={theme.status.error}> −{diff.linesRemoved}</Text>
-            )}
-          </Badge>
-        </>
-      )}
-
-      <Sep />
-
-      {/* CWD */}
-      <Badge dim>
-        <Text>⌂ </Text>
-        <Text>{cwdDisplay}</Text>
-      </Badge>
-
-      {/* Git branch */}
-      {branch && (
-        <>
-          <Sep />
-          <Badge>
-            <Text color={theme.text.secondary}>⎇ </Text>
-            <Text color={theme.text.primary}>{branch}</Text>
-          </Badge>
-        </>
-      )}
+      <TokenBar tokens={barTokens} separator={<Sep />} />
     </Box>
   );
 };
