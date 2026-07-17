@@ -26,8 +26,13 @@ export interface StatusToken {
  * Letting builders return falsy is what keeps separator placement correct:
  * omitted tokens never reach <TokenBar />, so it can never draw a separator
  * against a cell that rendered nothing.
+ *
+ * The union covers every falsy scalar a truthy-guard can leave behind, so a
+ * string- or number-guarded builder — `sandboxInfo && {…}`, `branch && {…}` —
+ * type-checks: the empty string and `0` are as valid a "not applicable" as
+ * `false`.
  */
-export type MaybeToken = StatusToken | false | null | undefined;
+export type MaybeToken = StatusToken | false | null | undefined | '' | 0;
 
 /** Drop inapplicable tokens, preserving declared order. */
 export function tokens(...items: MaybeToken[]): StatusToken[] {
